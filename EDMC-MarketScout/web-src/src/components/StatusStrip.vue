@@ -12,7 +12,7 @@ const emit = defineEmits(['update:autoRefresh'])
 const journalLabel = computed(() => {
   const event = props.latestJournalEvent || null
   if (!event || !event.event) return 'No Journal event received yet'
-  const parts = [`${shortTime(event.timestamp)} ${event.event}`]
+  const parts = [`${shortTime(event.timestamp)} · ${event.event}`]
   if (event.system) parts.push(event.system)
   if (event.station) parts.push(event.station)
   return parts.filter(Boolean).join(' · ')
