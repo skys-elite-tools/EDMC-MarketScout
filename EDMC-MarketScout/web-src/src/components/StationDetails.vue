@@ -8,6 +8,7 @@ const props = defineProps({
   watchedCommodities: { type: Array, default: () => [] },
   displayColumns: { type: Array, default: () => [] },
 })
+const emit = defineEmits(['close'])
 
 const detailCommodities = computed(() => Array.from(new Set([
   ...props.watchedCommodities,
@@ -30,14 +31,14 @@ const stationDetails = computed(() => {
 
 <template>
   <aside class="details">
-    <template v-if="!row">
-      <h2>{{ currentView === 'jackpots' ? 'Jackpot History' : currentView === 'ledger' ? 'Ledger' : 'Details' }}</h2>
-      <p>Select a row.</p>
-    </template>
-
-    <template v-else-if="currentView === 'stations'">
-      <h2>{{ fmt(row.system) }}</h2>
-      <p class="subtitle">{{ fmt(row.station) }} | Pad {{ fmt(row.pad) }}</p>
+    <template v-if="currentView === 'stations'">
+      <div class="detailsHeader">
+        <div>
+          <h2>{{ fmt(row.system) }}</h2>
+          <p class="subtitle">{{ fmt(row.station) }} | Pad {{ fmt(row.pad) }}</p>
+        </div>
+        <button type="button" class="detailsClose" title="Close details" aria-label="Close details" @click="emit('close')">x</button>
+      </div>
       <dl class="detailGrid">
         <template v-for="[k, v] in stationDetails" :key="k">
           <dt>{{ k }}</dt><dd>{{ fmt(v) }}</dd>
@@ -55,7 +56,10 @@ const stationDetails = computed(() => {
     </template>
 
     <template v-else>
-      <h2>{{ currentView === 'ledger' ? `${fmt(row.event_type).toUpperCase()} ${fmt(row.commodity)}` : `Jackpot ${fmt(row.jackpot_id)}` }}</h2>
+      <div class="detailsHeader">
+        <h2>{{ currentView === 'ledger' ? `${fmt(row.event_type).toUpperCase()} ${fmt(row.commodity)}` : `Jackpot ${fmt(row.jackpot_id)}` }}</h2>
+        <button type="button" class="detailsClose" title="Close details" aria-label="Close details" @click="emit('close')">x</button>
+      </div>
       <pre>{{ JSON.stringify(row, null, 2) }}</pre>
     </template>
   </aside>

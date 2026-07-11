@@ -61,6 +61,10 @@ function setSelected(idx) {
   selectedIndex.value = idx
 }
 
+function closeDetails() {
+  selectedIndex.value = -1
+}
+
 async function loadStations() {
   currentView.value = 'stations'
   const res = await fetch(`/api/stations?${query(stationParams())}`, { cache: 'no-store' })
@@ -243,7 +247,7 @@ onUnmounted(() => {
       @toggle-display-column="setDisplayColumn"
     />
 
-    <main>
+    <main :class="{ detailsOpen: selectedRow }">
       <section class="tablePanel">
         <StationsTable
           v-if="currentView === 'stations'"
@@ -271,10 +275,12 @@ onUnmounted(() => {
       </section>
 
       <StationDetails
+        v-if="selectedRow"
         :row="selectedRow"
         :current-view="currentView"
         :watched-commodities="watchedCommodities"
         :display-columns="displayColumns"
+        @close="closeDetails"
       />
     </main>
 

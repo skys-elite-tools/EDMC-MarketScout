@@ -200,9 +200,12 @@ button { cursor: pointer; background: #263142; }
 button:hover { border-color: var(--accent); }
 main {
   display: grid;
-  grid-template-columns: minmax(680px, 1fr) 380px;
+  grid-template-columns: minmax(0, 1fr);
   min-height: calc(100vh - 176px);
   flex: 1 1 auto;
+}
+main.detailsOpen {
+  grid-template-columns: minmax(680px, 1fr) 380px;
 }
 .tablePanel { overflow: auto; }
 table {
@@ -259,7 +262,21 @@ tr.strong { background: var(--strong); }
   padding: 14px;
   overflow: auto;
 }
-.details h2 { margin: 0 0 10px; }
+.detailsHeader {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.details h2 { margin: 0; }
+.detailsClose {
+  flex: 0 0 auto;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-weight: 800;
+}
 .detailGrid { display: grid; grid-template-columns: 120px 1fr; gap: 5px 10px; }
 .detailGrid dt { color: var(--muted); }
 .detailGrid dd { margin: 0; }
@@ -301,7 +318,8 @@ tr.ledgerSell.cheap { background: rgba(80,220,120,.10); }
 @media (max-width: 1100px) {
   .statusStrip { grid-template-columns: 1fr; }
   .viewStatus { justify-content: flex-start; }
-  main { grid-template-columns: 1fr; }
+  main,
+  main.detailsOpen { grid-template-columns: 1fr; }
   .details { border-left: none; border-top: 1px solid var(--line); max-height: 45vh; }
 }
 .statusStrip {
