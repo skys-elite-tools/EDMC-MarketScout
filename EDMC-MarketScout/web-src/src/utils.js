@@ -34,11 +34,22 @@ export function columnKey(col) {
 
 export function commodityCellParts(row, commodity, side) {
   const qtyName = side === 'buy' ? 'supply' : 'demand'
+  const qtyValue = row[`${commodity}_${qtyName}`]
   return {
     price: money(row[`${commodity}_${side}`]),
     qtyName,
-    qty: money(row[`${commodity}_${qtyName}`]),
+    qty: money(qtyValue),
+    qtyClass: quantityClass(qtyValue),
   }
+}
+
+export function quantityClass(value) {
+  const n = num(value)
+  if (n === null) return ''
+  if (n === 0) return 'quantityHigh'
+  if (n <= 7000) return 'quantityLow'
+  if (n <= 15000) return 'quantityMedium'
+  return 'quantityHigh'
 }
 
 export function stationDedupeKey(row) {

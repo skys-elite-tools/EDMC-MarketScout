@@ -265,6 +265,9 @@ tr.strong { background: var(--strong); }
   font-weight: 600;
 }
 .price { text-align: right; white-space: nowrap; }
+.quantityLow { color: #ff9a9a; }
+.quantityMedium { color: #f2d477; }
+.quantityHigh { color: #9be7a4; }
 .flag { white-space: nowrap; color: #f2d477; }
 .flagItem + .flagItem { margin-top: 2px; }
 .details {

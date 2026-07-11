@@ -1,5 +1,5 @@
 <script setup>
-import { columnKey, commodityCellParts, fmt, localDateTime, money, rowFlag } from '../utils.js'
+import { columnKey, commodityCellParts, fmt, localDateTime, money, quantityClass, rowFlag } from '../utils.js'
 
 const props = defineProps({
   rows: { type: Array, default: () => [] },
@@ -41,11 +41,11 @@ function flag(row) {
         <td><div class="systemName">{{ fmt(row.system) }}</div><div class="stationName">{{ fmt(row.station) }} <span class="stationMeta">Pad {{ fmt(row.pad) }}</span></div></td>
         <td><div class="cellMain">{{ fmt(row.state) }}</div><div class="cellSub">{{ fmt(row.economies) }}</div></td>
         <td>
-          <div v-if="row.best_buy_commodity" class="price"><div class="cellMain">{{ row.best_buy_commodity }} @ {{ money(row.best_buy_price) }}</div><div class="cellSub">Supply: {{ money(row.best_buy_supply) }} · Potential Profit: {{ money(row.best_buy_potential_profit) }} Cr/t</div></div>
+          <div v-if="row.best_buy_commodity" class="price"><div class="cellMain">{{ row.best_buy_commodity }} @ {{ money(row.best_buy_price) }}</div><div class="cellSub">Supply: <span :class="quantityClass(row.best_buy_supply)">{{ money(row.best_buy_supply) }}</span> · Potential Profit: {{ money(row.best_buy_potential_profit) }} Cr/t</div></div>
           <span v-else>—</span>
         </td>
         <td v-for="col in displayColumns" :key="columnKey(col)">
-          <div class="price"><div class="cellMain">{{ commodityCellParts(row, col.commodity, col.side).price }}</div><div class="cellSub">{{ commodityCellParts(row, col.commodity, col.side).qtyName }}: {{ commodityCellParts(row, col.commodity, col.side).qty }}</div></div>
+          <div class="price"><div class="cellMain">{{ commodityCellParts(row, col.commodity, col.side).price }}</div><div class="cellSub">{{ commodityCellParts(row, col.commodity, col.side).qtyName }}: <span :class="commodityCellParts(row, col.commodity, col.side).qtyClass">{{ commodityCellParts(row, col.commodity, col.side).qty }}</span></div></div>
         </td>
         <td><div>{{ localDateTime(row.market_updated) }}</div><div class="cellSub">Visit: {{ localDateTime(row.station_visit) }}</div></td>
       </tr>
