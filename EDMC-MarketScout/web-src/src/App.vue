@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import StatusStrip from './components/StatusStrip.vue'
 import TopBar from './components/TopBar.vue'
 import ViewControls from './components/ViewControls.vue'
 import CommoditySettings from './components/CommoditySettings.vue'
@@ -21,6 +22,7 @@ const allCommodities = ref([])
 const settingsVisible = ref(false)
 const commoditySearch = ref('')
 const statusText = ref('Loading…')
+const latestJournalEvent = ref(null)
 const autoRefresh = ref(true)
 
 const filters = ref({
@@ -152,9 +154,13 @@ async function openCommoditySettings() {
 }
 
 async function pollStatus() {
-  if (!autoRefresh.value) return
   const res = await fetch('/api/status', { cache: 'no-store' })
   const data = await res.json()
+  latestJournalEvent.value = data.latest_journal_event || null
+  if (!autoRefresh.value) {
+    lastVersion.value = data.data_version
+    return
+  }
   if (lastVersion.value !== null && data.data_version !== lastVersion.value) {
     await applyCurrentView()
   }
@@ -164,6 +170,7 @@ async function pollStatus() {
 let pollTimer = null
 onMounted(async () => {
   await loadCommoditySettings()
+  await pollStatus()
   await loadStations()
   pollTimer = setInterval(pollStatus, 2000)
 })
@@ -174,10 +181,14 @@ onUnmounted(() => {
 
 <template>
   <div class="appShell">
-    <TopBar
-      v-model:current-view="currentView"
+    <StatusStrip
       v-model:auto-refresh="autoRefresh"
       :status-text="statusText"
+      :latest-journal-event="latestJournalEvent"
+    />
+
+    <TopBar
+      v-model:current-view="currentView"
       @refresh="applyCurrentView"
     />
 

@@ -22,6 +22,7 @@ _SERVER: Optional[ThreadingHTTPServer] = None
 _THREAD: Optional[threading.Thread] = None
 _PORT: Optional[int] = None
 _CONTEXT: Dict[str, Any] = {}
+_LATEST_JOURNAL_EVENT: Optional[Dict[str, Any]] = None
 
 
 def start_server(plugin_dir: str, db_path: str, target_commodities: List[str], primary_metals: List[str]) -> int:
@@ -66,6 +67,16 @@ def server_url() -> Optional[str]:
     if _PORT is None:
         return None
     return f"http://127.0.0.1:{_PORT}/"
+
+
+def update_latest_journal_event(event: Dict[str, Any]) -> None:
+    """Store the most recent Journal event metadata for the Web UI status strip.
+
+    This intentionally stays in memory instead of writing to SQLite, so routine
+    Journal traffic does not force table reloads or mutate the user database.
+    """
+    global _LATEST_JOURNAL_EVENT
+    _LATEST_JOURNAL_EVENT = dict(event)
 
 
 class MarketScoutRequestHandler(BaseHTTPRequestHandler):
@@ -167,6 +178,7 @@ def api_status() -> Dict[str, Any]:
         "data_version": version,
         "target_commodities": _CONTEXT.get("target_commodities", []),
         "primary_metals": _CONTEXT.get("primary_metals", []),
+        "latest_journal_event": _LATEST_JOURNAL_EVENT,
     }
 
 

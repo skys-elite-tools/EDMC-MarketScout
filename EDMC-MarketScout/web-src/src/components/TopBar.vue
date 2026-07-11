@@ -1,10 +1,8 @@
 <script setup>
 const props = defineProps({
   currentView: { type: String, required: true },
-  statusText: { type: String, default: '' },
-  autoRefresh: { type: Boolean, default: true },
 })
-const emit = defineEmits(['update:currentView', 'update:autoRefresh', 'refresh'])
+const emit = defineEmits(['update:currentView', 'refresh'])
 
 function choose(view) {
   if (view === props.currentView) emit('refresh')
@@ -33,9 +31,5 @@ function choose(view) {
       <a href="#" title="Placeholder for future donation link">Donate</a>
     </div>
 
-    <div class="status">
-      <span>{{ statusText }}</span>
-      <label><input type="checkbox" :checked="autoRefresh" @change="emit('update:autoRefresh', $event.target.checked)" /> Auto-refresh</label>
-    </div>
   </header>
 </template>

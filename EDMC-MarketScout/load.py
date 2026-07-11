@@ -188,6 +188,8 @@ def journal_entry(cmdr: str, is_beta: bool, system: str, station: str, entry: Di
             return None
 
         name = entry.get("event")
+        update_web_latest_journal_event(name, system, station, entry, state)
+
         if name in ("Location", "FSDJump", "CarrierJump", "StartUp"):
             record_system_from_event(entry, state)
 
@@ -210,6 +212,28 @@ def journal_entry(cmdr: str, is_beta: bool, system: str, station: str, entry: Di
     except Exception:
         log_exception("journal_entry")
     return None
+
+
+def update_web_latest_journal_event(name: Any, system: str, station: str, entry: Dict[str, Any], state: Dict[str, Any]) -> None:
+    """Expose the latest Journal event metadata to the local Web UI.
+
+    The web module stores this in memory only. It is shown in the status strip
+    and does not trigger database writes or table refreshes by itself.
+    """
+    try:
+        event_name = str(name or entry.get("event") or "")
+        event_time = str(entry.get("timestamp") or now_utc_iso())
+        event_system = first_text(system, entry.get("StarSystem"), state.get("SystemName"), state.get("StarSystem"), LAST_CURRENT_SYSTEM)
+        event_station = first_text(station, entry.get("StationName"), state.get("StationName"))
+        load_web_module().update_latest_journal_event({
+            "event": event_name,
+            "timestamp": event_time,
+            "system": event_system,
+            "station": event_station,
+        })
+    except Exception:
+        # Status reporting should never interfere with Journal processing.
+        pass
 
 
 def cmdr_data(data: Any, is_beta: bool) -> Optional[str]:

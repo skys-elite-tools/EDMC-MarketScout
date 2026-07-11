@@ -24,7 +24,7 @@ a:hover { text-decoration: underline; }
 .appShell { min-height: 100vh; display: flex; flex-direction: column; }
 .topBar {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) auto auto minmax(210px, auto);
+  grid-template-columns: minmax(260px, 1fr) auto auto;
   align-items: center;
   gap: 16px;
   padding: 12px 16px;
@@ -47,7 +47,6 @@ a:hover { text-decoration: underline; }
 }
 h1 { margin: 0; font-size: 20px; }
 .subtitle { margin: 2px 0 0; color: var(--muted); }
-.status { display: flex; gap: 16px; align-items: center; justify-content: flex-end; color: var(--muted); }
 .mainNav { display: flex; gap: 6px; }
 .mainNav button.active { border-color: var(--accent); background: #304761; color: white; }
 .topLinks, .footerLinks { display: flex; gap: 12px; align-items: center; color: var(--muted); }
@@ -177,9 +176,44 @@ tr.ledgerSell.cheap { background: rgba(80,220,120,.10); }
 }
 @media (max-width: 1200px) {
   .topBar { grid-template-columns: 1fr; align-items: start; }
-  .status { justify-content: flex-start; }
 }
 @media (max-width: 1100px) {
+  .statusStrip { grid-template-columns: 1fr; }
+  .viewStatus { justify-content: flex-start; }
   main { grid-template-columns: 1fr; }
   .details { border-left: none; border-top: 1px solid var(--line); max-height: 45vh; }
+}
+.statusStrip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 5px 16px;
+  border-bottom: 1px solid #222b36;
+  background: #090d12;
+  color: var(--muted);
+  font-size: 12px;
+}
+.journalStatus,
+.viewStatus {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.viewStatus {
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+.statusLabel {
+  color: var(--accent);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-size: 11px;
+}
+.statusValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
