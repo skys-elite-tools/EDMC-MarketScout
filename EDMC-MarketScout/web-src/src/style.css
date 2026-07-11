@@ -213,6 +213,15 @@ table {
   border-collapse: separate;
   border-spacing: 0;
 }
+.stationsTable {
+  table-layout: fixed;
+}
+.stationFlagCol { width: 6rem; }
+.stationIdentityCol { width: 20%; }
+.stationStateCol { width: 15%; }
+.stationBestBuyCol { width: 18%; }
+.stationCommodityCol { width: 12rem; }
+.stationUpdatedCol { width: 14rem; }
 th {
   position: sticky;
   top: 0;
@@ -227,6 +236,7 @@ td {
   border-bottom: 1px solid #27313d;
   padding: 7px 8px;
   vertical-align: top;
+  overflow-wrap: anywhere;
 }
 tr { cursor: pointer; }
 tr:hover { background: #222a35; }

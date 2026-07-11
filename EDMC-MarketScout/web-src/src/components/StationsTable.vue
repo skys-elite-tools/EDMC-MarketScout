@@ -17,7 +17,15 @@ function flag(row) {
 </script>
 
 <template>
-  <table>
+  <table class="stationsTable">
+    <colgroup>
+      <col class="stationFlagCol" />
+      <col class="stationIdentityCol" />
+      <col class="stationStateCol" />
+      <col class="stationBestBuyCol" />
+      <col v-for="col in displayColumns" :key="`col-${columnKey(col)}`" class="stationCommodityCol" />
+      <col class="stationUpdatedCol" />
+    </colgroup>
     <thead>
       <tr>
         <th>Flag</th><th>System / Station</th><th>State / Economy</th><th>Best Buy</th>
