@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 marketscout.sqlite3
 marketscout-market-debug.log
+marketscout-ui.json
 marketscout-error.log
 *.log
 .DS_Store
