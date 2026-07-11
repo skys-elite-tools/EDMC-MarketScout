@@ -2,9 +2,18 @@
 
 __pycache__/
 *.pyc
-marketscout.sqlite3
-marketscout-market-debug.log
-marketscout-ui.json
-marketscout-error.log
+*.pyo
 *.log
 .DS_Store
+
+# Runtime/local MarketScout data
+marketscout.sqlite3
+marketscout-ui.json
+marketscout-market-debug.log
+marketscout-error.log
+marketscout-web-error.log
+
+# Frontend dev dependencies/build cache
+node_modules/
+EDMC-MarketScout/web-src/node_modules/
+EDMC-MarketScout/web-src/.vite/
