@@ -99,6 +99,10 @@ The Python local web server provides JSON endpoints; Vue should not know about S
 
 The Stations view Economy filter is intentionally empty by default so general users are not forced into the original `Extraction, Refinery` scouting workflow. The field supports saved presets through the local Web API. Presets are stored in `marketscout-economy-presets.json` in the plugin folder, not browser storage, so they survive browser changes. The default preset list is supplied by `marketscout_web.py` and includes single-value economy names plus `Extraction, Refinery`. User-saved presets are merged with the default list and shown alphabetically.
 
+### Stations default ordering
+
+The Stations API should default to a freshness-first order: newest `market_updated` first, newest `station_visit` second, strongest `best_buy_score` third, then system and station name alphabetically. This keeps the page focused on the newest information while relying on row highlights to make good deals obvious without adding another sort-mode control. Keep the SQL `ORDER BY` and the defensive post-dedupe Python sort in sync.
+
 ## Frontend development workflow
 
 From the repo root:

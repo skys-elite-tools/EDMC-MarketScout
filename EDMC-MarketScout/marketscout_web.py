@@ -445,7 +445,7 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
     if where:
         sql += " WHERE " + " AND ".join(where)
     sql += " GROUP BY st.market_id"
-    sql += " ORDER BY best_buy_score IS NULL, best_buy_score DESC, market_updated IS NULL, market_updated DESC, station_visit DESC, system ASC, station ASC"
+    sql += " ORDER BY market_updated IS NULL, market_updated DESC, station_visit IS NULL, station_visit DESC, best_buy_score IS NULL, best_buy_score DESC, system ASC, station ASC"
     limit = one("limit")
     try:
         lim = max(1, min(int(limit), 2000)) if limit else 1000
@@ -463,10 +463,12 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
         return (str(row.get("system") or "").strip().casefold(), str(row.get("station") or "").strip().casefold())
 
     def row_rank(row):
-        # Prefer rows with real visits and fresh market data, then higher best-buy score.
+        # Prefer the freshest station row first, then higher best-buy score.
+        # Timestamp strings are stored in ISO-like formats, so lexical ordering
+        # matches chronological ordering for our data.
         return (
-            1 if row.get("station_visit") else 0,
             str(row.get("market_updated") or ""),
+            str(row.get("station_visit") or ""),
             float(row.get("best_buy_score") or -1),
             0 if row.get("source") == "local_visit" else -1,
         )
@@ -480,7 +482,15 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
         if prev is None or row_rank(row) > row_rank(prev):
             deduped[key] = row
     rows = list(deduped.values())
-    rows.sort(key=lambda r: (r.get("best_buy_score") is None, -(float(r.get("best_buy_score") or 0)), r.get("market_updated") is None, str(r.get("market_updated") or ""), str(r.get("system") or ""), str(r.get("station") or "")))
+
+    # Keep the defensive post-dedupe ordering in sync with the SQL order:
+    # newest market updates first, then newest station visits, then strongest
+    # best-buy score, followed by stable alphabetical station identity.
+    # Use stable sorts so each priority can use its natural direction.
+    rows.sort(key=lambda r: (str(r.get("system") or "").casefold(), str(r.get("station") or "").casefold()))
+    rows.sort(key=lambda r: float(r.get("best_buy_score") or -1), reverse=True)
+    rows.sort(key=lambda r: str(r.get("station_visit") or ""), reverse=True)
+    rows.sort(key=lambda r: str(r.get("market_updated") or ""), reverse=True)
 
     return {"rows": rows, "count": len(rows), "raw_count": len(raw_rows), "display_columns": display_cols, "watched_commodities": watched}
 
