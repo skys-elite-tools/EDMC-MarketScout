@@ -78,15 +78,18 @@ export function potentialProfitTooltip(maxSell) {
 export function commodityCellParts(row, commodity, side) {
   const qtyName = side === 'buy' ? 'supply' : 'demand'
   const qtyValue = row[`${commodity}_${qtyName}`]
+  const priceValue = row[`${commodity}_${side}`]
+  const hideZeroBuy = side === 'buy' && num(priceValue) === 0
   const potentialProfit = side === 'buy' ? row[`${commodity}_potential_profit`] : null
   return {
-    price: money(row[`${commodity}_${side}`]),
+    price: hideZeroBuy ? '—' : money(priceValue),
     qtyName,
     qty: money(qtyValue),
     qtyClass: quantityClass(qtyValue),
+    showQuantity: !hideZeroBuy,
     potentialProfit: money(potentialProfit),
     potentialProfitClass: potentialProfitClass(potentialProfit),
-    hasPotentialProfit: shouldDisplayPotentialProfit(potentialProfit),
+    hasPotentialProfit: !hideZeroBuy && shouldDisplayPotentialProfit(potentialProfit),
     inaraId: row[`${commodity}_inara_id`],
     maxSell: row[`${commodity}_max_sell`],
   }
