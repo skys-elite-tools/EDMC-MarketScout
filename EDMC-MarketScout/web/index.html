@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EDMC-MarketScout</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div>
+      <h1>EDMC-MarketScout</h1>
+      <p class="subtitle">Local-only scouting database. No uploads, no external scripts.</p>
+    </div>
+    <div class="status">
+      <span id="statusText">Loading…</span>
+      <label><input type="checkbox" id="autoRefresh" checked /> Auto-refresh</label>
+    </div>
+  </header>
+
+  <section class="filters">
+    <label>System <input id="systemFilter" type="text" /></label>
+    <label>Station <input id="stationFilter" type="text" /></label>
+    <label>Economy <input id="economyFilter" type="text" value="Extraction, Refinery" /></label>
+    <label>State <input id="stateFilter" type="text" placeholder="Infrastructure Failure" /></label>
+    <label>Source
+      <select id="sourceFilter">
+        <option>Any</option>
+        <option>local_visit</option>
+        <option>spansh</option>
+        <option>imported</option>
+      </select>
+    </label>
+    <label class="check"><input id="includeFc" type="checkbox" /> Include fleet carriers</label>
+    <label>Highlight price ≤ <input id="priceThreshold" type="number" value="6000" /></label>
+    <label>Strong supply ≥ <input id="supplyThreshold" type="number" value="10000" /></label>
+    <label>Limit <input id="limitRows" type="number" value="1000" min="1" max="2000" /></label>
+    <label class="ledgerOnly">Commodity <input id="ledgerCommodity" type="text" placeholder="Gold" /></label>
+    <label class="ledgerOnly">Trade Type
+      <select id="ledgerType"><option>Any</option><option>buy</option><option>sell</option></select>
+    </label>
+    <label class="ledgerOnly check"><input id="showLifo" type="checkbox" /> Show LIFO</label>
+    <button id="applyBtn">Apply</button>
+    <button id="stationsBtn" type="button">Stations</button>
+    <button id="historyBtn" type="button">Jackpot History</button>
+    <button id="ledgerBtn" type="button">Ledger</button>
+    <button id="settingsBtn" type="button">Commodities</button>
+  </section>
+
+  <section id="settingsPanel" class="settingsPanel hidden">
+    <div class="settingsHeader"><h2>Watched commodities</h2><button id="closeSettingsBtn" type="button">Close</button></div>
+    <p class="subtitle">Watched commodities drive highlighting/details. Select Buy/Sell columns separately for the table.</p>
+    <label>Filter commodities <input id="commoditySearch" type="text" placeholder="gold, palladium, osmium…" /></label>
+    <div id="commoditySettings" class="commoditySettings"></div>
+    <button id="saveSettingsBtn" type="button">Save commodity settings</button>
+  </section>
+
+  <main>
+    <section class="tablePanel">
+      <table id="stationTable">
+        <thead>
+          <tr>
+            <th>Flag</th>
+            <th>System / Station</th>
+            <th>State / Economy</th>
+            <th>Best Buy</th>
+            <th>Palladium Buy</th>
+            <th>Gold Buy</th>
+            <th>Silver Buy</th>
+            <th>Updated</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+    <aside class="details" id="detailsPane">
+      <h2>Details</h2>
+      <p>Select a row.</p>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
