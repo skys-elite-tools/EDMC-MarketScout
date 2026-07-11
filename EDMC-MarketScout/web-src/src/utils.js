@@ -44,6 +44,30 @@ export function columnKey(col) {
   return `${col.commodity}::${col.side}`
 }
 
+export function inaraCommoditySellUrl(system, inaraId) {
+  const id = num(inaraId)
+  const nearSystem = String(system || '').trim()
+  if (id === null || id <= 0 || !nearSystem) return ''
+  const params = new URLSearchParams()
+  params.set('formbrief', '1')
+  params.set('pi1', '2')
+  params.append('pa1[]', String(Math.trunc(id)))
+  params.set('ps1', nearSystem)
+  params.set('pi10', '1')
+  params.set('pi11', '0')
+  params.set('pi3', '3')
+  params.set('pi9', '0')
+  params.set('pi4', '0')
+  params.set('pi8', '1')
+  params.set('pi13', '1')
+  params.set('pi5', '0')
+  params.set('pi12', '0')
+  params.set('pi7', '0')
+  params.set('pi14', '0')
+  params.set('ps3', '')
+  return `https://inara.cz/elite/commodities/?${params.toString()}`
+}
+
 export function commodityCellParts(row, commodity, side) {
   const qtyName = side === 'buy' ? 'supply' : 'demand'
   const qtyValue = row[`${commodity}_${qtyName}`]
@@ -56,6 +80,7 @@ export function commodityCellParts(row, commodity, side) {
     potentialProfit: money(potentialProfit),
     potentialProfitClass: potentialProfitClass(potentialProfit),
     hasPotentialProfit: num(potentialProfit) !== null,
+    inaraId: row[`${commodity}_inara_id`],
   }
 }
 

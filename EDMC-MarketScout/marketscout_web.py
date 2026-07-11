@@ -398,6 +398,12 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
         "ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_supply"
     )
     select_cols.append(
+        "(SELECT cgs2.inara_id FROM market_prices mp2 "
+        "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
+        "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 "
+        "ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_inara_id"
+    )
+    select_cols.append(
         "(SELECT CASE WHEN COALESCE(mp2.supply, 0) > 0 THEN (cgs2.max_sell - mp2.buy_price) END FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
         "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 "
@@ -410,6 +416,7 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
             f"MAX(CASE WHEN mp.commodity='{safe}' THEN mp.sell_price END) AS '{c}_sell'",
             f"MAX(CASE WHEN mp.commodity='{safe}' THEN mp.supply END) AS '{c}_supply'",
             f"MAX(CASE WHEN mp.commodity='{safe}' THEN mp.demand END) AS '{c}_demand'",
+            f"MAX(CASE WHEN mp.commodity='{safe}' THEN cgs.inara_id END) AS '{c}_inara_id'",
             f"MAX(CASE WHEN mp.commodity='{safe}' AND mp.buy_price IS NOT NULL AND mp.buy_price > 0 AND COALESCE(mp.supply, 0) > 0 AND cgs.max_sell IS NOT NULL THEN cgs.max_sell - mp.buy_price END) AS '{c}_potential_profit'",
         ])
     sql = "SELECT " + ", ".join(select_cols) + " FROM stations st LEFT JOIN systems s ON s.system_address=st.system_address LEFT JOIN market_prices mp ON mp.market_id=st.market_id LEFT JOIN commodity_global_stats cgs ON cgs.commodity=mp.commodity"

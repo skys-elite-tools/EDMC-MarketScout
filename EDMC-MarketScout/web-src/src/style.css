@@ -271,6 +271,15 @@ tr.strong { background: var(--strong); }
 .potentialLow { color: #ff9a9a; }
 .potentialMedium { color: #f2d477; }
 .potentialHigh { color: #9be7a4; }
+.potentialLink {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+.potentialLink:hover {
+  color: var(--accent);
+}
 .flag { white-space: nowrap; color: #f2d477; }
 .flagItem + .flagItem { margin-top: 2px; }
 .details {

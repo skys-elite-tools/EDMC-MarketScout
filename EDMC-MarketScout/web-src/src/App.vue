@@ -257,6 +257,7 @@ onUnmounted(() => {
           :watched-commodities="watchedCommodities"
           :price-threshold="filters.priceThreshold"
           :supply-threshold="filters.supplyThreshold"
+          :current-system="latestJournalEvent?.system || ''"
           @select="setSelected"
         />
         <JackpotHistory
