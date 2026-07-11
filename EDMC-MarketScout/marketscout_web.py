@@ -243,11 +243,11 @@ def api_commodities() -> Dict[str, Any]:
     """
     with connect() as conn:
         stat_rows = conn.execute(
-            "SELECT commodity, max_sell, min_buy FROM commodity_global_stats "
+            "SELECT * FROM commodity_global_stats "
             "WHERE commodity IS NOT NULL AND commodity != '' ORDER BY commodity"
         ).fetchall()
-        stats = {r[0]: {"max_sell": r[1], "min_buy": r[2]} for r in stat_rows}
-        rows = [r[0] for r in stat_rows]
+        stats = {r["commodity"]: row_to_dict(r) for r in stat_rows}
+        rows = [r["commodity"] for r in stat_rows]
         source = "commodity_global_stats"
         if not rows:
             rows = [

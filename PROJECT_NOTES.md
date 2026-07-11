@@ -134,7 +134,7 @@ Main data concepts:
 - Systems: system-level data such as name/address, coordinates, population, security, economy/state context.
 - Stations: station-level data such as name, market ID, station type, pad size, economies, faction/state, source, source timestamps, fleet carrier flag.
 - Market prices: commodity rows per market/station. Current direction is to store all commodities, not just a fixed metal list.
-- Commodity global stats: catalog/config table populated from `commodities.csv` with commodity display name, `max_sell`, and `min_buy`.
+- Commodity global stats: catalog/config table populated from `commodities.csv` with commodity display name, category, INARA ID, average buy/sell/profit, max sell, min buy, and max profit.
 - Jackpot events/samples: static jackpot context plus event-driven time-series samples.
 - Trade events/lots: ledger rows for MarketBuy/MarketSell, Journal profit fields, and optional LIFO details.
 
@@ -154,10 +154,10 @@ Current design intent:
 Default `commodities.csv` includes at least:
 
 ```csv
-commodity_name,max_sell,min_buy
-Palladium,71000,
-Gold,67000,
-Silver,49000,
+commodity_name,category,inara_id,avg_sell,avg_buy,avg_profit,max_sell,min_buy,max_profit
+Palladium,Metals,45,52035,48112,3923,71176,4736,66440
+Gold,Metals,42,47926,44911,3015,67461,4266,63195
+Silver,Metals,46,37713,34459,3254,49426,3049,46377
 ```
 
 Best Buy scoring:

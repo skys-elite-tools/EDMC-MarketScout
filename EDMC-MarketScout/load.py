@@ -7,7 +7,6 @@ Install: copy the MarketScout folder into EDMC's plugins directory and restart E
 """
 from __future__ import annotations
 
-import csv
 import json
 import math
 import os
@@ -57,6 +56,7 @@ WINDOW: Optional["MarketScoutWindow"] = None
 PLUGIN_DIR: Optional[str] = None
 WEB_MODULE: Any = None
 LEDGER_MODULE: Any = None
+COMMODITIES_IMPORTER_MODULE: Any = None
 LAST_CURRENT_POS: Optional[Tuple[float, float, float]] = None
 LAST_CURRENT_SYSTEM: Optional[str] = None
 
@@ -90,6 +90,21 @@ def load_ledger_module():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     LEDGER_MODULE = module
+    return module
+
+
+def load_commodities_importer_module():
+    """Load the commodity CSV importer without relying on sys.path."""
+    global COMMODITIES_IMPORTER_MODULE
+    if COMMODITIES_IMPORTER_MODULE is not None:
+        return COMMODITIES_IMPORTER_MODULE
+    path = os.path.join(os.path.dirname(__file__), "commodities_importer.py")
+    spec = importlib.util.spec_from_file_location("commodities_importer_local", path)
+    if spec is None or spec.loader is None:
+        raise ImportError("Could not load commodities_importer.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    COMMODITIES_IMPORTER_MODULE = module
     return module
 
 def load_importer_module():
@@ -313,8 +328,14 @@ def init_db(conn: sqlite3.Connection) -> None:
 
         CREATE TABLE IF NOT EXISTS commodity_global_stats (
             commodity TEXT PRIMARY KEY,
+            category TEXT,
+            inara_id INTEGER,
+            avg_sell INTEGER,
+            avg_buy INTEGER,
+            avg_profit INTEGER,
             max_sell INTEGER,
             min_buy INTEGER,
+            max_profit INTEGER,
             updated_datetime TEXT
         );
 
@@ -410,6 +431,10 @@ def migrate_db(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_stations_source ON stations(source)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_stations_fleet ON stations(is_fleet_carrier)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_market_prices_commodity ON market_prices(commodity)")
+    try:
+        load_commodities_importer_module().migrate_db(conn)
+    except Exception:
+        log_exception("commodities importer migrate_db")
     ensure_default_settings(conn)
     ensure_default_commodity_global_stats(conn)
 
@@ -579,48 +604,21 @@ def ensure_default_settings(conn: sqlite3.Connection) -> None:
         setting_set(conn, "watched_columns", cols)
 
 def ensure_default_commodity_global_stats(conn: sqlite3.Connection) -> None:
-    ts = now_utc_iso()
-    for commodity, vals in DEFAULT_COMMODITY_GLOBAL_STATS.items():
-        conn.execute(
-            "INSERT OR IGNORE INTO commodity_global_stats(commodity, max_sell, min_buy, updated_datetime) VALUES (?, ?, ?, ?)",
-            (commodity, vals.get("max_sell"), vals.get("min_buy"), ts),
-        )
+    load_commodities_importer_module().ensure_default_commodity_global_stats(conn, DEFAULT_COMMODITY_GLOBAL_STATS)
 
 def refresh_commodity_global_stats_from_csv(conn: sqlite3.Connection, plugin_dir: str) -> None:
     """Refresh commodity_global_stats from optional commodities.csv.
 
-    CSV format: commodity_name,max_sell,min_buy
-    Missing/blank numeric values are stored as NULL. This is intentionally
-    manual/local and performs no scraping or network activity.
+    This is intentionally manual/local and performs no scraping or network
+    activity. The importer module owns the CSV schema and SQLite upsert.
     """
-    ensure_default_commodity_global_stats(conn)
-    path = os.path.join(plugin_dir, "commodities.csv")
-    if not os.path.exists(path):
-        conn.commit()
-        return
     try:
-        ts = now_utc_iso()
-        with open(path, "r", encoding="utf-8-sig", newline="") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                raw_name = row.get("commodity_name") or row.get("commodity") or row.get("name")
-                commodity = normalize_commodity_name(raw_name)
-                if not commodity:
-                    continue
-                max_sell = first_int(row.get("max_sell"), row.get("commodityMaxSellPrice"), row.get("maxSell"))
-                min_buy = first_int(row.get("min_buy"), row.get("minBuy"))
-                conn.execute(
-                    """
-                    INSERT INTO commodity_global_stats(commodity, max_sell, min_buy, updated_datetime)
-                    VALUES (?, ?, ?, ?)
-                    ON CONFLICT(commodity) DO UPDATE SET
-                        max_sell=excluded.max_sell,
-                        min_buy=excluded.min_buy,
-                        updated_datetime=excluded.updated_datetime
-                    """,
-                    (commodity, max_sell, min_buy, ts),
-                )
-        conn.commit()
+        load_commodities_importer_module().refresh_commodity_global_stats_from_csv(
+            conn,
+            plugin_dir,
+            DEFAULT_COMMODITY_GLOBAL_STATS,
+            normalize_commodity_name,
+        )
     except Exception:
         log_exception("refresh_commodity_global_stats_from_csv")
 

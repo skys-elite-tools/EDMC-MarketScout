@@ -112,7 +112,7 @@ The Web UI includes a `Jackpot History` button that displays the stored samples.
 
 - MarketScout now stores all commodities seen in market data, not just the original metals.
 - The Web UI has a Commodities settings panel. Watched commodities affect highlighting/details, while Buy/Sell table columns can be selected separately.
-- Added `commodity_global_stats` and Best Buy scoring. On startup, MarketScout looks for `commodities.csv` in the plugin folder and refreshes stats if present. Format: `commodity_name,max_sell,min_buy`. Defaults include Palladium 71000, Gold 67000, Silver 49000.
+- Added `commodity_global_stats` and Best Buy scoring. On startup, MarketScout looks for `commodities.csv` in the plugin folder and refreshes stats if present. Current catalog columns are `commodity_name`, `category`, `inara_id`, `avg_sell`, `avg_buy`, `avg_profit`, `max_sell`, `min_buy`, and `max_profit`. Defaults include Palladium 71000, Gold 67000, Silver 49000.
 - Source remains available in details/API but is not shown as a default table column.
 
 

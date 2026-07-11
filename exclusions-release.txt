@@ -1,0 +1,7 @@
+node_modules
+__pycache__
+*.pyc
+*.log
+marketscout.sqlite3
+marketscout-ui.json
+web-src/dist
