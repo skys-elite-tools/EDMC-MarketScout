@@ -115,12 +115,16 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
   <label class="economyPresetField">
     Economy
     <div class="economyPresetControls">
-      <div class="economyCombo">
+      <div
+        class="economyCombo"
+        title="You can type multiple economies separated by commas"
+      >
         <input
           ref="inputEl"
           :value="modelValue"
           type="text"
           placeholder="Any economy"
+          title="You can type multiple economies separated by commas"
           autocomplete="off"
           @input="updateValue($event.target.value)"
           @keyup="openFilteredMenu"

@@ -1,4 +1,292 @@
-commodity_name,max_sell,min_buy
-Palladium,71000,
-Gold,67000,
-Silver,49000,
+commodity_name,category,inara_id,avg_sell,avg_buy,avg_profit,max_sell,min_buy,max_profit
+Agronomic Treatment,Chemicals,10268,3549,2742,807,35554,272,35282
+Explosives,Chemicals,3,628,369,259,2101,19,2082
+Hydrogen Fuel,Chemicals,4,93,94,-1,187,3,184
+Hydrogen Peroxide,Chemicals,138,3110,0,3110,3301,0,3301
+Liquid oxygen,Chemicals,137,1637,823,814,4276,66,4210
+Mineral Oil,Chemicals,5,581,256,325,1483,9,1474
+Nerve Agents,Chemicals,96,13458,11951,1507,15474,1088,14386
+Pesticides,Chemicals,6,428,242,186,1799,16,1783
+Rockforth Fertiliser,Chemicals,10264,0,0,0,0,0,0
+Surface Stabilisers,Chemicals,97,645,546,99,2610,36,2574
+Synthetic Reagents,Chemicals,98,7368,6032,1336,7851,5226,2625
+Tritium,Chemicals,10269,53360,50867,2493,61894,42413,19481
+Water,Chemicals,139,495,43,452,5120,2,5118
+Clothing,Consumer Items,7,690,378,312,2889,18,2871
+Consumer Technology,Consumer Items,8,7143,6052,1091,7851,534,7317
+Domestic Appliances,Consumer Items,9,881,557,324,1216,40,1176
+Evacuation Shelter,Consumer Items,99,389,285,104,3967,26,3941
+Survival Equipment,Consumer Items,164,576,492,84,4834,240,4594
+Beer,Legal Drugs,10,614,222,392,30485,7,30478
+Bootleg Liquor,Legal Drugs,95,675,0,675,5363,0,5363
+Liquor,Legal Drugs,11,960,717,243,51375,44,51331
+Narcotics,Legal Drugs,12,9011,8230,781,11306,763,10543
+"Onionhead Gamma
+                                        Strain",Legal Drugs,10435,5285,2494,2791,6674,238,6436
+Tobacco,Legal Drugs,13,5362,4520,842,6916,382,6534
+Wine,Legal Drugs,14,688,320,368,33953,13,33940
+Algae,Foods,15,496,81,415,5488,3,5485
+Animal Meat,Foods,16,1810,1284,526,4836,107,4729
+Coffee,Foods,17,1750,1206,544,2847,97,2750
+Fish,Foods,18,872,476,396,6821,24,6797
+Food Cartridges,Foods,19,325,66,259,4303,5,4298
+Fruit and Vegetables,Foods,20,711,314,397,12442,18,12424
+Grain,Foods,21,625,222,403,13862,9,13853
+Synthetic Meat,Foods,23,610,231,379,4973,14,4959
+Tea,Foods,22,1966,1417,549,3076,109,2967
+Ceramic Composites,Industrial Materials,100,986,351,635,10541,70,10471
+CMM Composite,Industrial Materials,140,6659,5323,1336,20292,4087,16205
+"Curated Commodity
+                                        Package",Industrial Materials,10488,0,0,0,0,0,0
+Insulating Membrane,Industrial Materials,141,11379,10115,1264,20610,8605,12005
+Meta-Alloys,Industrial Materials,101,197033,246598,-49565,246586,246598,-12
+"Micro-weave Cooling
+                                        Hoses",Industrial Materials,185,1892,1132,760,6221,896,5325
+Neofabric Insulation,Industrial Materials,183,6017,4332,1685,20051,3806,16245
+Polymers,Industrial Materials,26,586,176,410,9332,6,9326
+Semiconductors,Industrial Materials,28,1290,957,333,2021,78,1943
+Superconductors,Industrial Materials,27,7054,6122,932,10622,5020,5602
+Articulation Motors,Machinery,182,7574,0,7574,7851,0,7851
+Atmospheric Processors,Machinery,87,504,345,159,1851,27,1824
+Building Fabricators,Machinery,102,2094,1970,124,3342,175,3167
+Crop Harvesters,Machinery,29,2147,1903,244,3756,165,3591
+Emergency Power Cells,Machinery,158,2802,1884,918,6672,1298,5374
+Energy Grid Assembly,Machinery,149,3223,2309,914,6876,2124,4752
+Exhaust Manifold,Machinery,159,2357,1444,913,2511,1362,1149
+Geological Equipment,Machinery,103,1705,1608,97,2854,137,2717
+Heatsink Interlink,Machinery,151,2606,1677,929,2764,1547,1217
+HN Shock Mount,Machinery,150,1879,1531,348,2634,140,2494
+Ion Distributor,Machinery,160,2834,1962,872,3053,1776,1277
+Magnetic Emitter Coil,Machinery,152,1789,872,917,1922,95,1827
+Marine Equipment,Machinery,86,3960,3680,280,5511,327,5184
+Microbial Furnaces,Machinery,85,447,164,283,1941,10,1931
+Mineral Extractors,Machinery,31,795,561,234,2647,40,2607
+Modular Terminals,Machinery,181,2480,0,2480,2634,0,2634
+Power Converter,Machinery,153,1873,1085,788,6242,1005,5237
+Power Generators,Machinery,83,2685,2183,502,4529,1642,2887
+Power Transfer Bus,Machinery,161,2714,1686,1028,6264,1647,4617
+Radiation Baffle,Machinery,162,2233,1322,911,2396,1249,1147
+"Reinforced Mounting
+                                        Plate",Machinery,163,2978,2075,903,3212,1897,1315
+Skimmer Components,Machinery,104,919,815,104,1703,73,1630
+Thermal Cooling Units,Machinery,105,3459,3335,124,4893,306,4587
+Water Purifiers,Machinery,82,686,375,311,3131,63,3068
+Advanced Medicines,Medicines,166,1666,1214,452,4805,97,4708
+Agri-Medicines,Medicines,1,1208,905,303,1771,81,1690
+Basic Medicines,Medicines,33,531,310,221,5258,20,5238
+Combat Stabilisers,Medicines,34,3134,2442,692,3756,1817,1939
+Performance Enhancers,Medicines,35,7208,6149,1059,7859,539,7320
+Progenitor Cells,Medicines,36,7106,6076,1030,7875,579,7296
+Aluminium,Metals,37,2833,2233,600,3758,199,3559
+Beryllium,Metals,38,41110,38997,2113,44385,3823,40562
+Bismuth,Metals,106,2909,2068,841,3567,202,3365
+Cobalt,Metals,39,4735,3645,1090,20109,670,19439
+Copper,Metals,40,773,463,310,1931,32,1899
+Gallium,Metals,41,25851,24203,1648,27641,2371,25270
+Gold,Metals,42,47926,44911,3015,67461,4266,63195
+Hafnium 178,Metals,124,0,0,0,0,0,0
+Indium,Metals,43,23949,22178,1771,25919,2195,23724
+Lanthanum,Metals,107,9503,8114,1389,10196,7033,3163
+Lithium,Metals,44,2096,1598,498,2892,130,2762
+Osmium,Metals,72,56245,0,56245,273000,0,273000
+Palladium,Metals,45,52035,48112,3923,71176,4736,66440
+Platinum,Metals,81,70709,0,70709,302844,0,302844
+Praseodymium,Metals,143,8618,0,8618,11509,0,11509
+Samarium,Metals,142,28447,0,28447,48636,0,48636
+Silver,Metals,46,37713,34459,3254,49426,3049,46377
+Steel,Metals,10487,4518,3790,728,5593,347,5246
+Tantalum,Metals,47,14332,13017,1315,15582,1264,14318
+Thallium,Metals,108,4313,3296,1017,4997,2511,2486
+Thorium,Metals,109,12292,10736,1556,12917,9206,3711
+Titanium,Metals,48,4795,4033,762,5865,392,5473
+Uranium,Metals,50,7586,6649,937,8587,600,7987
+Alexandrite,Minerals,10249,228192,0,228192,877305,0,877305
+Bauxite,Minerals,51,2108,1586,522,15327,597,14730
+Benitoite,Minerals,10247,165166,0,165166,688164,0,688164
+Bertrandite,Minerals,52,18491,16461,2030,21649,1477,20172
+Bromellite,Minerals,148,33615,0,33615,116750,0,116750
+Coltan,Minerals,55,6157,5114,1043,7849,451,7398
+Cryolite,Minerals,110,15216,11262,3954,29940,915,29025
+Gallite,Minerals,56,12257,10534,1723,13829,932,12897
+Goslarite,Minerals,111,7835,5075,2760,16048,3625,12423
+Grandidierite,Minerals,10248,212210,0,212210,931533,0,931533
+Haematite,Minerals,10486,2852,2219,633,17708,1121,16587
+Indite,Minerals,57,11278,9844,1434,13470,881,12589
+Jadeite,Minerals,168,42495,0,42495,149555,0,149555
+Lepidolite,Minerals,58,1772,1294,478,6450,38,6412
+Lithium Hydroxide,Minerals,147,5649,0,5649,7729,0,7729
+"Low Temperature
+                                        Diamonds",Minerals,144,130306,0,130306,587181,0,587181
+Methane Clathrate,Minerals,145,1595,0,1595,1740,0,1740
+"Methanol Monohydrate
+                                        Crystals",Minerals,146,2522,0,2522,3794,0,3794
+Moissanite,Minerals,116,26760,0,26760,82809,0,82809
+Monazite,Minerals,10245,271546,0,271546,865908,0,865908
+Musgravite,Minerals,10246,221421,0,221421,954436,0,954436
+Painite,Minerals,84,57543,0,57543,418158,0,418158
+Pyrophyllite,Minerals,112,14723,10529,4194,29098,7794,21304
+Rhodplumsite,Minerals,10243,187069,0,187069,855939,0,855939
+Rutile,Minerals,59,3093,2470,623,21736,1285,20451
+Serendibite,Minerals,10244,187553,0,187553,570948,0,570948
+Taaffeite,Minerals,120,52293,0,52293,183603,0,183603
+Uraninite,Minerals,60,3012,2339,673,4202,188,4014
+Void Opal,Minerals,10250,150815,0,150815,840152,0,840152
+AI Relics,Salvage,89,166464,0,166464,0,0,0
+Ancient Artefact,Salvage,121,9611,0,9611,0,0,0
+Ancient Key,Salvage,10240,29357,0,29357,29357,0,29357
+Anomaly Particles,Salvage,10270,0,0,0,0,0,0
+"Antimatter Containment
+                                        Unit",Salvage,10167,73555,0,73555,0,0,0
+Antique Jewellery,Salvage,10209,143778,0,143778,0,0,0
+Antiquities,Salvage,91,158185,0,158185,0,0,0
+Assault Plans,Salvage,169,812,0,812,0,0,0
+Black Box,Salvage,122,31078,0,31078,31953,0,31953
+Bone Fragments,Salvage,10456,0,0,0,0,0,0
+"Caustic Tissue
+                                        Sample",Salvage,10439,270720,0,270720,0,0,0
+Commercial Samples,Salvage,170,316,0,316,0,0,0
+Coral Sap,Salvage,10451,130817,0,130817,0,0,0
+Cyst Specimen,Salvage,10459,0,0,0,0,0,0
+Damaged Escape Pod,Salvage,10215,17175,0,17175,35000,0,35000
+Data Core,Salvage,10166,6892,0,6892,0,0,0
+Diplomatic Bag,Salvage,171,491,0,491,0,0,0
+Earth Relics,Salvage,10210,21867,0,21867,0,0,0
+"Encrypted
+                                        Correspondence",Salvage,172,339,0,339,0,0,0
+Encrypted Data Storage,Salvage,173,691,0,691,0,0,0
+Experimental Chemicals,Salvage,123,17198,0,17198,17509,0,17509
+Fossil Remnants,Salvage,10221,11199,0,11199,0,0,0
+Gene Bank,Salvage,10211,12703,0,12703,0,0,0
+Geological Samples,Salvage,174,382,0,382,0,0,0
+Guardian Casket,Salvage,10153,16010,0,16010,16010,0,16010
+Guardian Orb,Salvage,10154,17110,0,17110,17110,0,17110
+Guardian Relic,Salvage,10155,24534,0,24534,24534,0,24534
+Guardian Tablet,Salvage,10156,17110,0,17110,17110,0,17110
+Guardian Totem,Salvage,10157,20090,0,20090,20090,0,20090
+Guardian Urn,Salvage,10158,14599,0,14599,14599,0,14599
+Hostages,Salvage,175,34603,0,34603,36157,0,36157
+Impure Spire Mineral,Salvage,10452,159930,0,159930,0,0,0
+"Large Survey Data
+                                        Cache",Salvage,125,154752,0,154752,0,0,0
+Military Intelligence,Salvage,126,62834,0,62834,0,0,0
+Military Plans,Salvage,127,15945,0,15945,0,0,0
+Mollusc Brain Tissue,Salvage,10256,47106,0,47106,0,0,0
+Mollusc Fluid,Salvage,10255,7926,0,7926,0,0,0
+Mollusc Membrane,Salvage,10252,25727,0,25727,0,0,0
+Mollusc Mycelium,Salvage,10253,46449,0,46449,0,0,0
+Mollusc Soft Tissue,Salvage,10254,20760,0,20760,0,0,0
+Mollusc Spores,Salvage,10251,8199,0,8199,0,0,0
+Mysterious Idol,Salvage,10219,14282,0,14282,0,0,0
+Occupied Escape Pod,Salvage,129,30431,0,30431,46727,0,46727
+Organ Sample,Salvage,10458,0,0,0,0,0,0
+Personal Effects,Salvage,10159,9582,0,9582,9996,0,9996
+Pod Core Tissue,Salvage,10259,47800,0,47800,0,0,0
+Pod Dead Tissue,Salvage,10257,133610,0,133610,0,0,0
+Pod Mesoglea,Salvage,10262,270090,0,270090,0,0,0
+Pod Outer Tissue,Salvage,10260,72100,0,72100,0,0,0
+Pod Shell Tissue,Salvage,10261,519200,0,519200,0,0,0
+Pod Surface Tissue,Salvage,10258,288190,0,288190,0,0,0
+Pod Tissue,Salvage,10263,125460,0,125460,0,0,0
+Political Prisoners,Salvage,177,3776,0,3776,0,0,0
+Precious Gems,Salvage,10165,123656,0,123656,0,0,0
+"Prohibited Research
+                                        Materials",Salvage,10220,132881,0,132881,0,0,0
+"Protective Membrane
+                                        Scrap",Salvage,10449,0,0,0,0,0,0
+Prototype Tech,Salvage,130,17755,0,17755,0,0,0
+Rare Artwork,Salvage,131,23585,0,23585,151151,0,151151
+Rebel Transmissions,Salvage,132,15051,0,15051,0,0,0
+SAP 8 Core Container,Salvage,90,49911,0,49911,0,0,0
+Scientific Research,Salvage,178,1705,0,1705,0,0,0
+Scientific Samples,Salvage,179,1679,0,1679,0,0,0
+"Semi-Refined Spire
+                                        Mineral",Salvage,10453,792105,0,792105,0,0,0
+"Small Survey Data
+                                        Cache",Salvage,10208,7080,0,7080,0,0,0
+Space Pioneer Relics,Salvage,10164,14354,0,14354,0,0,0
+Tactical Data,Salvage,180,779,0,779,0,0,0
+Technical Blueprints,Salvage,133,16165,0,16165,0,0,0
+"Thargoid Basilisk Tissue
+                                        Sample",Salvage,10236,181046,0,181046,0,0,0
+"Thargoid Bio-storage
+                                        Capsule",Salvage,10450,345832,0,345832,0,0,0
+"Thargoid Biological
+                                        Matter",Salvage,10160,205472,0,205472,0,0,0
+"Thargoid Cyclops Tissue
+                                        Sample",Salvage,10234,158660,0,158660,0,0,0
+"Thargoid Glaive Tissue
+                                        Sample",Salvage,10441,71903,0,71903,0,0,0
+Thargoid Heart,Salvage,10235,169717,0,169717,0,0,0
+"Thargoid Hydra Tissue
+                                        Sample",Salvage,10239,269388,0,269388,0,0,0
+Thargoid Link,Salvage,10161,102694,0,102694,0,0,0
+"Thargoid Medusa Tissue
+                                        Sample",Salvage,10237,206643,0,206643,0,0,0
+"Thargoid Orthrus Tissue
+                                        Sample",Salvage,10438,120717,0,120717,0,0,0
+Thargoid Probe,Salvage,186,441353,0,441353,442189,0,442189
+Thargoid Resin,Salvage,10162,32825,0,32825,0,0,0
+"Thargoid Scout Tissue
+                                        Sample",Salvage,10238,59609,0,59609,0,0,0
+"Thargoid Scythe Tissue
+                                        Sample",Salvage,10448,60344,0,60344,0,0,0
+Thargoid Sensor,Salvage,10226,304458,0,304458,305132,0,305132
+"Thargoid Technology
+                                        Samples",Salvage,10163,197247,0,197247,0,0,0
+Time Capsule,Salvage,10212,4810,0,4810,0,0,0
+"Titan Deep Tissue
+                                        Sample",Salvage,10442,498523,0,498523,0,0,0
+"Titan Drive
+                                        Component",Salvage,10457,18322797,0,18322797,0,0,0
+"Titan Maw Deep Tissue
+                                        Sample",Salvage,10445,1,0,1,0,0,0
+"Titan Maw Partial Tissue
+                                        Sample",Salvage,10446,298182,0,298182,0,0,0
+"Titan Maw Tissue
+                                        Sample",Salvage,10447,446407,0,446407,0,0,0
+"Titan Partial Tissue
+                                        Sample",Salvage,10444,154874,0,154874,0,0,0
+Titan Tissue Sample,Salvage,10443,302423,0,302423,0,0,0
+Trade Data,Salvage,134,14879,0,14879,14879,0,14879
+"Trinkets of Hidden
+                                        Fortune",Salvage,135,3375,0,3375,0,0,0
+Unclassified Relic,Salvage,10437,23750,0,23750,0,0,0
+"Unoccupied Escape
+                                        Pod",Salvage,10440,4104,0,4104,4418,0,4418
+Unstable Data Core,Salvage,176,4882,0,4882,0,0,0
+Wreckage Components,Salvage,10207,9049,0,9049,9406,0,9406
+Imperial Slaves,Slaves,49,16571,16567,4,18420,1503,16917
+Slaves,Slaves,53,11094,9961,1133,15056,8741,6315
+Advanced Catalysers,Technology,61,3061,2499,562,3756,222,3534
+Animal Monitors,Technology,62,582,313,269,4673,29,4644
+Aquaponic Systems,Technology,63,805,447,358,2745,20,2725
+Auto-Fabricators,Technology,65,3936,3310,626,5286,301,4985
+Bioreducing Lichen,Technology,66,1275,881,394,1703,69,1634
+Computer Components,Technology,67,790,545,245,1798,250,1548
+H.E. Suits,Technology,68,738,376,362,2270,98,2172
+"Hardware Diagnostic
+                                        Sensor",Technology,155,7606,6041,1565,8047,5836,2211
+Land Enrichment Systems,Technology,71,4860,4305,555,9662,400,9262
+"Medical Diagnostic
+                                        Equipment",Technology,154,3022,2563,459,7428,283,7145
+Micro Controllers,Technology,156,5885,5014,871,6810,3988,2822
+Muon Imager,Technology,119,6336,5738,598,7398,564,6834
+Nanobreakers,Technology,167,2372,0,2372,2511,0,2511
+Resonating Separators,Technology,69,6024,5278,746,7500,465,7035
+Robotics,Technology,70,2211,1718,493,3650,1010,2640
+Structural Regulators,Technology,117,1788,1641,147,2999,1010,1989
+Telemetry Suite,Technology,184,3220,0,3220,3381,0,3381
+Conductive Fabrics,Textiles,165,967,562,405,5161,42,5119
+Leather,Textiles,73,549,177,372,2397,10,2387
+Military Grade Fabrics,Textiles,157,1182,891,291,14530,68,14462
+Natural Fabrics,Textiles,74,879,514,365,2636,25,2611
+Synthetic Fabrics,Textiles,75,612,266,346,4484,8,4476
+Biowaste,Waste,76,88,83,5,1122,4,1118
+Chemical Waste,Waste,32,668,0,668,5708,0,5708
+Scrap,Waste,77,195,124,71,799,22,777
+Toxic Waste,Waste,54,443,0,443,443,0,443
+Battle Weapons,Weapons,88,6115,5941,174,7851,557,7294
+Landmines,Weapons,118,4133,3593,540,5908,343,5565
+Non-Lethal Weapons,Weapons,78,2018,1562,456,5524,137,5387
+Personal Weapons,Weapons,79,4123,3782,341,5328,2950,2378
+Reactive Armour,Weapons,80,2354,1845,509,2963,164,2799
