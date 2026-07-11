@@ -266,6 +266,7 @@ tr.strong { background: var(--strong); }
 }
 .price { text-align: right; white-space: nowrap; }
 .flag { white-space: nowrap; color: #f2d477; }
+.flagItem + .flagItem { margin-top: 2px; }
 .details {
   border-left: 1px solid var(--line);
   background: var(--panel);

@@ -86,7 +86,7 @@ export function rowFlag(row, watchedCommodities, priceThreshold, supplyThreshold
       if (supply !== null && supply >= supplyThreshold) strong.push(commodity)
     }
   }
-  if (strong.length) return { cls: 'strong', text: `★★ ${strong.slice(0, 3).join(', ')}` }
-  if (cheap.length) return { cls: 'cheap', text: `★ ${cheap.slice(0, 3).join(', ')}` }
-  return { cls: '', text: '' }
+  if (strong.length) return { cls: 'strong', marker: '★★', items: strong.slice(0, 3) }
+  if (cheap.length) return { cls: 'cheap', marker: '★', items: cheap.slice(0, 3) }
+  return { cls: '', marker: '', items: [] }
 }
