@@ -14,6 +14,7 @@ export function money(v) {
 
 export const POTENTIAL_PROFIT_LOW_MAX = 20000
 export const POTENTIAL_PROFIT_MEDIUM_MAX = 35000
+export const POTENTIAL_PROFIT_DISPLAY_THRESHOLD = 10000
 
 export function shortTime(v) {
   if (!v) return '—'
@@ -68,6 +69,12 @@ export function inaraCommoditySellUrl(system, inaraId) {
   return `https://inara.cz/elite/commodities/?${params.toString()}`
 }
 
+export function potentialProfitTooltip(maxSell) {
+  const maxSellText = money(maxSell)
+  if (maxSellText === '—') return 'Search current sell prices on Inara.'
+  return `Search current sell prices on Inara. Theoretical max uses max sell: ${maxSellText} Cr/t.`
+}
+
 export function commodityCellParts(row, commodity, side) {
   const qtyName = side === 'buy' ? 'supply' : 'demand'
   const qtyValue = row[`${commodity}_${qtyName}`]
@@ -79,8 +86,9 @@ export function commodityCellParts(row, commodity, side) {
     qtyClass: quantityClass(qtyValue),
     potentialProfit: money(potentialProfit),
     potentialProfitClass: potentialProfitClass(potentialProfit),
-    hasPotentialProfit: num(potentialProfit) !== null,
+    hasPotentialProfit: shouldDisplayPotentialProfit(potentialProfit),
     inaraId: row[`${commodity}_inara_id`],
+    maxSell: row[`${commodity}_max_sell`],
   }
 }
 
@@ -99,6 +107,11 @@ export function potentialProfitClass(value) {
   if (n <= POTENTIAL_PROFIT_LOW_MAX) return 'potentialLow'
   if (n <= POTENTIAL_PROFIT_MEDIUM_MAX) return 'potentialMedium'
   return 'potentialHigh'
+}
+
+export function shouldDisplayPotentialProfit(value) {
+  const n = num(value)
+  return n !== null && n >= POTENTIAL_PROFIT_DISPLAY_THRESHOLD
 }
 
 export function stationDedupeKey(row) {
