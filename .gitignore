@@ -9,6 +9,7 @@ __pycache__/
 # Runtime/local MarketScout data
 marketscout.sqlite3
 marketscout-ui.json
+marketscout-economy-presets.json
 marketscout-market-debug.log
 marketscout-error.log
 marketscout-web-error.log

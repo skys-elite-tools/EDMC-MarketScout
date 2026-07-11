@@ -23,6 +23,20 @@ _THREAD: Optional[threading.Thread] = None
 _PORT: Optional[int] = None
 _CONTEXT: Dict[str, Any] = {}
 _LATEST_JOURNAL_EVENT: Optional[Dict[str, Any]] = None
+ECONOMY_PRESETS_FILE = "marketscout-economy-presets.json"
+DEFAULT_ECONOMY_PRESETS = [
+    "Agriculture",
+    "Colony",
+    "Extraction",
+    "Extraction, Refinery",
+    "High Tech",
+    "Industrial",
+    "Military",
+    "Refinery",
+    "Service",
+    "Terraforming",
+    "Tourism",
+]
 
 
 def start_server(plugin_dir: str, db_path: str, target_commodities: List[str], primary_metals: List[str]) -> int:
@@ -102,6 +116,8 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
                 return self.send_json(api_ledger_summary(parse_qs(parsed.query)))
             if path == "/api/options":
                 return self.send_json(api_options())
+            if path == "/api/economy-presets":
+                return self.send_json(api_economy_presets())
             if path == "/api/commodities":
                 return self.send_json(api_commodities())
             if path == "/api/settings":
@@ -122,6 +138,8 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
             payload = json.loads(body or "{}")
             if parsed.path == "/api/settings":
                 return self.send_json(api_save_settings(payload))
+            if parsed.path == "/api/economy-presets":
+                return self.send_json(api_save_economy_preset(payload))
             self.send_error(404)
         except Exception as exc:
             log_web_exception(exc)
@@ -258,6 +276,63 @@ def api_save_settings(payload: Dict[str, Any]) -> Dict[str, Any]:
             setting_set(conn, "watched_columns", cols)
         conn.commit()
     return {"ok": True}
+
+
+def economy_presets_path() -> Path:
+    return Path(_CONTEXT["plugin_dir"]) / ECONOMY_PRESETS_FILE
+
+
+def normalize_economy_preset(value: Any) -> str:
+    # Keep multi-economy presets readable while trimming accidental whitespace.
+    parts = [part.strip() for part in str(value or "").split(",") if part.strip()]
+    return ", ".join(parts)
+
+
+def sort_presets(values: List[str]) -> List[str]:
+    return sorted(set(values), key=lambda item: item.casefold())
+
+
+def read_economy_presets() -> List[str]:
+    presets = [normalize_economy_preset(value) for value in DEFAULT_ECONOMY_PRESETS]
+    path = economy_presets_path()
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                values = data.get("presets", [])
+            elif isinstance(data, list):
+                values = data
+            else:
+                values = []
+            presets.extend(normalize_economy_preset(value) for value in values)
+        except Exception as exc:
+            log_web_exception(exc)
+    return sort_presets([preset for preset in presets if preset])
+
+
+def write_economy_presets(presets: List[str]) -> None:
+    path = economy_presets_path()
+    payload = {
+        "version": 1,
+        "presets": sort_presets([normalize_economy_preset(value) for value in presets if normalize_economy_preset(value)]),
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def api_economy_presets() -> Dict[str, Any]:
+    return {"presets": read_economy_presets(), "source": ECONOMY_PRESETS_FILE}
+
+
+def api_save_economy_preset(payload: Dict[str, Any]) -> Dict[str, Any]:
+    preset = normalize_economy_preset(payload.get("preset"))
+    if not preset:
+        return {"ok": False, "error": "Empty preset", "presets": read_economy_presets()}
+    presets = read_economy_presets()
+    created = preset.casefold() not in {item.casefold() for item in presets}
+    if created:
+        presets.append(preset)
+        write_economy_presets(presets)
+    return {"ok": True, "created": created, "preset": preset, "presets": sort_presets(presets)}
 
 def api_options() -> Dict[str, Any]:
     with connect() as conn:

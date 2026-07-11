@@ -39,7 +39,7 @@ End users should not need frontend build tools.
 - Vue/Vite/Node/npm are development/build-time tools only.
 - Release packages must include a ready-to-serve `web/` directory.
 - Do not include `node_modules/` in releases or patches.
-- Do not include runtime/local data such as `marketscout.sqlite3`, `marketscout-ui.json`, logs, or `__pycache__/`.
+- Do not include runtime/local data such as `marketscout.sqlite3`, `marketscout-ui.json`, `marketscout-economy-presets.json`, logs, or `__pycache__/`.
 
 ## Repository structure
 
@@ -94,6 +94,10 @@ Current views:
 - `Ledger`: placeholder/future controls + ledger table/filters.
 
 The Python local web server provides JSON endpoints; Vue should not know about SQLite directly.
+
+### Economy filter presets
+
+The Stations view Economy filter is intentionally empty by default so general users are not forced into the original `Extraction, Refinery` scouting workflow. The field supports saved presets through the local Web API. Presets are stored in `marketscout-economy-presets.json` in the plugin folder, not browser storage, so they survive browser changes. The default preset list is supplied by `marketscout_web.py` and includes single-value economy names plus `Extraction, Refinery`. User-saved presets are merged with the default list and shown alphabetically.
 
 ## Frontend development workflow
 

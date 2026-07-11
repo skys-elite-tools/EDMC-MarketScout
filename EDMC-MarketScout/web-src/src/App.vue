@@ -24,11 +24,13 @@ const commoditySearch = ref('')
 const statusText = ref('Loading…')
 const latestJournalEvent = ref(null)
 const autoRefresh = ref(true)
+const economyPresets = ref([])
+const economyPresetStatus = ref('')
 
 const filters = ref({
   system: '',
   station: '',
-  economy: 'Extraction, Refinery',
+  economy: '',
   state: '',
   source: 'Any',
   includeFc: false,
@@ -103,6 +105,31 @@ watch(currentView, () => {
   applyCurrentView()
 })
 
+
+async function loadEconomyPresets() {
+  const res = await fetch('/api/economy-presets', { cache: 'no-store' })
+  const data = await res.json()
+  economyPresets.value = data.presets || []
+}
+
+async function saveEconomyPreset() {
+  const value = (filters.value.economy || '').trim()
+  if (!value) {
+    economyPresetStatus.value = 'Nothing to save'
+    setTimeout(() => { economyPresetStatus.value = '' }, 2200)
+    return
+  }
+  const res = await fetch('/api/economy-presets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ preset: value }),
+  })
+  const data = await res.json()
+  economyPresets.value = data.presets || economyPresets.value
+  economyPresetStatus.value = data.created ? 'Saved preset' : 'Preset already saved'
+  setTimeout(() => { economyPresetStatus.value = '' }, 2200)
+}
+
 async function loadCommoditySettings() {
   const [settingsRes, commoditiesRes] = await Promise.all([
     fetch('/api/settings', { cache: 'no-store' }),
@@ -169,7 +196,7 @@ async function pollStatus() {
 
 let pollTimer = null
 onMounted(async () => {
-  await loadCommoditySettings()
+  await Promise.all([loadCommoditySettings(), loadEconomyPresets()])
   await pollStatus()
   await loadStations()
   pollTimer = setInterval(pollStatus, 2000)
@@ -196,8 +223,11 @@ onUnmounted(() => {
       :current-view="currentView"
       :filters="filters"
       :ledger-filters="ledgerFilters"
+      :economy-presets="economyPresets"
+      :economy-preset-status="economyPresetStatus"
       @apply="applyCurrentView"
       @open-commodities="openCommoditySettings"
+      @save-economy-preset="saveEconomyPreset"
     />
 
     <CommoditySettings

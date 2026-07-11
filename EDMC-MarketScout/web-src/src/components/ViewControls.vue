@@ -1,10 +1,13 @@
 <script setup>
+import EconomyPresetInput from './EconomyPresetInput.vue'
 const props = defineProps({
   currentView: { type: String, required: true },
   filters: { type: Object, required: true },
   ledgerFilters: { type: Object, required: true },
+  economyPresets: { type: Array, default: () => [] },
+  economyPresetStatus: { type: String, default: '' },
 })
-const emit = defineEmits(['apply', 'open-commodities'])
+const emit = defineEmits(['apply', 'open-commodities', 'save-economy-preset'])
 </script>
 
 <template>
@@ -13,7 +16,12 @@ const emit = defineEmits(['apply', 'open-commodities'])
       <div class="controlGroupTitle">Station filters</div>
       <label>System <input v-model="filters.system" type="text" /></label>
       <label>Station <input v-model="filters.station" type="text" /></label>
-      <label>Economy <input v-model="filters.economy" type="text" /></label>
+      <EconomyPresetInput
+        v-model="filters.economy"
+        :presets="economyPresets"
+        :save-status="economyPresetStatus"
+        @save="emit('save-economy-preset')"
+      />
       <label>State <input v-model="filters.state" type="text" placeholder="Infrastructure Failure" /></label>
       <label>Source
         <select v-model="filters.source">

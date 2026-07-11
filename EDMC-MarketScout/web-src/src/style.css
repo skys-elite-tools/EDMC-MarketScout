@@ -69,6 +69,27 @@ h1 { margin: 0; font-size: 20px; }
 }
 .viewControls label { display: flex; flex-direction: column; gap: 3px; color: var(--muted); font-size: 12px; }
 .viewControls label.check { flex-direction: row; align-items: center; align-self: center; padding-top: 15px; }
+.economyPresetField { min-width: 24rem; }
+.economyPresetControls {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) minmax(9rem, auto) auto;
+  gap: 6px;
+  align-items: center;
+}
+.economyPresetControls input { min-width: 0; }
+.presetSelect {
+  max-width: 13rem;
+}
+.presetStatus {
+  color: var(--accent);
+  font-size: 11px;
+  min-height: 1em;
+}
+@media (max-width: 760px) {
+  .economyPresetField { min-width: 100%; }
+  .economyPresetControls { grid-template-columns: 1fr; }
+  .presetSelect { max-width: none; }
+}
 input, select, button {
   background: #0e1217;
   color: var(--text);
