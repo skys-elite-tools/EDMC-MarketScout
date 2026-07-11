@@ -1,0 +1,62 @@
+<script setup>
+import { computed } from 'vue'
+import { fmt, localDateTime, money } from '../utils.js'
+
+const props = defineProps({
+  row: { type: Object, default: null },
+  currentView: { type: String, required: true },
+  watchedCommodities: { type: Array, default: () => [] },
+  displayColumns: { type: Array, default: () => [] },
+})
+
+const detailCommodities = computed(() => Array.from(new Set([
+  ...props.watchedCommodities,
+  ...props.displayColumns.map(c => c.commodity),
+])))
+
+const stationDetails = computed(() => {
+  const row = props.row || {}
+  return [
+    ['System', row.system], ['Station', row.station], ['Pad', row.pad], ['Type', row.type],
+    ['State', row.state], ['Economies', row.economies], ['System Economy', row.system_economy],
+    ['Security', row.security], ['Population', money(row.population)], ['Arrival LS', money(row.arrival_ls)],
+    ['Fleet Carrier', row.fleet_carrier || 'No'], ['Planetary', row.planetary || 'No'],
+    ['Source', row.source], ['Source Pulled', localDateTime(row.source_pulled)], ['Source Updated', localDateTime(row.source_updated)],
+    ['Market Updated', localDateTime(row.market_updated)], ['Station Visit', localDateTime(row.station_visit)],
+    ['Best Buy', row.best_buy_commodity ? `${row.best_buy_commodity} @ ${money(row.best_buy_price)} / supply ${money(row.best_buy_supply)} / score ${money(row.best_buy_score)}` : '—'],
+  ]
+})
+</script>
+
+<template>
+  <aside class="details">
+    <template v-if="!row">
+      <h2>{{ currentView === 'jackpots' ? 'Jackpot History' : currentView === 'ledger' ? 'Ledger' : 'Details' }}</h2>
+      <p>Select a row.</p>
+    </template>
+
+    <template v-else-if="currentView === 'stations'">
+      <h2>{{ fmt(row.system) }}</h2>
+      <p class="subtitle">{{ fmt(row.station) }} | Pad {{ fmt(row.pad) }}</p>
+      <dl class="detailGrid">
+        <template v-for="[k, v] in stationDetails" :key="k">
+          <dt>{{ k }}</dt><dd>{{ fmt(v) }}</dd>
+        </template>
+      </dl>
+      <div v-for="commodity in detailCommodities" :key="commodity" class="metalBlock">
+        <h3>{{ commodity }}</h3>
+        <dl class="detailGrid">
+          <dt>Buy</dt><dd>{{ money(row[`${commodity}_buy`]) }}</dd>
+          <dt>Supply</dt><dd>{{ money(row[`${commodity}_supply`]) }}</dd>
+          <dt>Sell</dt><dd>{{ money(row[`${commodity}_sell`]) }}</dd>
+          <dt>Demand</dt><dd>{{ money(row[`${commodity}_demand`]) }}</dd>
+        </dl>
+      </div>
+    </template>
+
+    <template v-else>
+      <h2>{{ currentView === 'ledger' ? `${fmt(row.event_type).toUpperCase()} ${fmt(row.commodity)}` : `Jackpot ${fmt(row.jackpot_id)}` }}</h2>
+      <pre>{{ JSON.stringify(row, null, 2) }}</pre>
+    </template>
+  </aside>
+</template>
