@@ -1,1 +1,9 @@
 /local-*
+
+__pycache__/
+*.pyc
+marketscout.sqlite3
+marketscout-market-debug.log
+marketscout-error.log
+*.log
+.DS_Store
