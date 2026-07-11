@@ -326,6 +326,14 @@ tr.strong { background: var(--strong); }
 tr.ledgerBuy { background: rgba(80,160,255,.035); }
 tr.ledgerSell { background: rgba(80,220,120,.035); }
 tr.ledgerSell.cheap { background: rgba(80,220,120,.10); }
+.inlineToggle {
+  min-width: 1.6rem;
+  padding: 1px 4px;
+  margin-right: 4px;
+}
+.jackpotSampleRow td {
+  background: rgba(255,255,255,.025);
+}
 .mini { width: 100%; font-size: 12px; margin-top: 6px; }
 .mini th { position: static; padding: 5px; }
 .mini td { padding: 5px; }
