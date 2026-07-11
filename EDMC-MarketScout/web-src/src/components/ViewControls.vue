@@ -1,5 +1,6 @@
 <script setup>
 import EconomyPresetInput from './EconomyPresetInput.vue'
+import EconomicStateInput from './EconomicStateInput.vue'
 const props = defineProps({
   currentView: { type: String, required: true },
   filters: { type: Object, required: true },
@@ -23,7 +24,7 @@ const emit = defineEmits(['apply', 'open-commodities', 'save-economy-preset'])
           :save-status="economyPresetStatus"
           @save="emit('save-economy-preset')"
         />
-        <label>State <input v-model="filters.state" type="text" placeholder="Infrastructure Failure" /></label>
+        <EconomicStateInput v-model="filters.state" />
         <label class="sourceFilter">Source
           <select v-model="filters.source">
             <option>Any</option>
