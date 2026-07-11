@@ -397,6 +397,12 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
         "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 "
         "ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_supply"
     )
+    select_cols.append(
+        "(SELECT (cgs2.max_sell - mp2.buy_price) FROM market_prices mp2 "
+        "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
+        "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 "
+        "ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_potential_profit"
+    )
     for c in display_commodities:
         safe = c.replace("'", "''")
         select_cols.extend([

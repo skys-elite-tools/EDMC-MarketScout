@@ -24,7 +24,7 @@ const stationDetails = computed(() => {
     ['Fleet Carrier', row.fleet_carrier || 'No'], ['Planetary', row.planetary || 'No'],
     ['Source', row.source], ['Source Pulled', localDateTime(row.source_pulled)], ['Source Updated', localDateTime(row.source_updated)],
     ['Market Updated', localDateTime(row.market_updated)], ['Station Visit', localDateTime(row.station_visit)],
-    ['Best Buy', row.best_buy_commodity ? `${row.best_buy_commodity} @ ${money(row.best_buy_price)} / supply ${money(row.best_buy_supply)} / score ${money(row.best_buy_score)}` : '—'],
+    ['Best Buy', row.best_buy_commodity ? `${row.best_buy_commodity} @ ${money(row.best_buy_price)} / supply ${money(row.best_buy_supply)} / potential profit ${money(row.best_buy_potential_profit)} Cr/t` : '—'],
   ]
 })
 </script>
