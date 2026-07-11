@@ -221,7 +221,7 @@ table {
 .stationStateCol { width: 15%; }
 .stationBestBuyCol { width: 18%; }
 .stationCommodityCol { width: 12rem; }
-.stationUpdatedCol { width: 14rem; }
+.stationUpdatedCol { width: 10rem; }
 th {
   position: sticky;
   top: 0;

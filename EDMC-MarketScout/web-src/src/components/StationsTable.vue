@@ -1,5 +1,5 @@
 <script setup>
-import { columnKey, commodityCellParts, fmt, localDateTime, money, quantityClass, rowFlag } from '../utils.js'
+import { columnKey, commodityCellParts, compactDateTime, fmt, localDateTime, money, quantityClass, rowFlag } from '../utils.js'
 
 const props = defineProps({
   rows: { type: Array, default: () => [] },
@@ -47,7 +47,7 @@ function flag(row) {
         <td v-for="col in displayColumns" :key="columnKey(col)">
           <div class="price"><div class="cellMain">{{ commodityCellParts(row, col.commodity, col.side).price }}</div><div class="cellSub">{{ commodityCellParts(row, col.commodity, col.side).qtyName }}: <span :class="commodityCellParts(row, col.commodity, col.side).qtyClass">{{ commodityCellParts(row, col.commodity, col.side).qty }}</span></div></div>
         </td>
-        <td><div>{{ localDateTime(row.market_updated) }}</div><div class="cellSub">Visit: {{ localDateTime(row.station_visit) }}</div></td>
+        <td><div :title="localDateTime(row.market_updated)">{{ compactDateTime(row.market_updated) }}</div><div class="cellSub" :title="localDateTime(row.station_visit)">Visit: {{ compactDateTime(row.station_visit) }}</div></td>
       </tr>
     </tbody>
   </table>
