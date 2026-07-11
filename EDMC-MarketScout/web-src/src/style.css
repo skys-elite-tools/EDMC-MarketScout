@@ -246,6 +246,7 @@ tr.strong { background: var(--strong); }
   line-height: 1.2;
 }
 .stationMeta {
+  display: block;
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;

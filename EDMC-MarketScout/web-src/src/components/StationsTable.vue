@@ -28,7 +28,7 @@ function flag(row) {
     <tbody>
       <tr v-for="(row, idx) in rows" :key="`${row.market_id || idx}-${row.system}-${row.station}`" :class="[flag(row).cls, { selected: idx === selectedIndex }]" @click="emit('select', idx)">
         <td class="flag">{{ flag(row).text }}</td>
-        <td><div class="systemName">{{ fmt(row.system) }}</div><div class="stationName">{{ fmt(row.station) }} <span class="stationMeta">| Pad {{ fmt(row.pad) }}</span></div></td>
+        <td><div class="systemName">{{ fmt(row.system) }}</div><div class="stationName">{{ fmt(row.station) }} <span class="stationMeta">Pad {{ fmt(row.pad) }}</span></div></td>
         <td><div class="cellMain">{{ fmt(row.state) }}</div><div class="cellSub">{{ fmt(row.economies) }}</div></td>
         <td>
           <div v-if="row.best_buy_commodity" class="price"><div class="cellMain">{{ row.best_buy_commodity }} @ {{ money(row.best_buy_price) }}</div><div class="cellSub">supply: {{ money(row.best_buy_supply) }} · score: {{ money(row.best_buy_score) }}</div></div>
