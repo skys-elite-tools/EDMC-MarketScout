@@ -12,6 +12,9 @@ export function money(v) {
   return n === null ? '—' : Math.round(n).toLocaleString()
 }
 
+export const POTENTIAL_PROFIT_LOW_MAX = 20000
+export const POTENTIAL_PROFIT_MEDIUM_MAX = 35000
+
 export function shortTime(v) {
   if (!v) return '—'
   const d = new Date(v)
@@ -44,11 +47,15 @@ export function columnKey(col) {
 export function commodityCellParts(row, commodity, side) {
   const qtyName = side === 'buy' ? 'supply' : 'demand'
   const qtyValue = row[`${commodity}_${qtyName}`]
+  const potentialProfit = side === 'buy' ? row[`${commodity}_potential_profit`] : null
   return {
     price: money(row[`${commodity}_${side}`]),
     qtyName,
     qty: money(qtyValue),
     qtyClass: quantityClass(qtyValue),
+    potentialProfit: money(potentialProfit),
+    potentialProfitClass: potentialProfitClass(potentialProfit),
+    hasPotentialProfit: num(potentialProfit) !== null,
   }
 }
 
@@ -59,6 +66,14 @@ export function quantityClass(value) {
   if (n <= 7000) return 'quantityLow'
   if (n <= 15000) return 'quantityMedium'
   return 'quantityHigh'
+}
+
+export function potentialProfitClass(value) {
+  const n = num(value)
+  if (n === null) return ''
+  if (n <= POTENTIAL_PROFIT_LOW_MAX) return 'potentialLow'
+  if (n <= POTENTIAL_PROFIT_MEDIUM_MAX) return 'potentialMedium'
+  return 'potentialHigh'
 }
 
 export function stationDedupeKey(row) {
