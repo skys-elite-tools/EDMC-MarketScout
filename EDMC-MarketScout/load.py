@@ -672,6 +672,7 @@ def record_marketdata(marketdata: Dict[str, Any], data: Any) -> int:
         return 0
 
     inserted = 0
+    seen_commodities: List[str] = []
     for item in commodities:
         item_dict = as_dict(item)
         if not item_dict:
@@ -683,6 +684,7 @@ def record_marketdata(marketdata: Dict[str, Any], data: Any) -> int:
         )
         if not commodity:
             continue
+        seen_commodities.append(commodity)
         if commodity in ("Palladium", "Gold", "Silver"):
             log_market_debug("tracked commodity raw fields", {
                 "commodity": commodity,
@@ -725,10 +727,34 @@ def record_marketdata(marketdata: Dict[str, Any], data: Any) -> int:
         )
         inserted += 1
 
+    cleared = clear_missing_market_supply(market_id, seen_commodities, update_time)
     if inserted:
         maybe_record_jackpot_history(market_id, update_time)
-    log_market_debug("record_marketdata complete", {"market_id": market_id, "commodities_seen": len(commodities), "tracked_rows_written": inserted})
+    log_market_debug("record_marketdata complete", {"market_id": market_id, "commodities_seen": len(commodities), "tracked_rows_written": inserted, "stale_buy_rows_cleared": cleared})
     return inserted
+
+
+def clear_missing_market_supply(market_id: int, seen_commodities: List[str], update_time: str) -> int:
+    """Mark buy-side rows missing from a fresh market snapshot as unavailable."""
+    if CONN is None or not seen_commodities:
+        return 0
+
+    seen = sorted(set(seen_commodities))
+    placeholders = ",".join("?" for _ in seen)
+    params: List[Any] = [update_time, market_id] + seen
+    cur = CONN.execute(
+        f"""
+        UPDATE market_prices
+        SET buy_price=0,
+            supply=0,
+            market_price_update_datetime=?
+        WHERE market_id=?
+          AND commodity NOT IN ({placeholders})
+          AND (COALESCE(buy_price, 0) != 0 OR COALESCE(supply, 0) != 0)
+        """,
+        params,
+    )
+    return int(cur.rowcount or 0)
 
 
 def extract_marketdata(data: Any) -> Optional[Dict[str, Any]]:
