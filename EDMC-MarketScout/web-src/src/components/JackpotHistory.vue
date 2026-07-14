@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { fmt, localDateTime, money } from '../utils.js'
+import { compactDateTime, fmt, localDateTime, money } from '../utils.js'
 
 const props = defineProps({
   rows: { type: Array, default: () => [] },
@@ -65,7 +65,7 @@ function isGroupSelected(group) {
           <td><div class="price"><div class="cellMain">{{ money(group.latest.gold_buy) }}</div><div class="cellSub">supply: {{ money(group.latest.gold_supply) }}</div></div></td>
           <td><div class="price"><div class="cellMain">{{ money(group.latest.silver_buy) }}</div><div class="cellSub">supply: {{ money(group.latest.silver_supply) }}</div></div></td>
           <td><div class="cellMain">{{ sampleCountLabel(group) }}</div><div class="cellSub">Detected: {{ localDateTime(group.first.detected_datetime) }}</div></td>
-          <td>{{ localDateTime(group.latest.sample_datetime) }}</td>
+          <td :title="localDateTime(group.latest.sample_datetime)">{{ compactDateTime(group.latest.sample_datetime) }}</td>
         </tr>
         <template v-if="isExpanded(group)">
           <tr
@@ -76,7 +76,7 @@ function isGroupSelected(group) {
             @click="selectSample(sample)"
           >
             <td>{{ sample.is_jackpot ? 'Active sample' : 'Ended sample' }}</td>
-            <td><div class="cellSub">{{ localDateTime(sample.sample_datetime) }}</div></td>
+            <td><div class="cellSub" :title="localDateTime(sample.sample_datetime)">{{ compactDateTime(sample.sample_datetime) }}</div></td>
             <td><div class="cellSub">{{ fmt(sample.sample_triggers || sample.event_triggers) }}</div></td>
             <td><div class="price"><div class="cellMain">{{ money(sample.palladium_buy) }}</div><div class="cellSub">supply: {{ money(sample.palladium_supply) }}</div></div></td>
             <td><div class="price"><div class="cellMain">{{ money(sample.gold_buy) }}</div><div class="cellSub">supply: {{ money(sample.gold_supply) }}</div></div></td>

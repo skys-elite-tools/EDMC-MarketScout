@@ -32,7 +32,7 @@ export function compactDateTime(v) {
   if (!v) return '—'
   const d = new Date(v)
   if (Number.isNaN(d.getTime())) return String(v)
-  const date = d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })
+  const date = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: '2-digit' })
   const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
   return `${date}, ${time}`
 }
