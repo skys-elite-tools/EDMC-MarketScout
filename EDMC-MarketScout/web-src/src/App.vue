@@ -306,12 +306,11 @@ onUnmounted(() => {
           v-else-if="currentView === 'rare'"
           :rows="rows"
           :selected-index="selectedIndex"
-          @select="setSelected"
         />
       </section>
 
       <StationDetails
-        v-if="selectedRow"
+        v-if="selectedRow && currentView !== 'rare'"
         :row="selectedRow"
         :current-view="currentView"
         :watched-commodities="watchedCommodities"

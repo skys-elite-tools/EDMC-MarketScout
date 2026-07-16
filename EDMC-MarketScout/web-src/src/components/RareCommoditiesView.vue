@@ -5,7 +5,6 @@ defineProps({
   rows: { type: Array, default: () => [] },
   selectedIndex: { type: Number, default: -1 },
 })
-const emit = defineEmits(['select'])
 
 function profitTitle(row) {
   const avg = money(row.galactic_average_price)
@@ -42,7 +41,6 @@ function profitClass(row) {
         v-for="(row, idx) in rows"
         :key="row.commodity || idx"
         :class="[{ selected: idx === selectedIndex, engineeringRare: row.is_engineering_rare }]"
-        @click="emit('select', idx)"
       >
         <td><div class="cellMain">{{ fmt(row.commodity) }}</div><div v-if="row.is_engineering_rare" class="cellSub">Engineering unlock</div></td>
         <td>{{ fmt(row.system_name) }}</td>
