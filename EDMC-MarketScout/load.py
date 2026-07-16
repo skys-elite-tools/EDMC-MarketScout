@@ -168,7 +168,7 @@ def plugin_start3(plugin_dir: str) -> str:
     CONN = sqlite3.connect(DB_PATH)
     CONN.row_factory = sqlite3.Row
     init_db(CONN)
-    refresh_commodity_global_stats_from_csv(CONN, plugin_dir)
+    refresh_rawdata_imports(CONN, plugin_dir)
     deduplicate_market_price_commodities(CONN)
     deduplicate_station_rows(CONN)
     return PLUGIN_NAME
@@ -621,6 +621,17 @@ def refresh_commodity_global_stats_from_csv(conn: sqlite3.Connection, plugin_dir
         )
     except Exception:
         log_exception("refresh_commodity_global_stats_from_csv")
+
+def refresh_rare_commodities_from_csv(conn: sqlite3.Connection, plugin_dir: str) -> None:
+    """Refresh rare_commodities from optional rawdata/commodities_rare.csv."""
+    try:
+        load_commodities_importer_module().refresh_rare_commodities_from_csv(conn, plugin_dir)
+    except Exception:
+        log_exception("refresh_rare_commodities_from_csv")
+
+def refresh_rawdata_imports(conn: sqlite3.Connection, plugin_dir: str) -> None:
+    refresh_commodity_global_stats_from_csv(conn, plugin_dir)
+    refresh_rare_commodities_from_csv(conn, plugin_dir)
 
 def get_watched_commodities(conn: sqlite3.Connection) -> List[str]:
     value = setting_get(conn, "watched_commodities", list(DEFAULT_WATCHED_COMMODITIES))

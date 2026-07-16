@@ -112,14 +112,14 @@ The Web UI includes a `Jackpot History` button that displays the stored samples.
 
 - MarketScout now stores all commodities seen in market data, not just the original metals.
 - The Web UI has a Commodities settings panel. Watched commodities affect highlighting/details, while Buy/Sell table columns can be selected separately.
-- Added `commodity_global_stats` and Best Buy scoring. On startup, MarketScout looks for `commodities.csv` in the plugin folder and refreshes stats if present. Current catalog columns are `commodity_name`, `category`, `inara_id`, `avg_sell`, `avg_buy`, `avg_profit`, `max_sell`, `min_buy`, and `max_profit`. Defaults include Palladium 71000, Gold 67000, Silver 49000.
+- Added `commodity_global_stats` and Best Buy scoring. On startup, MarketScout looks for `rawdata/commodities.csv` in the plugin folder and refreshes stats when the file SHA-256 differs from the last imported hash. Current catalog columns are `commodity_name`, `category`, `inara_id`, `avg_sell`, `avg_buy`, `avg_profit`, `max_sell`, `min_buy`, and `max_profit`. Defaults include Palladium 71000, Gold 67000, Silver 49000.
 - Source remains available in details/API but is not shown as a default table column.
 
 
 ## 0.1.15 notes
 
-- The Web UI Commodities settings list is now populated from `commodity_global_stats`, which is refreshed from `commodities.csv` on startup.
-- This makes `commodities.csv` / `commodity_global_stats` the authoritative commodity catalog for selectable watched commodities and Buy/Sell columns.
+- The Web UI Commodities settings list is now populated from `commodity_global_stats`, which is refreshed from `rawdata/commodities.csv` on startup.
+- This makes `rawdata/commodities.csv` / `commodity_global_stats` the authoritative commodity catalog for selectable watched commodities and Buy/Sell columns.
 - If `commodity_global_stats` is empty, the UI falls back to commodities discovered in recorded market data.
 
 
@@ -133,7 +133,7 @@ The Web UI includes a `Jackpot History` button that displays the stored samples.
 ## 0.1.18 notes
 
 - Adds a legacy commodity-name dedupe migration for `market_prices`.
-- MarketScout now uses a canonical commodity key for matching and the `commodity_global_stats` / `commodities.csv` catalogue for display names when possible.
+- MarketScout now uses a canonical commodity key for matching and the `commodity_global_stats` / `rawdata/commodities.csv` catalogue for display names when possible.
 - This prevents duplicate rows such as `Agronomic Treatment` and `Agronomictreatment` for the same market, and merges existing legacy duplicates by keeping the newest market snapshot.
 
 

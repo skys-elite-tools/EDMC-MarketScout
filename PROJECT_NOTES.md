@@ -51,7 +51,9 @@ EDMC-MarketScout/
   marketscout_importer.py    # CSV import logic, currently including Spansh templates
   marketscout_ledger.py      # Trade ledger logic and LIFO/statistics calculations
   marketscout_web.py         # Local HTTP server and JSON API endpoints
-  commodities.csv            # Commodity catalog/stats input loaded on startup
+  rawdata/
+    commodities.csv          # Commodity catalog/stats input loaded on startup
+    commodities_rare.csv     # Rare commodity source data loaded on startup
   README.md
   web/                       # Prebuilt static Web UI served at runtime
   web-src/                   # Vue 3 + Vite source for developers
@@ -134,7 +136,8 @@ Main data concepts:
 - Systems: system-level data such as name/address, coordinates, population, security, economy/state context.
 - Stations: station-level data such as name, market ID, station type, pad size, economies, faction/state, source, source timestamps, fleet carrier flag.
 - Market prices: commodity rows per market/station. Current direction is to store all commodities, not just a fixed metal list.
-- Commodity global stats: catalog/config table populated from `commodities.csv` with commodity display name, category, INARA ID, average buy/sell/profit, max sell, min buy, and max profit.
+- Commodity global stats: catalog/config table populated from `rawdata/commodities.csv` with commodity display name, category, INARA ID, average buy/sell/profit, max sell, min buy, and max profit.
+- Rare commodities: catalog table populated from `rawdata/commodities_rare.csv` with commodity, INARA IDs, source station/system, usual supply, buy/profit/sell values, and preserved distance metadata.
 - Jackpot events/samples: static jackpot context plus event-driven time-series samples.
 - Trade events/lots: ledger rows for MarketBuy/MarketSell, Journal profit fields, and optional LIFO details.
 
@@ -147,11 +150,11 @@ Reason: Frontier/localized names and rare commodities can collide if matched loo
 Current design intent:
 
 - Store all commodity data from market captures.
-- Use `commodity_global_stats`/`commodities.csv` as the authoritative catalog for the Web UI commodity selector.
+- Use `commodity_global_stats`/`rawdata/commodities.csv` as the authoritative catalog for the Web UI commodity selector.
 - Watched commodities control which commodity-specific columns are shown.
 - Best Buy calculation is independent of watched commodities and should consider all commodities with `max_sell` in `commodity_global_stats` that are present at a station.
 
-Default `commodities.csv` includes at least:
+Default `rawdata/commodities.csv` includes at least:
 
 ```csv
 commodity_name,category,inara_id,avg_sell,avg_buy,avg_profit,max_sell,min_buy,max_profit

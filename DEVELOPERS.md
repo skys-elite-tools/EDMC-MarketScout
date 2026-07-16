@@ -12,7 +12,7 @@ EDMC-MarketScout/
   marketscout_importer.py    # CSV/import logic
   marketscout_ledger.py      # trade ledger logic
   marketscout_web.py         # local 127.0.0.1 web server + JSON API
-  commodities.csv            # commodity stats catalog used at startup
+  rawdata/commodities.csv    # commodity stats catalog used at startup
   web/                       # compiled Web UI served at runtime; include in releases
   web-src/                   # Vue 3 + Vite source for the Web UI
 ```
