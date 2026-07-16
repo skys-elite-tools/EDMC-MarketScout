@@ -38,6 +38,7 @@ RARE_COMMODITY_COLUMNS = {
 }
 
 ENGINEERS_UNLOCK_COLUMNS = {
+    "engineer_system": "TEXT",
     "is_public_knowledge": "INTEGER",
     "discovered_via": "TEXT",
     "required_commodity": "TEXT",
@@ -179,6 +180,7 @@ def migrate_db(conn) -> None:
         """
         CREATE TABLE IF NOT EXISTS engineers_unlock (
             engineer TEXT PRIMARY KEY,
+            engineer_system TEXT,
             is_public_knowledge INTEGER,
             discovered_via TEXT,
             required_commodity TEXT,
@@ -456,11 +458,12 @@ def refresh_engineers_unlock_from_csv(conn, plugin_dir: str) -> Dict[str, int]:
             conn.execute(
                 """
                 INSERT INTO engineers_unlock(
-                    engineer, is_public_knowledge, discovered_via, required_commodity,
+                    engineer, engineer_system, is_public_knowledge, discovered_via, required_commodity,
                     required_commodity_quantity, other_requirements, is_rare_commodity, updated_datetime
                 )
-                VALUES (?, ?, ?, ?, ?, ?, 0, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)
                 ON CONFLICT(engineer) DO UPDATE SET
+                    engineer_system=excluded.engineer_system,
                     is_public_knowledge=excluded.is_public_knowledge,
                     discovered_via=excluded.discovered_via,
                     required_commodity=excluded.required_commodity,
@@ -470,6 +473,7 @@ def refresh_engineers_unlock_from_csv(conn, plugin_dir: str) -> Dict[str, int]:
                 """,
                 (
                     engineer,
+                    get(row, "engineer_system", "engineer system", "system"),
                     1 if first_int(get(row, "is_public_knowledge", "public")) else 0,
                     get(row, "discovered_via", "discovered via"),
                     get(row, "required_commodity", "commodity"),

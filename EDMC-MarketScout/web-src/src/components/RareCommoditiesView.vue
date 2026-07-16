@@ -42,7 +42,7 @@ function profitClass(row) {
         :key="row.commodity || idx"
         :class="[{ selected: idx === selectedIndex, engineeringRare: row.is_engineering_rare }]"
       >
-        <td><div class="cellMain">{{ fmt(row.commodity) }}</div><div v-if="row.is_engineering_rare" class="cellSub">Engineering unlock</div></td>
+        <td><div class="cellMain">{{ fmt(row.commodity) }}</div><div v-if="row.is_engineering_rare" class="cellSub">{{ fmt(row.engineering_unlocks) }}</div></td>
         <td>{{ fmt(row.system_name) }}</td>
         <td>{{ fmt(row.station_name) }}</td>
         <td class="num">{{ money(row.station_distance_ls) }}</td>

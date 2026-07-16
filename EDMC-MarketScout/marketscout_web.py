@@ -642,7 +642,22 @@ def api_rare_commodities(qs: Dict[str, List[str]]) -> Dict[str, Any]:
                               lower(trim(replace(rc.commodity, char(160), ' ')))
                     )
                     THEN 1 ELSE 0
-                END AS is_engineering_rare
+                END AS is_engineering_rare,
+                (
+                    SELECT GROUP_CONCAT(
+                        eu.engineer ||
+                        CASE
+                            WHEN eu.engineer_system IS NOT NULL AND trim(eu.engineer_system) != ''
+                            THEN ' @ ' || eu.engineer_system
+                            ELSE ''
+                        END,
+                        ', '
+                    )
+                    FROM engineers_unlock eu
+                    WHERE eu.is_rare_commodity=1
+                      AND lower(trim(replace(eu.required_commodity, char(160), ' '))) =
+                          lower(trim(replace(rc.commodity, char(160), ' ')))
+                ) AS engineering_unlocks
             FROM rare_commodities rc
         )
     """
