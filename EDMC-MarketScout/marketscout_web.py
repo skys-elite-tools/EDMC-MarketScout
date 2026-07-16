@@ -112,6 +112,8 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
                 return self.send_json(api_jackpots(parse_qs(parsed.query)))
             if path == "/api/ledger":
                 return self.send_json(api_ledger(parse_qs(parsed.query)))
+            if path == "/api/rare-commodities":
+                return self.send_json(api_rare_commodities(parse_qs(parsed.query)))
             if path == "/api/ledger/summary":
                 return self.send_json(api_ledger_summary(parse_qs(parsed.query)))
             if path == "/api/options":
@@ -593,6 +595,65 @@ def api_ledger(qs: Dict[str, List[str]]) -> Dict[str, Any]:
                 # Backward-compatible alias for older Web UI code; primary field is profit_per_hour.
                 if "credits_per_hour" not in row:
                     row["credits_per_hour"] = row.get("profit_per_hour")
+        except sqlite3.OperationalError:
+            rows = []
+    return {"rows": rows, "count": len(rows)}
+
+
+def api_rare_commodities(qs: Dict[str, List[str]]) -> Dict[str, Any]:
+    def one(name: str) -> str:
+        return (qs.get(name, [""])[0] or "").strip()
+    try:
+        lim = max(1, min(int(one("limit") or "500"), 2000))
+    except Exception:
+        lim = 500
+
+    engineering_only = one("engineering_only").lower() in ("1", "true", "yes")
+    where: List[str] = []
+    if engineering_only:
+        where.append("is_engineering_rare = 1")
+
+    sql = """
+        SELECT *
+        FROM (
+            SELECT
+                rc.commodity,
+                rc.system_name,
+                rc.station_name,
+                rc.station_distance_ls,
+                rc.usual_supply,
+                rc.buy_price,
+                rc.galactic_average_price,
+                CASE
+                    WHEN rc.galactic_average_price IS NOT NULL
+                    THEN rc.galactic_average_price * 1000
+                END AS galactic_average_1000x,
+                CASE
+                    WHEN rc.galactic_average_price IS NOT NULL AND rc.buy_price IS NOT NULL
+                    THEN rc.galactic_average_price * 1000 - rc.buy_price
+                END AS carrier_profit,
+                CASE
+                    WHEN EXISTS (
+                        SELECT 1
+                        FROM engineers_unlock eu
+                        WHERE eu.is_rare_commodity=1
+                          AND lower(trim(replace(eu.required_commodity, char(160), ' '))) =
+                              lower(trim(replace(rc.commodity, char(160), ' ')))
+                    )
+                    THEN 1 ELSE 0
+                END AS is_engineering_rare
+            FROM rare_commodities rc
+        )
+    """
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += """
+        ORDER BY carrier_profit IS NULL, carrier_profit DESC, commodity ASC
+        LIMIT ?
+    """
+    with connect() as conn:
+        try:
+            rows = [row_to_dict(r) for r in conn.execute(sql, (lim,)).fetchall()]
         except sqlite3.OperationalError:
             rows = []
     return {"rows": rows, "count": len(rows)}

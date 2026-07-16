@@ -8,6 +8,7 @@ import StationsTable from './components/StationsTable.vue'
 import StationDetails from './components/StationDetails.vue'
 import JackpotHistory from './components/JackpotHistory.vue'
 import LedgerView from './components/LedgerView.vue'
+import RareCommoditiesView from './components/RareCommoditiesView.vue'
 import FooterBar from './components/FooterBar.vue'
 import { columnKey, dedupeStationRows, query } from './utils.js'
 
@@ -43,6 +44,11 @@ const ledgerFilters = ref({
   commodity: '',
   eventType: 'Any',
   showLifo: false,
+})
+
+const rareFilters = ref({
+  sort: 'profit_desc',
+  engineeringOnly: false,
 })
 
 function stationParams() {
@@ -99,7 +105,22 @@ async function loadLedger() {
   statusText.value = `${rows.value.length} trades · ${new Date().toLocaleTimeString()}`
 }
 
+async function loadRareCommodities() {
+  currentView.value = 'rare'
+  const params = {
+    sort: rareFilters.value.sort || 'profit_desc',
+    engineering_only: rareFilters.value.engineeringOnly ? '1' : '0',
+    limit: filters.value.limit || '1000',
+  }
+  const res = await fetch(`/api/rare-commodities?${query(params)}`, { cache: 'no-store' })
+  const data = await res.json()
+  rows.value = data.rows || []
+  selectedIndex.value = -1
+  statusText.value = `${rows.value.length} rare commodities · ${new Date().toLocaleTimeString()}`
+}
+
 function applyCurrentView() {
+  if (currentView.value === 'rare') return loadRareCommodities()
   if (currentView.value === 'ledger') return loadLedger()
   if (currentView.value === 'jackpots') return loadJackpots()
   return loadStations()
@@ -108,6 +129,13 @@ function applyCurrentView() {
 watch(currentView, () => {
   applyCurrentView()
 })
+
+watch(
+  () => [rareFilters.value.sort, rareFilters.value.engineeringOnly],
+  () => {
+    if (currentView.value === 'rare') loadRareCommodities()
+  }
+)
 
 
 async function loadEconomyPresets() {
@@ -227,6 +255,7 @@ onUnmounted(() => {
       :current-view="currentView"
       :filters="filters"
       :ledger-filters="ledgerFilters"
+      :rare-filters="rareFilters"
       :economy-presets="economyPresets"
       :economy-preset-status="economyPresetStatus"
       @apply="applyCurrentView"
@@ -271,6 +300,12 @@ onUnmounted(() => {
           :rows="rows"
           :selected-index="selectedIndex"
           :show-lifo="ledgerFilters.showLifo"
+          @select="setSelected"
+        />
+        <RareCommoditiesView
+          v-else-if="currentView === 'rare'"
+          :rows="rows"
+          :selected-index="selectedIndex"
           @select="setSelected"
         />
       </section>

@@ -24,6 +24,7 @@ function choose(view) {
       <button type="button" :class="{ active: currentView === 'stations' }" @click="choose('stations')">Stations</button>
       <button type="button" :class="{ active: currentView === 'jackpots' }" @click="choose('jackpots')">Jackpots</button>
       <button type="button" :class="{ active: currentView === 'ledger' }" @click="choose('ledger')">Ledger</button>
+      <button type="button" :class="{ active: currentView === 'rare' }" @click="choose('rare')">Rare Commodities</button>
     </nav>
 
     <div class="topLinks">

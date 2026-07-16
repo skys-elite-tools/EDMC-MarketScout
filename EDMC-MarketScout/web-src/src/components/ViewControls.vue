@@ -5,6 +5,7 @@ const props = defineProps({
   currentView: { type: String, required: true },
   filters: { type: Object, required: true },
   ledgerFilters: { type: Object, required: true },
+  rareFilters: { type: Object, required: true },
   economyPresets: { type: Array, default: () => [] },
   economyPresetStatus: { type: String, default: '' },
 })
@@ -59,6 +60,18 @@ const emit = defineEmits(['apply', 'open-commodities', 'save-economy-preset'])
         <select v-model="ledgerFilters.eventType"><option>Any</option><option>buy</option><option>sell</option></select>
       </label>
       <label class="check"><input v-model="ledgerFilters.showLifo" type="checkbox" /> Show LIFO</label>
+      <label>Limit <input v-model.number="filters.limit" type="number" min="1" max="2000" /></label>
+      <button type="button" @click="emit('apply')">Apply</button>
+    </template>
+
+    <template v-else-if="currentView === 'rare'">
+      <div class="controlGroupTitle">Rare commodity controls</div>
+      <label>Sort
+        <select v-model="rareFilters.sort">
+          <option value="profit_desc">Profit large to small</option>
+        </select>
+      </label>
+      <label class="check"><input v-model="rareFilters.engineeringOnly" type="checkbox" /> Show only engineering rare commodities</label>
       <label>Limit <input v-model.number="filters.limit" type="number" min="1" max="2000" /></label>
       <button type="button" @click="emit('apply')">Apply</button>
     </template>

@@ -33,8 +33,7 @@ RARE_COMMODITY_COLUMNS = {
     "distance_from_sol_ly": "REAL",
     "usual_supply": "INTEGER",
     "buy_price": "INTEGER",
-    "profit": "INTEGER",
-    "total_sell_price": "INTEGER",
+    "galactic_average_price": "INTEGER",
     "updated_datetime": "TEXT",
 }
 
@@ -115,18 +114,11 @@ def add_column_if_missing(conn, table: str, column: str, definition: str) -> Non
         conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
 
-def migrate_db(conn) -> None:
-    for column, definition in COMMODITY_GLOBAL_STATS_COLUMNS.items():
-        add_column_if_missing(conn, "commodity_global_stats", column, definition)
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS imports (
-            data_name TEXT PRIMARY KEY,
-            last_sha256 TEXT NOT NULL,
-            imported_datetime TEXT NOT NULL
-        )
-        """
-    )
+def table_columns(conn, table: str) -> list[str]:
+    return [str(row[1]) for row in conn.execute(f"PRAGMA table_info({table})")]
+
+
+def create_rare_commodities_table(conn) -> None:
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS rare_commodities (
@@ -139,14 +131,50 @@ def migrate_db(conn) -> None:
             distance_from_sol_ly REAL,
             usual_supply INTEGER,
             buy_price INTEGER,
-            profit INTEGER,
-            total_sell_price INTEGER,
+            galactic_average_price INTEGER,
             updated_datetime TEXT
         )
         """
     )
+
+
+def remove_obsolete_rare_commodity_columns(conn) -> None:
+    columns = table_columns(conn, "rare_commodities")
+    obsolete = {"profit", "total_sell_price"}
+    if not obsolete.intersection(columns):
+        return
+
+    desired = ["commodity", *RARE_COMMODITY_COLUMNS.keys()]
+    conn.execute("ALTER TABLE rare_commodities RENAME TO rare_commodities_old")
+    create_rare_commodities_table(conn)
+    old_columns = set(table_columns(conn, "rare_commodities_old"))
+    select_exprs = [col if col in old_columns else "NULL" for col in desired]
+    conn.execute(
+        f"""
+        INSERT INTO rare_commodities({", ".join(desired)})
+        SELECT {", ".join(select_exprs)}
+        FROM rare_commodities_old
+        """
+    )
+    conn.execute("DROP TABLE rare_commodities_old")
+
+
+def migrate_db(conn) -> None:
+    for column, definition in COMMODITY_GLOBAL_STATS_COLUMNS.items():
+        add_column_if_missing(conn, "commodity_global_stats", column, definition)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS imports (
+            data_name TEXT PRIMARY KEY,
+            last_sha256 TEXT NOT NULL,
+            imported_datetime TEXT NOT NULL
+        )
+        """
+    )
+    create_rare_commodities_table(conn)
     for column, definition in RARE_COMMODITY_COLUMNS.items():
         add_column_if_missing(conn, "rare_commodities", column, definition)
+    remove_obsolete_rare_commodity_columns(conn)
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS engineers_unlock (
@@ -335,9 +363,9 @@ def refresh_rare_commodities_from_csv(conn, plugin_dir: str) -> Dict[str, int]:
                 INSERT INTO rare_commodities(
                     commodity, inara_commodity_id, station_name, system_name, inara_location_id,
                     station_distance_ls, distance_from_sol_ly, usual_supply, buy_price,
-                    profit, total_sell_price, updated_datetime
+                    galactic_average_price, updated_datetime
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(commodity) DO UPDATE SET
                     inara_commodity_id=excluded.inara_commodity_id,
                     station_name=excluded.station_name,
@@ -347,8 +375,7 @@ def refresh_rare_commodities_from_csv(conn, plugin_dir: str) -> Dict[str, int]:
                     distance_from_sol_ly=rare_commodities.distance_from_sol_ly,
                     usual_supply=excluded.usual_supply,
                     buy_price=excluded.buy_price,
-                    profit=excluded.profit,
-                    total_sell_price=excluded.total_sell_price,
+                    galactic_average_price=excluded.galactic_average_price,
                     updated_datetime=excluded.updated_datetime
                 """,
                 (
@@ -361,8 +388,7 @@ def refresh_rare_commodities_from_csv(conn, plugin_dir: str) -> Dict[str, int]:
                     first_float(get(row, "distance_from_sol_ly", "distance")),
                     first_int(get(row, "usual_supply", "supply")),
                     first_int(get(row, "buy_price", "buy price")),
-                    first_int(get(row, "profit")),
-                    first_int(get(row, "total_sell_price", "total sell price")),
+                    first_int(get(row, "galactic_average_price", "galactic average price", "galactic_average")),
                     ts,
                 ),
             )

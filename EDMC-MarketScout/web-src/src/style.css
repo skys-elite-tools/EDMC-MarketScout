@@ -47,7 +47,7 @@ a:hover { text-decoration: underline; }
 }
 h1 { margin: 0; font-size: 20px; }
 .subtitle { margin: 2px 0 0; color: var(--muted); }
-.mainNav { display: flex; gap: 6px; }
+.mainNav { display: flex; gap: 6px; flex-wrap: wrap; }
 .mainNav button.active { border-color: var(--accent); background: #304761; color: white; }
 .topLinks, .footerLinks { display: flex; gap: 12px; align-items: center; color: var(--muted); }
 .viewControls {
@@ -326,6 +326,11 @@ tr.strong { background: var(--strong); }
 tr.ledgerBuy { background: rgba(80,160,255,.035); }
 tr.ledgerSell { background: rgba(80,220,120,.035); }
 tr.ledgerSell.cheap { background: rgba(80,220,120,.10); }
+tr.engineeringRare { background: rgba(140,200,255,.045); }
+.rareTable th:nth-child(1) { min-width: 14rem; }
+.rareTable th:nth-child(3) { min-width: 14rem; }
+.rareTable th:nth-child(8),
+.rareTable th:nth-child(9) { min-width: 10rem; }
 .inlineToggle {
   min-width: 1.6rem;
   padding: 1px 4px;

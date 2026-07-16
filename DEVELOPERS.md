@@ -77,6 +77,7 @@ After backend or Web UI changes:
    - Stations
    - Jackpot History
    - Ledger
+   - Rare Commodities
    - Commodities settings
 6. If market data is involved, dock/open a market or use a known `Market.json` test case.
 

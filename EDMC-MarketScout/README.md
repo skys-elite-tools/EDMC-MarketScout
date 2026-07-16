@@ -141,6 +141,11 @@ The Web UI includes a `Jackpot History` button that displays the stored samples.
 - MarketScout imports `rawdata/engineers-unlock.csv` into `engineers_unlock` on startup when the file SHA-256 changes.
 - The importer marks `is_rare_commodity` by matching required commodities against `rare_commodities`.
 
+## Rare commodities view
+
+- MarketScout imports `rawdata/commodities_rare.csv` into `rare_commodities` with source station/system, usual supply, buy price, and optional galactic average price.
+- The Web UI has a `Rare Commodities` view with an engineering-only filter and fleet-carrier maximum sale profit estimate.
+
 
 ## 0.1.22 notes
 
