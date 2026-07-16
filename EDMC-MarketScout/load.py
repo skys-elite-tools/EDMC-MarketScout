@@ -629,9 +629,17 @@ def refresh_rare_commodities_from_csv(conn: sqlite3.Connection, plugin_dir: str)
     except Exception:
         log_exception("refresh_rare_commodities_from_csv")
 
+def refresh_engineers_unlock_from_csv(conn: sqlite3.Connection, plugin_dir: str) -> None:
+    """Refresh engineers_unlock from optional rawdata/engineers-unlock.csv."""
+    try:
+        load_commodities_importer_module().refresh_engineers_unlock_from_csv(conn, plugin_dir)
+    except Exception:
+        log_exception("refresh_engineers_unlock_from_csv")
+
 def refresh_rawdata_imports(conn: sqlite3.Connection, plugin_dir: str) -> None:
     refresh_commodity_global_stats_from_csv(conn, plugin_dir)
     refresh_rare_commodities_from_csv(conn, plugin_dir)
+    refresh_engineers_unlock_from_csv(conn, plugin_dir)
 
 def get_watched_commodities(conn: sqlite3.Connection) -> List[str]:
     value = setting_get(conn, "watched_commodities", list(DEFAULT_WATCHED_COMMODITIES))

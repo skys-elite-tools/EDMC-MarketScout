@@ -136,6 +136,11 @@ The Web UI includes a `Jackpot History` button that displays the stored samples.
 - MarketScout now uses a canonical commodity key for matching and the `commodity_global_stats` / `rawdata/commodities.csv` catalogue for display names when possible.
 - This prevents duplicate rows such as `Agronomic Treatment` and `Agronomictreatment` for the same market, and merges existing legacy duplicates by keeping the newest market snapshot.
 
+## Engineer unlock data
+
+- MarketScout imports `rawdata/engineers-unlock.csv` into `engineers_unlock` on startup when the file SHA-256 changes.
+- The importer marks `is_rare_commodity` by matching required commodities against `rare_commodities`.
+
 
 ## 0.1.22 notes
 

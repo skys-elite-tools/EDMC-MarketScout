@@ -54,6 +54,7 @@ EDMC-MarketScout/
   rawdata/
     commodities.csv          # Commodity catalog/stats input loaded on startup
     commodities_rare.csv     # Rare commodity source data loaded on startup
+    engineers-unlock.csv     # Engineer unlock requirements loaded on startup
   README.md
   web/                       # Prebuilt static Web UI served at runtime
   web-src/                   # Vue 3 + Vite source for developers
@@ -138,6 +139,7 @@ Main data concepts:
 - Market prices: commodity rows per market/station. Current direction is to store all commodities, not just a fixed metal list.
 - Commodity global stats: catalog/config table populated from `rawdata/commodities.csv` with commodity display name, category, INARA ID, average buy/sell/profit, max sell, min buy, and max profit.
 - Rare commodities: catalog table populated from `rawdata/commodities_rare.csv` with commodity, INARA IDs, source station/system, usual supply, buy/profit/sell values, and preserved distance metadata.
+- Engineer unlocks: table populated from `rawdata/engineers-unlock.csv` with public/discovery-chain status, required commodity/quantity, other requirements, and an `is_rare_commodity` flag derived by matching against `rare_commodities`.
 - Jackpot events/samples: static jackpot context plus event-driven time-series samples.
 - Trade events/lots: ledger rows for MarketBuy/MarketSell, Journal profit fields, and optional LIFO details.
 

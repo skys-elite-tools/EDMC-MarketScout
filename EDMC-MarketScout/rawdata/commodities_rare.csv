@@ -1,143 +1,143 @@
-commodity_name,inara_commodity_id,station_name,system_name,inara_location_id,station_distance_ls,distance_from_sol_ly,usual_supply,buy_price,profit,total_sell_price
-Fujin Tea,10055,Futen Spaceport,Fujin,2919,557.0,0.0,15,1136,409,23175
-Tauri Chimes,10060,Porta,39 Tauri,2707,994.0,13.02,17,924,4,15787
-Gerasian Gueuze Beer,10056,Yurchikhin Port,Geras,2686,1052893.0,17.73,0,450,16,0
-Wolf Fesh,10071,Saunders's Dive,Wolf 1301,22976,417.0,22.85,0,712,19,0
-Chameleon Cloth,10109,Smith Reserve,LDS 883,9086,54387.0,23.43,7,1664,16,11761
-Witchhaul Kobe Beef,10072,Hornby Terminal,Witchhaul,3121,220.0,23.86,14,4972,-444,63382
-Momus Bog Spaniel,10039,Tartarus Point,Momus Reach,2583,414.0,36.89,14,1975,466,34176
-Terra Mater Blood Bores,10129,GR8Minds,Terra Mater,15169,490.0,47.3,0,7824,60,0
-Pantaa Prayer Sticks,10058,Zamka Platform,George Pantazis,2706,45.0,47.45,18,1815,260,37351
-Live Hecate Sea Worms,10004,RJH1972,Hecate,1838,526.0,52.36,11,952,1410,25990
-Saxon Wine,10169,Hunt Enterprise,9 Aurigae,23323,67190.0,52.59,13,1540,428,25586
-Zeessze Ant Grub Glue,10044,Nicollier Hangar,Zeessze,59719,489.0,54.11,41,991,1,40688
-Onionhead,10070,Harvestport,Kappa Fornacis,2759,918.0,54.48,6,1339,3392,28388
-Lucan Onionhead,10112,Cassie-L-Peia,Tanmark,2328,414.0,56.15,16,990,7310,132814
-Tanmark Tranquil Tea,10019,Cassie-L-Peia,Tanmark,2328,414.0,56.15,18,1963,409,42705
-Jotun Mookah,10111,Icelock,Jotun,13306,79.0,59.32,0,1252,901,0
-Bast Snake Gin,10008,Hart Station,Bast,2850,204.0,60.6,0,1080,928,0
-Tarach Spice,10075,Tranquillity,Tarach Tor,11511,359.0,64.15,16,1231,1058,36633
-Crystalline Spheres,10214,Snow Moon,Bento,10560,342.0,64.55,18,6493,5867,222481
-AZ Cancri Formula 42,10099,Fisher Station,AZ Cancri,2176,16.0,66.12,18,6829,871,138608
-The Hutton Mug,10138,Hutton Orbital,Alpha Centauri,1939,6395261.0,69.76,45,306,2184,112062
-Centauri Mega Gin,10053,Hutton Orbital,Alpha Centauri,1939,6395261.0,69.76,14,3447,1175,64716
-Indi Bourbon,10042,Mansfield Orbiter,Epsilon Indi,1770,143.0,70.16,16,1288,1918,51307
-Master Chefs,10142,Pataarcy Corporate,Viracocha,6348,502.0,73.33,0,20580,50,0
-Duradrives,10242,Cowper Dock,Anima,11304,1094.0,74.24,12,16250,8841,301101
-Chi Eridani Marine Paste,10009,Steve Masters,Chi Eridani,2109,2241.0,74.52,18,784,2658,61969
-Altairian Skin,10038,Solo Orbiter,Altair,1028,666.0,75.54,63,1325,2538,243406
-Chateau De Aegaeon,10015,Schweickart Station,Aegaeon,2266,8855.0,75.62,14,1267,2668,55095
-Pavonis Ear Grubs,10105,Hooper Relay,Delta Pavonis,1704,195.0,77.4,20,1239,2646,77708
-HIP 10175 Bush Meat,10094,Stefanyshyn-Piper Station,HIP 10175,5269,4836.0,78.64,13,2105,2877,64777
-Banki Amphibious Leather,10049,Antonio de Andrade Vista,Banki,15230,531684.0,79.27,18,625,3612,76266
-Vega Slimweed,10090,Taylor City,Vega,5265,1083.0,79.77,0,1919,3548,0
-Damna Carapaces,10020,Nemere Market,Damna,2336,3047.0,81.56,15,315,4223,68076
-Ophiuch Exino Artefacts,10139,Katzenstein Dock,36 Ophiuchi,12167,4216466.0,84.97,0,4915,2587,0
-Tiolce Waste2Paste Units,10098,Gordon Terminal,Tiolce,42254,158.0,85.82,20,1569,4396,119311
-LTT Hyper Sweet,10135,Smeaton Orbital,LTT 9360,20943,1872201.0,87.33,0,363,5546,0
-Eranin Pearl Whisky,10002,Azeban City,Eranin,151,294.0,90.03,24,2310,4905,173167
-Utgaroar Millennial Eggs,10073,Fort Klarix,Utgaroar,2805,169.0,90.18,5,227,7115,36711
-Crom Silver Fesh,10151,Chorel Survey,Crom,26405,1276.0,90.65,26,855,6136,181771
-Ceti Rabbits,10108,Kaufmanis Hub,47 Ceti,9590,596226.0,90.92,18,2111,5367,134619
-Aepyornis Egg,10110,Glushko Station,47 Ceti,9591,592761.0,90.92,11,3053,4867,87125
-Neritus Berries,10077,Toll Ring,Neritus,3788,524.0,92.3,20,1335,6157,149845
-Xihe Biomorphic Companions,10010,Zhen Dock,Xihe,2110,1929.0,94.18,40,4666,5127,391739
-Thrutis Cream,10005,Kingsbury Dock,Thrutis,1127,290.0,95.23,11,925,7401,91592
-Void Extract Coffee,10059,Ehrlich Orbital,LFT 1421,1719,774585.0,95.29,27,2749,6181,241134
-Havasupai Dream Catcher,10054,Lovelace Port,Havasupai,2684,603620.0,96.8,4,9561,3303,51456
-Mulachi Giant Fungus,10050,Clark Terminal,Mulachi,2681,594306.0,98.87,0,692,8322,0
-Uzumoku Low-G Wings,10045,Sverdrup Ring,Uzumoku,2610,505391.0,99.01,0,8435,4251,0
-Mechucos High Tea,10088,Brandenstein Port,Mechucos,5264,534686.0,101.77,16,1345,8607,159245
-Honesty Pills,10104,King Gateway,LP 375-25,7033,513847.0,101.91,26,1365,9006,269654
-Albino Quechua Mammoth Meat,10100,Crown Ring,Quechua,5274,118.0,101.93,0,2538,8300,0
-Aganippe Rush,10130,Julian Market,Aganippe,15672,116.0,102.6,0,8966,4791,0
-Platinum Alloy,10233,Artzybasheff Terminal,Nahuatl,6145,133.0,104.61,13,14800,3421,236878
-Medb Starlube,10076,Vela Dock,Medb,3787,1686576.0,106.16,0,749,9894,0
-V Herculis Body Rub,10102,Kaku Plant,V1090 Herculis,7031,1238612.0,106.31,0,160,10921,0
-Rusani Old Smokey,10023,Fernandes Market,Rusani,2339,72.0,108.06,10,5810,8038,138486
-Belalans Ray Leather,10012,Boscovich Ring,Belalans,1866,78.0,108.83,17,1359,10696,204935
-Coquim Spongiform Victuals,10078,Hirayama Installation,Coquim,3789,604.0,109.49,20,255,11686,238825
-Ethgreze Tea Buds,10003,Bloch Station,Ethgreze,1707,351.0,111.21,11,3653,10051,150744
-Tiegfries Synth Silk,10170,Larbalestier Dock,Tiegfries,40200,563049.0,112.08,30,823,11655,374367
-HIP Proto-Squid,10021,Andersson Station,HIP 41181,2337,536698.0,114.86,14,1414,12417,193646
-Non Euclidian Exotanks,10134,Euclid Terminal,LTT 8517,20937,710876.0,114.94,16,892,12659,216830
-The Waters Of Shintara,10069,Jameson Memorial,Shinrarta Dezhra,786,345.0,116.37,12,7421,11049,221649
-Alya Body Soap,10092,Malaspina Gateway,Alya,5267,52129.0,117.6,16,454,13436,222241
-Cherbones Blood Crystals,10047,Chalker Landing,Cherbones,2678,576316.0,122.95,8,12504,8179,165466
-Galactic Travel Guide,10143,Bluford Orbital,LHS 3447,52176,2114.0,123.61,0,1122,19135,0
-Esuseku Caviar,10033,Savinykh Orbital,Esuseku,2431,273.0,124.16,10,2328,13997,163254
-Arouca Conventual Sweets,10051,Shipton Orbital,Arouca,2682,409.0,125.99,12,1191,13937,181544
-Motrona Experience Jelly,10074,Pinzon Dock,Dea Motrona,3122,1759044.0,128.7,0,5936,14067,0
-HIP 118311 Swarm,10150,Lubbock Market,HIP 118311,5543,89.0,130.86,0,6550,15899,0
-Onionhead Alpha Strain,10216,Navigator Market,Xelabara,2902,302.0,130.89,0,765,15431,0
-Onionhead Beta Strain,10217,la Cosa City,HIP 112974,28889,8770.0,132.51,10,765,15608,163735
-Nanomedicines,10241,Elion Dock,Kuma,16741,362.0,132.82,40,2782,15079,714444
-Mokojing Beast Feast,10095,Noli Terminal,Mokojing,5270,539541.0,132.84,11,2930,15205,199489
-CD-75 Kitten Brand Coffee,10017,Kirk Dock,CD-75 661,2299,339.0,132.97,18,2729,14910,317507
-Giant Verrix,10081,Greeboski's Outpost,Phiagre,5257,84.0,133.18,12,6506,15064,258842
-Wulpa Hyperbore Systems,10103,Williams Gateway,Wulpa,7032,27.0,133.78,10,1175,15648,168231
-Jaradharre Puzzle Box,10048,Gohar Station,Jaradharre,2679,525333.0,134.61,0,12648,13958,0
-Gilya Signature Weapons,10132,Bell Orbital,Gilya,3311,456.0,134.75,18,7582,13609,381447
-Baltah'sine Vacuum Krill,10089,Baltha'Sine Station,Baltah'Sine,5276,359.0,137.34,18,825,16033,303454
-Haiden Black Brew,10046,Searfoss Enterprise,Haiden,2612,563253.0,137.89,21,1705,15652,364502
-Delta Phoenicis Palms,10001,Trading Post,Delta Phoenicis,1798,3710.0,138.15,17,412,16158,281696
-Kachirigin Filter Leeches,10068,Nowak Orbital,Kachirigin,2758,339.0,138.73,10,467,16194,166619
-Harma Silver Sea Rum,10232,Gabriel Enterprise,Harma,8301,258.0,141.36,90,4480,14041,1666908
-Nguna Modern Antiques,10066,Biggle Hub,Nguna,2756,1872.0,142.01,18,919,15445,294557
-Eden Apples Of Aerial,10063,Andrade Legacy,Aerial,2753,179.0,145.5,15,615,16541,257348
-Ochoeng Chillies,10091,Roddenberry Gateway,Ochoeng,5266,484.0,145.7,21,1468,16039,367652
-Deuringas Truffles,10086,Shukor Hub,Deuringas,5262,802.0,149.17,11,2384,16336,205924
-Personal Gifts,10213,Frost Dock,Njambalba,37220,32241.0,150.1,24,12250,17253,708077
-Koro Kung Pellets,10080,Lonchakov Orbital,Korro Kung,5275,622617.0,150.67,30,591,16384,509260
-Kongga Ale,10032,Laplace Ring,Kongga,2430,253.0,152.08,16,585,15801,262177
-Lyrae Weed,10171,Budrys Ring,16 Lyrae,18082,1464.0,152.48,10,1475,15876,173513
-Any Na Coffee,10016,Libby Orbital,Any Na,2267,580.0,153.33,11,1790,16717,203578
-Borasetani Pathogenetics,10067,Katzenstein Terminal,Borasetani,3224,229.0,153.82,12,8200,16133,292005
-Holva Duelling Blades,10101,Kreutz Orbital,Holva,2606,23160.0,155.71,7,6518,16419,160559
-Shan's Charis Orchid,10149,Baird Gateway,Arque,1525,586.0,156.15,48,2390,15502,858821
-Yaso Kondi Leaf,10029,Wheeler Market,Yaso Kondi,2428,112.0,157.09,18,6572,16017,406604
-Volkhab Bee Drones,10085,Vernadsky Dock,Volkhab,5261,397.0,157.18,12,3262,16734,239963
-Buckyball Beer Mats,10147,Rebuy Prospect,Fullerene C60,59574,238.0,159.45,25,85,16075,404002
-Baked Greebles,10266,Bamford Ring,38 Virginis,18137,525770.0,160.2,5,445,15875,81601
-Helvetitj Pearls,10025,Friend Orbital,Helvetitj,2423,444.0,164.6,6,3439,17046,122912
-Kamorin Historic Weapons,10064,Godwin Vision,Kamorin,2754,449.0,165.45,12,2650,16929,234954
-HR 7221 Wheat,10024,Veron City,HR 7221,2422,1894.0,165.53,24,897,15416,391527
-Azure Milk,10040,George Lucas,Leesti,903,264.0,169.32,42,4708,16801,903382
-Leestian Evil Juice,10034,George Lucas,Leesti,903,264.0,169.32,63,1042,15358,1033229
-Diso Ma Corn,10043,Shifnalport,Diso,1052,288.0,170.93,68,894,15346,1104355
-Hip Organophosphates,10107,Stasheff Colony,HIP 80364,9597,2633.0,171.17,0,385,15926,0
-Uszaian Tree Grub,10106,Guest Installation,Uszaa,627,4349.0,172.52,21,1248,14658,334043
-Ultra-Compact Processor Prototypes,10148,Langford Enterprise,17 Lyrae,11002,2199.0,172.59,3,19350,15603,104861
-Lavian Brandy,10006,Lave Station,Lave,731,299.0,172.6,24,3500,17463,503120
-Rapa Bao Snake Skins,10018,Flagg Gateway,Rapa Bao,2327,2196.0,173.47,11,550,16684,189575
-Leathery Eggs,10041,Ridley Scott,Zaonce,952,363.0,173.92,5,24107,21660,228839
-Orrerian Vicious Brew,10035,Sharon Lee Free Market,Orrere,1171,962.0,174.08,32,630,16035,533302
-Eleu Thermals,10027,Finney Dock,Eleu,2425,333.0,177.17,13,864,16793,229549
-Ceremonial Heike Tea,10011,Brunel City,Heike,2111,409.0,178.7,8,1824,17079,151231
-Vanayequi Ceratomorpha Fur,10036,Clauss Hub,Vanayequi,2525,81.0,179.03,15,828,16776,264068
-Vidavantian Lace,10057,Lee Mines,Vidavanta,2705,517450.0,179.29,5,6690,17025,118576
-Mukusubii Chitin-os,10065,Ledyard Dock,Mukusubii,2755,505120.0,179.43,0,1008,16642,0
-Anduliga Fire Works,10052,Celsius Estate,Anduliga,2683,626405.0,180.61,0,882,16999,0
-Burnham Bile Distillate,10097,Burnham Beacon,HIP 59533,5272,530435.0,183.0,0,1161,17076,0
-Ngadandari Fire Opals,10062,Napier Terminal,Ngadandari,15491,501539.0,187.22,12,15905,16915,393847
-Wuthielo Ku Froth,10037,Tarter Dock,Wuthielo Ku,2526,174.0,190.04,4,42,16618,66640
-Kamitra Cigars,10030,Hammel Terminal,Kamitra,2429,83.0,196.6,23,6592,17964,564807
-Karetii Couture,10026,Sinclair Platform,Karetii,2424,990.0,196.78,5,5225,16996,111108
-Apa Vietii,10267,Forester's Choice,Upaniklis,94792,10314.0,199.52,11,3495,17443,230326
-Toxandji Virocide,10007,Tsunenaga Orbital,Toxandji,1795,6762.0,201.76,42,749,16785,736458
-Alacarakmo Skin Art,10028,Weyl Gateway,Alacarakmo,2426,14.0,201.87,20,1421,16377,355971
-Jaroua Rice,10013,McCool City,Jaroua,2264,142.0,201.98,27,674,15657,440955
-Giant Irukama Snails,10096,Blaauw City,Irukama,5271,325.0,205.07,36,2435,15912,660517
-Rajukru Multi-Stoves,10084,Snyder Terminal,Rajukru,5260,117.0,206.22,32,682,16074,536219
-Njangari Saddles,10014,Lee Hub,Njangari,2265,21305.0,214.71,20,1170,15837,340159
-Kinago Violins,10082,Fozard Ring,Kinago,5258,1725.0,219.12,11,7643,16635,267067
-Soontill Relics,10127,Cheranovsky City,Ngurii,15168,1248.0,228.69,80,17000,22768,3181470
-Goman Yaupon Coffee,10031,Gustav Sporer Port,Goman,2436,271.0,229.36,16,1451,16620,289151
-Sanuma Decorative Meat,10087,Dunyach Gateway,Sanuma,5263,7514.0,230.05,34,860,16147,578271
-Karsuki Locusts,10093,West Market,Karsuki Ti,5268,27.0,233.0,27,1098,16227,467801
-Geawen Dance Dust,10083,Obruchev Legacy,Geawen,5259,462327.0,238.1,45,1370,16651,810989
-Eshu Umbrellas,10022,Shajn Terminal,Eshu,2338,1743.0,254.76,9,2050,16633,168155
-Wheemete Wheat Cakes,10061,Eisinga Enterprise,Wheemete,2721,551873.0,267.13,19,260,17001,327977
-Classified Experimental Equipment,10436,Heart of Taurus,HIP 22460,410901,1865.0,299.22,0,5000,17000,0
-Sothis Crystalline Gold,10136,Newholm Station,Sothis,17216,1826.0,452.17,45,15937,22288,1720125
-Jaques Quinentian Still,10128,Jaques Station,Colonia,53294,1543.0,22049.78,65,8691,19000,1799915
+commodity_name,inara_commodity_id,station_name,system_name,inara_location_id,station_distance_ls,distance_from_sol_ly,usual_supply,buy_price,profit,total_sell_price,galactic_average_price
+Fujin Tea,10055,Futen Spaceport,Fujin,2919,557,0,15,1136,409,23175,7460
+Tauri Chimes,10060,Porta,39 Tauri,2707,994,13.02,17,924,4,15787,
+Gerasian Gueuze Beer,10056,Yurchikhin Port,Geras,2686,1052893,17.73,0,450,16,0,
+Wolf Fesh,10071,Saunders's Dive,Wolf 1301,22976,417,22.85,0,712,19,0,
+Chameleon Cloth,10109,Smith Reserve,LDS 883,9086,54387,23.43,7,1664,16,11761,
+Witchhaul Kobe Beef,10072,Hornby Terminal,Witchhaul,3121,220,23.86,14,4972,-444,63382,
+Momus Bog Spaniel,10039,Tartarus Point,Momus Reach,2583,414,36.89,14,1975,466,34176,
+Terra Mater Blood Bores,10129,GR8Minds,Terra Mater,15169,490,47.3,0,7824,60,0,
+Pantaa Prayer Sticks,10058,Zamka Platform,George Pantazis,2706,45,47.45,18,1815,260,37351,
+Live Hecate Sea Worms,10004,RJH1972,Hecate,1838,526,52.36,11,952,1410,25990,
+Saxon Wine,10169,Hunt Enterprise,9 Aurigae,23323,67190,52.59,13,1540,428,25586,
+Zeessze Ant Grub Glue,10044,Nicollier Hangar,Zeessze,59719,489,54.11,41,991,1,40688,
+Onionhead,10070,Harvestport,Kappa Fornacis,2759,918,54.48,6,1339,3392,28388,
+Lucan Onionhead,10112,Cassie-L-Peia,Tanmark,2328,414,56.15,16,990,7310,132814,
+Tanmark Tranquil Tea,10019,Cassie-L-Peia,Tanmark,2328,414,56.15,18,1963,409,42705,
+Jotun Mookah,10111,Icelock,Jotun,13306,79,59.32,0,1252,901,0,
+Bast Snake Gin,10008,Hart Station,Bast,2850,204,60.6,0,1080,928,0,
+Tarach Spice,10075,Tranquillity,Tarach Tor,11511,359,64.15,16,1231,1058,36633,
+Crystalline Spheres,10214,Snow Moon,Bento,10560,342,64.55,18,6493,5867,222481,
+AZ Cancri Formula 42,10099,Fisher Station,AZ Cancri,2176,16,66.12,18,6829,871,138608,
+The Hutton Mug,10138,Hutton Orbital,Alpha Centauri,1939,6395261,69.76,45,306,2184,112062,
+Centauri Mega Gin,10053,Hutton Orbital,Alpha Centauri,1939,6395261,69.76,14,3447,1175,64716,
+Indi Bourbon,10042,Mansfield Orbiter,Epsilon Indi,1770,143,70.16,16,1288,1918,51307,
+Master Chefs,10142,Pataarcy Corporate,Viracocha,6348,502,73.33,0,20580,50,0,
+Duradrives,10242,Cowper Dock,Anima,11304,1094,74.24,12,16250,8841,301101,
+Chi Eridani Marine Paste,10009,Steve Masters,Chi Eridani,2109,2241,74.52,18,784,2658,61969,
+Altairian Skin,10038,Solo Orbiter,Altair,1028,666,75.54,63,1325,2538,243406,
+Chateau De Aegaeon,10015,Schweickart Station,Aegaeon,2266,8855,75.62,14,1267,2668,55095,
+Pavonis Ear Grubs,10105,Hooper Relay,Delta Pavonis,1704,195,77.4,20,1239,2646,77708,
+HIP 10175 Bush Meat,10094,Stefanyshyn-Piper Station,HIP 10175,5269,4836,78.64,13,2105,2877,64777,
+Banki Amphibious Leather,10049,Antonio de Andrade Vista,Banki,15230,531684,79.27,18,625,3612,76266,
+Vega Slimweed,10090,Taylor City,Vega,5265,1083,79.77,0,1919,3548,0,
+Damna Carapaces,10020,Nemere Market,Damna,2336,3047,81.56,15,315,4223,68076,
+Ophiuch Exino Artefacts,10139,Katzenstein Dock,36 Ophiuchi,12167,4216466,84.97,0,4915,2587,0,
+Tiolce Waste2Paste Units,10098,Gordon Terminal,Tiolce,42254,158,85.82,20,1569,4396,119311,
+LTT Hyper Sweet,10135,Smeaton Orbital,LTT 9360,20943,1872201,87.33,0,363,5546,0,
+Eranin Pearl Whisky,10002,Azeban City,Eranin,151,294,90.03,24,2310,4905,173167,
+Utgaroar Millennial Eggs,10073,Fort Klarix,Utgaroar,2805,169,90.18,5,227,7115,36711,
+Crom Silver Fesh,10151,Chorel Survey,Crom,26405,1276,90.65,26,855,6136,181771,
+Ceti Rabbits,10108,Kaufmanis Hub,47 Ceti,9590,596226,90.92,18,2111,5367,134619,
+Aepyornis Egg,10110,Glushko Station,47 Ceti,9591,592761,90.92,11,3053,4867,87125,
+Neritus Berries,10077,Toll Ring,Neritus,3788,524,92.3,20,1335,6157,149845,
+Xihe Biomorphic Companions,10010,Zhen Dock,Xihe,2110,1929,94.18,40,4666,5127,391739,
+Thrutis Cream,10005,Kingsbury Dock,Thrutis,1127,290,95.23,11,925,7401,91592,
+Void Extract Coffee,10059,Ehrlich Orbital,LFT 1421,1719,774585,95.29,27,2749,6181,241134,
+Havasupai Dream Catcher,10054,Lovelace Port,Havasupai,2684,603620,96.8,4,9561,3303,51456,
+Mulachi Giant Fungus,10050,Clark Terminal,Mulachi,2681,594306,98.87,0,692,8322,0,
+Uzumoku Low-G Wings,10045,Sverdrup Ring,Uzumoku,2610,505391,99.01,0,8435,4251,0,
+Mechucos High Tea,10088,Brandenstein Port,Mechucos,5264,534686,101.77,16,1345,8607,159245,
+Honesty Pills,10104,King Gateway,LP 375-25,7033,513847,101.91,26,1365,9006,269654,
+Albino Quechua Mammoth Meat,10100,Crown Ring,Quechua,5274,118,101.93,0,2538,8300,0,
+Aganippe Rush,10130,Julian Market,Aganippe,15672,116,102.6,0,8966,4791,0,
+Platinum Alloy,10233,Artzybasheff Terminal,Nahuatl,6145,133,104.61,13,14800,3421,236878,
+Medb Starlube,10076,Vela Dock,Medb,3787,1686576,106.16,0,749,9894,0,
+V Herculis Body Rub,10102,Kaku Plant,V1090 Herculis,7031,1238612,106.31,0,160,10921,0,
+Rusani Old Smokey,10023,Fernandes Market,Rusani,2339,72,108.06,10,5810,8038,138486,
+Belalans Ray Leather,10012,Boscovich Ring,Belalans,1866,78,108.83,17,1359,10696,204935,
+Coquim Spongiform Victuals,10078,Hirayama Installation,Coquim,3789,604,109.49,20,255,11686,238825,
+Ethgreze Tea Buds,10003,Bloch Station,Ethgreze,1707,351,111.21,11,3653,10051,150744,
+Tiegfries Synth Silk,10170,Larbalestier Dock,Tiegfries,40200,563049,112.08,30,823,11655,374367,
+HIP Proto-Squid,10021,Andersson Station,HIP 41181,2337,536698,114.86,14,1414,12417,193646,
+Non Euclidian Exotanks,10134,Euclid Terminal,LTT 8517,20937,710876,114.94,16,892,12659,216830,
+The Waters Of Shintara,10069,Jameson Memorial,Shinrarta Dezhra,786,345,116.37,12,7421,11049,221649,
+Alya Body Soap,10092,Malaspina Gateway,Alya,5267,52129,117.6,16,454,13436,222241,
+Cherbones Blood Crystals,10047,Chalker Landing,Cherbones,2678,576316,122.95,8,12504,8179,165466,
+Galactic Travel Guide,10143,Bluford Orbital,LHS 3447,52176,2114,123.61,0,1122,19135,0,
+Esuseku Caviar,10033,Savinykh Orbital,Esuseku,2431,273,124.16,10,2328,13997,163254,
+Arouca Conventual Sweets,10051,Shipton Orbital,Arouca,2682,409,125.99,12,1191,13937,181544,
+Motrona Experience Jelly,10074,Pinzon Dock,Dea Motrona,3122,1759044,128.7,0,5936,14067,0,
+HIP 118311 Swarm,10150,Lubbock Market,HIP 118311,5543,89,130.86,0,6550,15899,0,
+Onionhead Alpha Strain,10216,Navigator Market,Xelabara,2902,302,130.89,0,765,15431,0,
+Onionhead Beta Strain,10217,la Cosa City,HIP 112974,28889,8770,132.51,10,765,15608,163735,
+Nanomedicines,10241,Elion Dock,Kuma,16741,362,132.82,40,2782,15079,714444,
+Mokojing Beast Feast,10095,Noli Terminal,Mokojing,5270,539541,132.84,11,2930,15205,199489,
+CD-75 Kitten Brand Coffee,10017,Kirk Dock,CD-75 661,2299,339,132.97,18,2729,14910,317507,
+Giant Verrix,10081,Greeboski's Outpost,Phiagre,5257,84,133.18,12,6506,15064,258842,
+Wulpa Hyperbore Systems,10103,Williams Gateway,Wulpa,7032,27,133.78,10,1175,15648,168231,
+Jaradharre Puzzle Box,10048,Gohar Station,Jaradharre,2679,525333,134.61,0,12648,13958,0,
+Gilya Signature Weapons,10132,Bell Orbital,Gilya,3311,456,134.75,18,7582,13609,381447,
+Baltah'sine Vacuum Krill,10089,Baltha'Sine Station,Baltah'Sine,5276,359,137.34,18,825,16033,303454,
+Haiden Black Brew,10046,Searfoss Enterprise,Haiden,2612,563253,137.89,21,1705,15652,364502,
+Delta Phoenicis Palms,10001,Trading Post,Delta Phoenicis,1798,3710,138.15,17,412,16158,281696,
+Kachirigin Filter Leeches,10068,Nowak Orbital,Kachirigin,2758,339,138.73,10,467,16194,166619,
+Harma Silver Sea Rum,10232,Gabriel Enterprise,Harma,8301,258,141.36,90,4480,14041,1666908,
+Nguna Modern Antiques,10066,Biggle Hub,Nguna,2756,1872,142.01,18,919,15445,294557,
+Eden Apples Of Aerial,10063,Andrade Legacy,Aerial,2753,179,145.5,15,615,16541,257348,
+Ochoeng Chillies,10091,Roddenberry Gateway,Ochoeng,5266,484,145.7,21,1468,16039,367652,
+Deuringas Truffles,10086,Shukor Hub,Deuringas,5262,802,149.17,11,2384,16336,205924,
+Personal Gifts,10213,Frost Dock,Njambalba,37220,32241,150.1,24,12250,17253,708077,
+Koro Kung Pellets,10080,Lonchakov Orbital,Korro Kung,5275,622617,150.67,30,591,16384,509260,
+Kongga Ale,10032,Laplace Ring,Kongga,2430,253,152.08,16,585,15801,262177,
+Lyrae Weed,10171,Budrys Ring,16 Lyrae,18082,1464,152.48,10,1475,15876,173513,
+Any Na Coffee,10016,Libby Orbital,Any Na,2267,580,153.33,11,1790,16717,203578,
+Borasetani Pathogenetics,10067,Katzenstein Terminal,Borasetani,3224,229,153.82,12,8200,16133,292005,
+Holva Duelling Blades,10101,Kreutz Orbital,Holva,2606,23160,155.71,7,6518,16419,160559,
+Shan's Charis Orchid,10149,Baird Gateway,Arque,1525,586,156.15,48,2390,15502,858821,
+Yaso Kondi Leaf,10029,Wheeler Market,Yaso Kondi,2428,112,157.09,18,6572,16017,406604,
+Volkhab Bee Drones,10085,Vernadsky Dock,Volkhab,5261,397,157.18,12,3262,16734,239963,
+Buckyball Beer Mats,10147,Rebuy Prospect,Fullerene C60,59574,238,159.45,25,85,16075,404002,
+Baked Greebles,10266,Bamford Ring,38 Virginis,18137,525770,160.2,5,445,15875,81601,
+Helvetitj Pearls,10025,Friend Orbital,Helvetitj,2423,444,164.6,6,3439,17046,122912,
+Kamorin Historic Weapons,10064,Godwin Vision,Kamorin,2754,449,165.45,12,2650,16929,234954,
+HR 7221 Wheat,10024,Veron City,HR 7221,2422,1894,165.53,24,897,15416,391527,
+Azure Milk,10040,George Lucas,Leesti,903,264,169.32,42,4708,16801,903382,
+Leestian Evil Juice,10034,George Lucas,Leesti,903,264,169.32,63,1042,15358,1033229,
+Diso Ma Corn,10043,Shifnalport,Diso,1052,288,170.93,68,894,15346,1104355,
+Hip Organophosphates,10107,Stasheff Colony,HIP 80364,9597,2633,171.17,0,385,15926,0,
+Uszaian Tree Grub,10106,Guest Installation,Uszaa,627,4349,172.52,21,1248,14658,334043,
+Ultra-Compact Processor Prototypes,10148,Langford Enterprise,17 Lyrae,11002,2199,172.59,3,19350,15603,104861,
+Lavian Brandy,10006,Lave Station,Lave,731,299,172.6,24,3500,17463,503120,
+Rapa Bao Snake Skins,10018,Flagg Gateway,Rapa Bao,2327,2196,173.47,11,550,16684,189575,
+Leathery Eggs,10041,Ridley Scott,Zaonce,952,363,173.92,5,24107,21660,228839,
+Orrerian Vicious Brew,10035,Sharon Lee Free Market,Orrere,1171,962,174.08,32,630,16035,533302,
+Eleu Thermals,10027,Finney Dock,Eleu,2425,333,177.17,13,864,16793,229549,
+Ceremonial Heike Tea,10011,Brunel City,Heike,2111,409,178.7,8,1824,17079,151231,
+Vanayequi Ceratomorpha Fur,10036,Clauss Hub,Vanayequi,2525,81,179.03,15,828,16776,264068,
+Vidavantian Lace,10057,Lee Mines,Vidavanta,2705,517450,179.29,5,6690,17025,118576,
+Mukusubii Chitin-os,10065,Ledyard Dock,Mukusubii,2755,505120,179.43,0,1008,16642,0,
+Anduliga Fire Works,10052,Celsius Estate,Anduliga,2683,626405,180.61,0,882,16999,0,
+Burnham Bile Distillate,10097,Burnham Beacon,HIP 59533,5272,530435,183,0,1161,17076,0,
+Ngadandari Fire Opals,10062,Napier Terminal,Ngadandari,15491,501539,187.22,12,15905,16915,393847,
+Wuthielo Ku Froth,10037,Tarter Dock,Wuthielo Ku,2526,174,190.04,4,42,16618,66640,
+Kamitra Cigars,10030,Hammel Terminal,Kamitra,2429,83,196.6,23,6592,17964,564807,
+Karetii Couture,10026,Sinclair Platform,Karetii,2424,990,196.78,5,5225,16996,111108,
+Apa Vietii,10267,Forester's Choice,Upaniklis,94792,10314,199.52,11,3495,17443,230326,
+Toxandji Virocide,10007,Tsunenaga Orbital,Toxandji,1795,6762,201.76,42,749,16785,736458,
+Alacarakmo Skin Art,10028,Weyl Gateway,Alacarakmo,2426,14,201.87,20,1421,16377,355971,
+Jaroua Rice,10013,McCool City,Jaroua,2264,142,201.98,27,674,15657,440955,
+Giant Irukama Snails,10096,Blaauw City,Irukama,5271,325,205.07,36,2435,15912,660517,
+Rajukru Multi-Stoves,10084,Snyder Terminal,Rajukru,5260,117,206.22,32,682,16074,536219,
+Njangari Saddles,10014,Lee Hub,Njangari,2265,21305,214.71,20,1170,15837,340159,
+Kinago Violins,10082,Fozard Ring,Kinago,5258,1725,219.12,11,7643,16635,267067,
+Soontill Relics,10127,Cheranovsky City,Ngurii,15168,1248,228.69,80,17000,22768,3181470,
+Goman Yaupon Coffee,10031,Gustav Sporer Port,Goman,2436,271,229.36,16,1451,16620,289151,
+Sanuma Decorative Meat,10087,Dunyach Gateway,Sanuma,5263,7514,230.05,34,860,16147,578271,
+Karsuki Locusts,10093,West Market,Karsuki Ti,5268,27,233,27,1098,16227,467801,
+Geawen Dance Dust,10083,Obruchev Legacy,Geawen,5259,462327,238.1,45,1370,16651,810989,
+Eshu Umbrellas,10022,Shajn Terminal,Eshu,2338,1743,254.76,9,2050,16633,168155,
+Wheemete Wheat Cakes,10061,Eisinga Enterprise,Wheemete,2721,551873,267.13,19,260,17001,327977,
+Classified Experimental Equipment,10436,Heart of Taurus,HIP 22460,410901,1865,299.22,0,5000,17000,0,
+Sothis Crystalline Gold,10136,Newholm Station,Sothis,17216,1826,452.17,45,15937,22288,1720125,
+Jaques Quinentian Still,10128,Jaques Station,Colonia,53294,1543,22049.78,65,8691,19000,1799915,

@@ -38,6 +38,16 @@ RARE_COMMODITY_COLUMNS = {
     "updated_datetime": "TEXT",
 }
 
+ENGINEERS_UNLOCK_COLUMNS = {
+    "is_public_knowledge": "INTEGER",
+    "discovered_via": "TEXT",
+    "required_commodity": "TEXT",
+    "required_commodity_quantity": "INTEGER",
+    "other_requirements": "TEXT",
+    "is_rare_commodity": "INTEGER DEFAULT 0",
+    "updated_datetime": "TEXT",
+}
+
 
 def now_utc_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -137,6 +147,22 @@ def migrate_db(conn) -> None:
     )
     for column, definition in RARE_COMMODITY_COLUMNS.items():
         add_column_if_missing(conn, "rare_commodities", column, definition)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS engineers_unlock (
+            engineer TEXT PRIMARY KEY,
+            is_public_knowledge INTEGER,
+            discovered_via TEXT,
+            required_commodity TEXT,
+            required_commodity_quantity INTEGER,
+            other_requirements TEXT,
+            is_rare_commodity INTEGER DEFAULT 0,
+            updated_datetime TEXT
+        )
+        """
+    )
+    for column, definition in ENGINEERS_UNLOCK_COLUMNS.items():
+        add_column_if_missing(conn, "engineers_unlock", column, definition)
 
 
 def last_import_sha(conn, data_name: str) -> Optional[str]:
@@ -275,6 +301,10 @@ def placeholders(values: Sequence[object]) -> str:
     return ",".join("?" for _ in values)
 
 
+def normalized_match_sql(column: str) -> str:
+    return f"lower(trim(replace({column}, char(160), ' ')))"
+
+
 def refresh_rare_commodities_from_csv(conn, plugin_dir: str) -> Dict[str, int]:
     """Refresh rare_commodities from optional rawdata/commodities_rare.csv."""
     migrate_db(conn)
@@ -346,5 +376,92 @@ def refresh_rare_commodities_from_csv(conn, plugin_dir: str) -> Dict[str, int]:
     else:
         conn.execute("DELETE FROM rare_commodities")
     record_import(conn, "rare_commodities", digest, ts)
+    update_engineers_rare_flags(conn)
     conn.commit()
     return {"imported": imported, "skipped": skipped, "unchanged": 0}
+
+
+def update_engineers_rare_flags(conn) -> int:
+    migrate_db(conn)
+    conn.execute("UPDATE engineers_unlock SET is_rare_commodity=0")
+    cur = conn.execute(
+        f"""
+        UPDATE engineers_unlock
+        SET is_rare_commodity=1
+        WHERE required_commodity IS NOT NULL
+          AND trim(required_commodity) != ''
+          AND EXISTS (
+              SELECT 1
+              FROM rare_commodities rc
+              WHERE {normalized_match_sql("rc.commodity")} = {normalized_match_sql("engineers_unlock.required_commodity")}
+          )
+        """
+    )
+    return int(cur.rowcount or 0)
+
+
+def refresh_engineers_unlock_from_csv(conn, plugin_dir: str) -> Dict[str, int]:
+    """Refresh engineers_unlock from optional rawdata/engineers-unlock.csv."""
+    migrate_db(conn)
+    path = os.path.join(plugin_dir, "rawdata", "engineers-unlock.csv")
+    if not os.path.exists(path):
+        update_engineers_rare_flags(conn)
+        conn.commit()
+        return {"imported": 0, "skipped": 0}
+
+    digest = sha256_file(path)
+    if last_import_sha(conn, "engineers_unlock") == digest:
+        rare_matches = update_engineers_rare_flags(conn)
+        conn.commit()
+        return {"imported": 0, "skipped": 0, "unchanged": 1, "rare_matches": rare_matches}
+
+    ts = now_utc_iso()
+    imported = 0
+    skipped = 0
+    seen: list[str] = []
+    with open(path, "r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            engineer = get(row, "engineer", "name")
+            if not engineer:
+                skipped += 1
+                continue
+            seen.append(engineer)
+            conn.execute(
+                """
+                INSERT INTO engineers_unlock(
+                    engineer, is_public_knowledge, discovered_via, required_commodity,
+                    required_commodity_quantity, other_requirements, is_rare_commodity, updated_datetime
+                )
+                VALUES (?, ?, ?, ?, ?, ?, 0, ?)
+                ON CONFLICT(engineer) DO UPDATE SET
+                    is_public_knowledge=excluded.is_public_knowledge,
+                    discovered_via=excluded.discovered_via,
+                    required_commodity=excluded.required_commodity,
+                    required_commodity_quantity=excluded.required_commodity_quantity,
+                    other_requirements=excluded.other_requirements,
+                    updated_datetime=excluded.updated_datetime
+                """,
+                (
+                    engineer,
+                    1 if first_int(get(row, "is_public_knowledge", "public")) else 0,
+                    get(row, "discovered_via", "discovered via"),
+                    get(row, "required_commodity", "commodity"),
+                    first_int(get(row, "required_commodity_quantity", "quantity")),
+                    get(row, "other_requirements", "other requirements"),
+                    ts,
+                ),
+            )
+            imported += 1
+
+    if seen:
+        conn.execute(
+            f"DELETE FROM engineers_unlock WHERE engineer NOT IN ({placeholders(seen)})",
+            seen,
+        )
+    else:
+        conn.execute("DELETE FROM engineers_unlock")
+    rare_matches = update_engineers_rare_flags(conn)
+    record_import(conn, "engineers_unlock", digest, ts)
+    conn.commit()
+    return {"imported": imported, "skipped": skipped, "unchanged": 0, "rare_matches": rare_matches}
