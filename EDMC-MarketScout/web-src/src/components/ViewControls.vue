@@ -69,6 +69,7 @@ const emit = defineEmits(['apply', 'open-commodities', 'save-economy-preset'])
       <label>Sort
         <select v-model="rareFilters.sort">
           <option value="profit_desc">Profit large to small</option>
+          <option value="usual_supply_desc">Usual Supply, high to low</option>
         </select>
       </label>
       <label class="check"><input v-model="rareFilters.engineeringOnly" type="checkbox" /> Show only engineering rare commodities</label>

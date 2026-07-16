@@ -609,6 +609,7 @@ def api_rare_commodities(qs: Dict[str, List[str]]) -> Dict[str, Any]:
         lim = 500
 
     engineering_only = one("engineering_only").lower() in ("1", "true", "yes")
+    sort = one("sort") or "profit_desc"
     where: List[str] = []
     if engineering_only:
         where.append("is_engineering_rare = 1")
@@ -647,10 +648,10 @@ def api_rare_commodities(qs: Dict[str, List[str]]) -> Dict[str, Any]:
     """
     if where:
         sql += " WHERE " + " AND ".join(where)
-    sql += """
-        ORDER BY carrier_profit IS NULL, carrier_profit DESC, commodity ASC
-        LIMIT ?
-    """
+    if sort == "usual_supply_desc":
+        sql += " ORDER BY usual_supply IS NULL, usual_supply DESC, commodity ASC LIMIT ?"
+    else:
+        sql += " ORDER BY carrier_profit IS NULL, carrier_profit DESC, commodity ASC LIMIT ?"
     with connect() as conn:
         try:
             rows = [row_to_dict(r) for r in conn.execute(sql, (lim,)).fetchall()]
