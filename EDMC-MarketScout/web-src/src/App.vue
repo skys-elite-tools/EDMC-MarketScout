@@ -19,7 +19,27 @@ const rows = ref([])
 const selectedIndex = ref(-1)
 const selectedRow = computed(() => selectedIndex.value >= 0 ? rows.value[selectedIndex.value] : null)
 const lastVersion = ref(null)
-const currentView = ref('stations')
+const ACTIVE_VIEW_STORAGE_KEY = 'marketscout.activeView'
+const VALID_VIEWS = new Set(['stations', 'jackpots', 'ledger', 'commodities', 'rare', 'analyze', 'carrier'])
+
+function loadStoredView() {
+  try {
+    const stored = window.localStorage.getItem(ACTIVE_VIEW_STORAGE_KEY)
+    return VALID_VIEWS.has(stored) ? stored : 'stations'
+  } catch (err) {
+    return 'stations'
+  }
+}
+
+function persistCurrentView() {
+  try {
+    window.localStorage.setItem(ACTIVE_VIEW_STORAGE_KEY, currentView.value)
+  } catch (err) {
+    // Ignore private browsing or storage quota failures.
+  }
+}
+
+const currentView = ref(loadStoredView())
 const displayColumns = ref([])
 const watchedCommodities = ref(['Palladium', 'Gold', 'Silver'])
 const bestBuyIgnoreCommodities = ref([])
@@ -168,6 +188,7 @@ function applyCurrentView() {
 }
 
 watch(currentView, () => {
+  persistCurrentView()
   applyCurrentView()
 })
 
@@ -318,7 +339,7 @@ let pollTimer = null
 onMounted(async () => {
   await Promise.all([loadCommoditySettings(), loadEconomyPresets()])
   await pollStatus()
-  await loadStations()
+  await applyCurrentView()
   pollTimer = setInterval(pollStatus, 2000)
 })
 onUnmounted(() => {
