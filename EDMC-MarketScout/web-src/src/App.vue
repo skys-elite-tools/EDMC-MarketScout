@@ -23,6 +23,7 @@ const displayColumns = ref([])
 const watchedCommodities = ref(['Palladium', 'Gold', 'Silver'])
 const bestBuyIgnoreCommodities = ref([])
 const allCommodities = ref([])
+const commoditiesCatalogLoaded = ref(false)
 const settingsVisible = ref(false)
 const bestBuyIgnoreVisible = ref(false)
 const commoditySearch = ref('')
@@ -59,6 +60,7 @@ const rareFilters = ref({
 const commodityFilters = ref({
   sort: 'commodity_asc',
 })
+const COMMODITY_SELECTOR_LIMIT = 500
 
 function stationParams() {
   return {
@@ -200,26 +202,34 @@ async function saveEconomyPreset() {
 }
 
 async function loadCommoditySettings() {
-  const [settingsRes, commoditiesRes] = await Promise.all([
-    fetch('/api/settings', { cache: 'no-store' }),
-    fetch('/api/commodities', { cache: 'no-store' }),
-  ])
+  const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
   const settings = await settingsRes.json()
-  const data = await commoditiesRes.json()
   watchedCommodities.value = settings.watched_commodities || ['Palladium', 'Gold', 'Silver']
   displayColumns.value = settings.watched_columns || watchedCommodities.value.map(c => ({ commodity: c, side: 'buy' }))
   bestBuyIgnoreCommodities.value = settings.best_buy_ignore_commodities || []
-  allCommodities.value = Array.from(new Set([...(data.commodities || []), ...watchedCommodities.value, ...bestBuyIgnoreCommodities.value])).sort()
+  if (!commoditiesCatalogLoaded.value) {
+    const commoditiesRes = await fetch('/api/commodities', { cache: 'no-store' })
+    const data = await commoditiesRes.json()
+    allCommodities.value = data.commodities || []
+    commoditiesCatalogLoaded.value = true
+  }
+  allCommodities.value = Array.from(new Set([...allCommodities.value, ...watchedCommodities.value, ...bestBuyIgnoreCommodities.value])).sort()
 }
 
 const filteredCommodities = computed(() => {
   const filter = (commoditySearch.value || '').toLowerCase()
-  return allCommodities.value.filter(c => !filter || c.toLowerCase().includes(filter)).slice(0, 250)
+  const selected = new Set(watchedCommodities.value)
+  const selectedRows = allCommodities.value.filter(c => selected.has(c))
+  const matchedRows = allCommodities.value.filter(c => !selected.has(c) && (!filter || c.toLowerCase().includes(filter)))
+  return [...selectedRows, ...matchedRows.slice(0, COMMODITY_SELECTOR_LIMIT)]
 })
 
 const filteredBestBuyIgnoreCommodities = computed(() => {
   const filter = (bestBuyIgnoreSearch.value || '').toLowerCase()
-  return allCommodities.value.filter(c => !filter || c.toLowerCase().includes(filter)).slice(0, 250)
+  const selected = new Set(bestBuyIgnoreCommodities.value)
+  const selectedRows = allCommodities.value.filter(c => selected.has(c))
+  const matchedRows = allCommodities.value.filter(c => !selected.has(c) && (!filter || c.toLowerCase().includes(filter)))
+  return [...selectedRows, ...matchedRows.slice(0, COMMODITY_SELECTOR_LIMIT)]
 })
 
 function setWatchedCommodity(commodity, checked) {
@@ -326,6 +336,8 @@ onUnmounted(() => {
       :ledger-filters="ledgerFilters"
       :rare-filters="rareFilters"
       :commodity-filters="commodityFilters"
+      :watched-count="watchedCommodities.length"
+      :best-buy-ignore-count="bestBuyIgnoreCommodities.length"
       :economy-presets="economyPresets"
       :economy-preset-status="economyPresetStatus"
       @apply="applyCurrentView"

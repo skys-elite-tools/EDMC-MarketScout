@@ -7,6 +7,8 @@ const props = defineProps({
   ledgerFilters: { type: Object, required: true },
   rareFilters: { type: Object, required: true },
   commodityFilters: { type: Object, required: true },
+  watchedCount: { type: Number, default: 0 },
+  bestBuyIgnoreCount: { type: Number, default: 0 },
   economyPresets: { type: Array, default: () => [] },
   economyPresetStatus: { type: String, default: '' },
 })
@@ -42,8 +44,14 @@ const emit = defineEmits(['apply', 'open-commodities', 'open-best-buy-ignore-lis
       </div>
       <div class="stationFilterActions">
         <button type="button" class="applyFiltersButton" @click="emit('apply')">Apply Filters</button>
-        <button type="button" @click="emit('open-commodities')">Watched Commodities</button>
-        <button type="button" @click="emit('open-best-buy-ignore-list')">Best Buy Ignore List</button>
+        <button type="button" class="countButton" @click="emit('open-commodities')">
+          <span>Watched Commodities</span>
+          <span class="buttonCount">{{ watchedCount }} selected</span>
+        </button>
+        <button type="button" class="countButton" @click="emit('open-best-buy-ignore-list')">
+          <span>Best Buy Ignore List</span>
+          <span class="buttonCount">{{ bestBuyIgnoreCount }} selected</span>
+        </button>
       </div>
     </template>
 

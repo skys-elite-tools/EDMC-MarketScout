@@ -21,6 +21,14 @@ const emit = defineEmits([
 ])
 
 const selectedSet = computed(() => new Set(props.selectedCommodities))
+const sortedCommodities = computed(() => {
+  return [...props.commodities].sort((a, b) => {
+    const aSelected = selectedSet.value.has(a) ? 0 : 1
+    const bSelected = selectedSet.value.has(b) ? 0 : 1
+    if (aSelected !== bSelected) return aSelected - bSelected
+    return String(a || '').localeCompare(String(b || ''))
+  })
+})
 
 function columnKey(col) { return `${col.commodity}::${col.side}` }
 function isColumnSelected(commodity, side) {
@@ -34,7 +42,7 @@ function isColumnSelected(commodity, side) {
     <p class="subtitle">{{ description }}</p>
     <label>Filter commodities <input :value="search" type="text" placeholder="gold, palladium, osmium..." @input="emit('update:search', $event.target.value)" /></label>
     <div class="commoditySettings">
-      <div v-for="commodity in commodities" :key="commodity" class="commodityRow" :class="{ singleSelect: !showDisplayColumns }">
+      <div v-for="commodity in sortedCommodities" :key="commodity" class="commodityRow" :class="{ singleSelect: !showDisplayColumns }">
         <label><input type="checkbox" :checked="selectedSet.has(commodity)" @change="emit('toggle-selected', commodity, $event.target.checked)" /> {{ commodity }}</label>
         <label v-if="showDisplayColumns"><input type="checkbox" :checked="isColumnSelected(commodity, 'buy')" @change="emit('toggle-display-column', commodity, 'buy', $event.target.checked)" /> Buy col</label>
         <label v-if="showDisplayColumns"><input type="checkbox" :checked="isColumnSelected(commodity, 'sell')" @change="emit('toggle-display-column', commodity, 'sell', $event.target.checked)" /> Sell col</label>
