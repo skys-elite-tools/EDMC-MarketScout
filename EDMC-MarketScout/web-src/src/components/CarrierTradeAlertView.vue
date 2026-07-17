@@ -51,6 +51,9 @@ const stageWidth = ref(0)
 const defaultImageUrl = ref(placeholderImage)
 const uploadedImageUrl = ref(savedDraft.uploadedImageUrl || '')
 const copied = ref(false)
+const layoutName = ref('')
+const layoutSaveStatus = ref('')
+const layoutMenuOpen = ref(false)
 let resizeObserver = null
 let activeDrag = null
 
@@ -151,10 +154,19 @@ const floatingLayers = [
   { key: 'carrierId', sizeKey: 'carrierId', weight: 900, align: 'right' },
 ]
 
+const builtInLayoutNames = new Set(['classic', 'free floating'])
+
 const activeLayers = computed(() => (textStyle.value === 'floating' ? floatingLayers : classicLayers).map(layer => ({
   ...layer,
   ...(layerPositions.value[textStyle.value][layer.key] || { x: 50, y: 50 }),
 })))
+
+const currentLayoutLabel = computed(() => {
+  if (textLayout.value === 'classic') return 'Classic'
+  if (textLayout.value === 'floating') return 'Free Floating'
+  const layout = savedLayouts.value.find(item => `custom:${item.id}` === textLayout.value)
+  return layout?.name || 'Classic'
+})
 
 function persistSavedLayouts() {
   try {
@@ -167,20 +179,45 @@ function persistSavedLayouts() {
 function applyTextLayout(value) {
   if (value === 'classic' || value === 'floating') {
     textStyle.value = value
+    layoutName.value = ''
     return
   }
   const layout = savedLayouts.value.find(item => `custom:${item.id}` === value)
   if (!layout) return
+  layoutName.value = layout.name
   textStyle.value = layout.mode === 'floating' ? 'floating' : 'classic'
   if (layout.positions) layerPositions.value[textStyle.value] = clone(layout.positions)
   if (layout.fontSizes) fontSizes.value = { ...fontSizes.value, ...clone(layout.fontSizes) }
 }
 
+function selectTextLayout(value) {
+  textLayout.value = value
+  layoutMenuOpen.value = false
+}
+
+function deleteSavedLayout(id) {
+  savedLayouts.value = savedLayouts.value.filter(item => item.id !== id)
+  persistSavedLayouts()
+  if (textLayout.value === `custom:${id}`) {
+    textLayout.value = 'classic'
+    layoutName.value = ''
+  }
+  layoutSaveStatus.value = 'Deleted layout'
+  setTimeout(() => { layoutSaveStatus.value = '' }, 1800)
+}
+
 function saveCurrentLayout() {
-  const name = window.prompt('Name this text layout')
-  const cleanName = String(name || '').trim()
-  if (!cleanName) return
-  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const cleanName = String(layoutName.value || '').trim()
+  if (!cleanName) {
+    layoutSaveStatus.value = 'Enter a layout name'
+    return
+  }
+  if (builtInLayoutNames.has(cleanName.toLowerCase())) {
+    layoutSaveStatus.value = 'Built-in layouts cannot be overwritten'
+    return
+  }
+  const existing = savedLayouts.value.find(item => item.name.trim().toLowerCase() === cleanName.toLowerCase())
+  const id = existing?.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const layout = {
     id,
     name: cleanName,
@@ -188,9 +225,13 @@ function saveCurrentLayout() {
     positions: clone(layerPositions.value[textStyle.value]),
     fontSizes: clone(fontSizes.value),
   }
-  savedLayouts.value = [...savedLayouts.value, layout]
+  savedLayouts.value = existing
+    ? savedLayouts.value.map(item => item.id === id ? layout : item)
+    : [...savedLayouts.value, layout]
   persistSavedLayouts()
   textLayout.value = `custom:${id}`
+  layoutSaveStatus.value = existing ? 'Updated layout' : 'Saved layout'
+  setTimeout(() => { layoutSaveStatus.value = '' }, 1800)
 }
 
 function persistDraft() {
@@ -462,15 +503,27 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
       <h2>Image Options</h2>
       <div class="carrierImageTools">
         <label>Upload image <input type="file" accept="image/*" @change="onFileChange" /></label>
-        <label>Text Layout
-          <select v-model="textLayout">
-            <option value="classic">Classic</option>
-            <option value="floating">Free Floating</option>
-            <option v-for="layout in savedLayouts" :key="layout.id" :value="`custom:${layout.id}`">{{ layout.name }}</option>
-          </select>
-        </label>
+        <div class="textLayoutMenuField">
+          <span>Text Layout</span>
+          <div class="textLayoutMenu">
+            <button type="button" class="textLayoutMenuButton" @click="layoutMenuOpen = !layoutMenuOpen">{{ currentLayoutLabel }} ▾</button>
+            <div v-if="layoutMenuOpen" class="textLayoutMenuList">
+              <button type="button" class="textLayoutMenuOption" :class="{ active: textLayout === 'classic' }" @click="selectTextLayout('classic')">Classic</button>
+              <button type="button" class="textLayoutMenuOption" :class="{ active: textLayout === 'floating' }" @click="selectTextLayout('floating')">Free Floating</button>
+              <div v-if="savedLayouts.length" class="textLayoutMenuDivider"></div>
+              <div v-for="layout in savedLayouts" :key="layout.id" class="textLayoutMenuRow" :class="{ active: textLayout === `custom:${layout.id}` }">
+                <button type="button" class="textLayoutMenuOption custom" @click="selectTextLayout(`custom:${layout.id}`)">{{ layout.name }}</button>
+                <button type="button" class="textLayoutDeleteButton" title="Delete layout" @click.stop="deleteSavedLayout(layout.id)">🗑</button>
+              </div>
+            </div>
+          </div>
+        </div>
         <label>Text Color <input v-model="textColor" type="color" /></label>
+      </div>
+      <div class="layoutSaveRow">
+        <label>Layout name <input v-model="layoutName" type="text" placeholder="My carrier layout" /></label>
         <button type="button" class="saveLayoutButton" @click="saveCurrentLayout">Save Current</button>
+        <span class="small">{{ layoutSaveStatus }}</span>
       </div>
       <h2>Trade</h2>
       <div class="carrierFormGrid">

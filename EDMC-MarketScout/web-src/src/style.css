@@ -473,9 +473,98 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 }
 .carrierImageTools {
   display: grid;
-  grid-template-columns: minmax(12rem, 1fr) minmax(10rem, .7fr) 5rem auto;
+  grid-template-columns: minmax(12rem, 1fr) minmax(10rem, .7fr) 5rem;
   gap: 12px;
   align-items: end;
+}
+.textLayoutMenuField {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+.textLayoutMenu {
+  position: relative;
+}
+.textLayoutMenuButton {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.textLayoutMenuList {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 15rem;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0b1016;
+  box-shadow: 0 12px 30px rgba(0,0,0,.35);
+  padding: 4px;
+}
+.textLayoutMenuOption {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+.textLayoutMenuOption:hover,
+.textLayoutMenuOption.active,
+.textLayoutMenuRow.active .textLayoutMenuOption {
+  background: #263142;
+  color: white;
+}
+.textLayoutMenuDivider {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--line);
+}
+.textLayoutMenuRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2rem;
+  gap: 3px;
+}
+.textLayoutMenuOption.custom {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.textLayoutDeleteButton {
+  min-width: 2rem;
+  padding: 0;
+  text-align: center;
+  border: 0;
+  background: transparent;
+}
+.textLayoutDeleteButton:hover {
+  background: rgba(255, 100, 100, .12);
+  border-color: rgba(255, 100, 100, .45);
+}
+.layoutSaveRow {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) auto minmax(7rem, auto);
+  gap: 8px;
+  align-items: end;
+}
+.layoutSaveRow label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.layoutSaveRow input {
+  width: 100%;
 }
 .saveLayoutButton {
   white-space: nowrap;
