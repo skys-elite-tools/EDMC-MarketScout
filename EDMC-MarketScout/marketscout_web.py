@@ -115,6 +115,8 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
                 return self.send_json(api_ledger(parse_qs(parsed.query)))
             if path == "/api/rare-commodities":
                 return self.send_json(api_rare_commodities(parse_qs(parsed.query)))
+            if path == "/api/commodity-stats":
+                return self.send_json(api_commodity_stats(parse_qs(parsed.query)))
             if path == "/api/ledger/summary":
                 return self.send_json(api_ledger_summary(parse_qs(parsed.query)))
             if path == "/api/options":
@@ -143,6 +145,8 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
                 return self.send_json(api_save_settings(payload))
             if parsed.path == "/api/economy-presets":
                 return self.send_json(api_save_economy_preset(payload))
+            if parsed.path == "/api/analyze-commodities":
+                return self.send_json(api_analyze_commodities(payload))
             self.send_error(404)
         except Exception as exc:
             log_web_exception(exc)
@@ -262,6 +266,34 @@ def api_commodities() -> Dict[str, Any]:
             ]
             source = "market_prices_fallback"
     return {"commodities": rows, "stats": stats, "source": source}
+
+
+def api_commodity_stats(qs: Dict[str, List[str]]) -> Dict[str, Any]:
+    def one(name: str) -> str:
+        return (qs.get(name, [""])[0] or "").strip()
+    sort = one("sort") or "commodity_asc"
+    order_by = {
+        "category_asc": "category IS NULL, category ASC, commodity ASC",
+        "max_profit_desc": "max_profit IS NULL, max_profit DESC, commodity ASC",
+        "commodity_asc": "commodity ASC",
+    }.get(sort, "commodity ASC")
+    with connect() as conn:
+        try:
+            rows = [
+                row_to_dict(r)
+                for r in conn.execute(
+                    f"""
+                    SELECT commodity, category, min_buy, avg_buy, max_sell, max_profit
+                    FROM commodity_global_stats
+                    WHERE commodity IS NOT NULL AND commodity != ''
+                    ORDER BY {order_by}
+                    """
+                ).fetchall()
+            ]
+        except sqlite3.OperationalError:
+            rows = []
+    return {"rows": rows, "count": len(rows), "sort": sort}
+
 
 def api_settings() -> Dict[str, Any]:
     with connect() as conn:
@@ -770,6 +802,78 @@ def format_ly(value: float) -> str:
     if value < 10:
         return f"{value:.2f} Ly"
     return f"{value:.1f} Ly"
+
+
+def split_commodity_input(text: str) -> List[str]:
+    seen = set()
+    out: List[str] = []
+    for part in str(text or "").split(","):
+        name = " ".join(part.replace("\xa0", " ").strip().split())
+        key = normalized_name(name)
+        if name and key not in seen:
+            seen.add(key)
+            out.append(name)
+    return out
+
+
+def api_analyze_commodities(payload: Dict[str, Any]) -> Dict[str, Any]:
+    names = split_commodity_input(str(payload.get("text") or ""))
+    keys = {normalized_name(name) for name in names}
+    if not keys:
+        return {"regular": [], "rare": [], "input_count": 0}
+
+    with connect() as conn:
+        try:
+            regular_rows = [
+                row_to_dict(r)
+                for r in conn.execute(
+                    """
+                    SELECT commodity, category, min_buy, max_profit
+                    FROM commodity_global_stats
+                    WHERE commodity IS NOT NULL AND commodity != ''
+                    ORDER BY commodity ASC
+                    """
+                ).fetchall()
+            ]
+            rare_rows = [
+                row_to_dict(r)
+                for r in conn.execute(
+                    """
+                    SELECT rc.commodity, rc.system_name, rc.station_name, rc.buy_price,
+                           rc.galactic_average_price,
+                           sd.x AS system_x, sd.y AS system_y, sd.z AS system_z,
+                           CASE
+                               WHEN rc.galactic_average_price IS NOT NULL
+                               THEN rc.galactic_average_price * 100
+                           END AS galactic_average_100x
+                    FROM rare_commodities rc
+                    LEFT JOIN systems_data sd
+                      ON lower(trim(replace(sd.system_name, char(160), ' '))) =
+                         lower(trim(replace(rc.system_name, char(160), ' ')))
+                    WHERE rc.commodity IS NOT NULL AND rc.commodity != ''
+                    ORDER BY rc.commodity ASC
+                    """
+                ).fetchall()
+            ]
+            current = latest_current_position(conn)
+        except sqlite3.OperationalError:
+            return {"regular": [], "rare": [], "input_count": len(names)}
+
+    rare_keys = {normalized_name(row.get("commodity")) for row in rare_rows}
+    regular = [
+        row for row in regular_rows
+        if normalized_name(row.get("commodity")) in keys and normalized_name(row.get("commodity")) not in rare_keys
+    ]
+    rare: List[Dict[str, Any]] = []
+    for row in rare_rows:
+        if normalized_name(row.get("commodity")) not in keys:
+            continue
+        row["distance_from_current_ly"] = distance_ly(
+            current,
+            (row.get("system_x"), row.get("system_y"), row.get("system_z")),
+        )
+        rare.append(row)
+    return {"regular": regular, "rare": rare, "input_count": len(names)}
 
 
 def api_ledger_summary(qs: Dict[str, List[str]]) -> Dict[str, Any]:

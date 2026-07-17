@@ -9,6 +9,8 @@ import StationDetails from './components/StationDetails.vue'
 import JackpotHistory from './components/JackpotHistory.vue'
 import LedgerView from './components/LedgerView.vue'
 import RareCommoditiesView from './components/RareCommoditiesView.vue'
+import CommoditiesView from './components/CommoditiesView.vue'
+import AnalyzeCommoditiesView from './components/AnalyzeCommoditiesView.vue'
 import FooterBar from './components/FooterBar.vue'
 import { columnKey, dedupeStationRows, query } from './utils.js'
 
@@ -49,6 +51,10 @@ const ledgerFilters = ref({
 const rareFilters = ref({
   sort: 'profit_desc',
   engineeringOnly: false,
+})
+
+const commodityFilters = ref({
+  sort: 'commodity_asc',
 })
 
 function stationParams() {
@@ -119,7 +125,28 @@ async function loadRareCommodities() {
   statusText.value = `${rows.value.length} rare commodities · ${new Date().toLocaleTimeString()}`
 }
 
+async function loadCommodityStats() {
+  currentView.value = 'commodities'
+  const params = {
+    sort: commodityFilters.value.sort || 'commodity_asc',
+  }
+  const res = await fetch(`/api/commodity-stats?${query(params)}`, { cache: 'no-store' })
+  const data = await res.json()
+  rows.value = data.rows || []
+  selectedIndex.value = -1
+  statusText.value = `${rows.value.length} commodities · ${new Date().toLocaleTimeString()}`
+}
+
+async function loadAnalyzeCommodities() {
+  currentView.value = 'analyze'
+  rows.value = []
+  selectedIndex.value = -1
+  statusText.value = `Analyze commodities · ${new Date().toLocaleTimeString()}`
+}
+
 function applyCurrentView() {
+  if (currentView.value === 'analyze') return loadAnalyzeCommodities()
+  if (currentView.value === 'commodities') return loadCommodityStats()
   if (currentView.value === 'rare') return loadRareCommodities()
   if (currentView.value === 'ledger') return loadLedger()
   if (currentView.value === 'jackpots') return loadJackpots()
@@ -134,6 +161,13 @@ watch(
   () => [rareFilters.value.sort, rareFilters.value.engineeringOnly],
   () => {
     if (currentView.value === 'rare') loadRareCommodities()
+  }
+)
+
+watch(
+  () => commodityFilters.value.sort,
+  () => {
+    if (currentView.value === 'commodities') loadCommodityStats()
   }
 )
 
@@ -256,6 +290,7 @@ onUnmounted(() => {
       :filters="filters"
       :ledger-filters="ledgerFilters"
       :rare-filters="rareFilters"
+      :commodity-filters="commodityFilters"
       :economy-presets="economyPresets"
       :economy-preset-status="economyPresetStatus"
       @apply="applyCurrentView"
@@ -306,6 +341,13 @@ onUnmounted(() => {
           v-else-if="currentView === 'rare'"
           :rows="rows"
           :selected-index="selectedIndex"
+        />
+        <CommoditiesView
+          v-else-if="currentView === 'commodities'"
+          :rows="rows"
+        />
+        <AnalyzeCommoditiesView
+          v-else-if="currentView === 'analyze'"
         />
       </section>
 

@@ -327,11 +327,56 @@ tr.ledgerBuy { background: rgba(80,160,255,.035); }
 tr.ledgerSell { background: rgba(80,220,120,.035); }
 tr.ledgerSell.cheap { background: rgba(80,220,120,.10); }
 tr.engineeringRare { background: rgba(140,200,255,.045); }
+.commoditiesTable th:first-child { min-width: 16rem; }
 .rareTable th:nth-child(1) { min-width: 14rem; }
 .rareTable th:nth-child(3) { min-width: 14rem; }
 .rareTable th:nth-child(5) { min-width: 6rem; }
 .rareTable th:nth-child(9),
 .rareTable th:nth-child(10) { min-width: 10rem; }
+.analyzeCommodities {
+  padding: 12px 16px;
+}
+.analyzeInput textarea {
+  width: 100%;
+  min-height: 6rem;
+  resize: vertical;
+  background: #0e1217;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font: inherit;
+}
+.analyzeActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.analysisTables {
+  display: grid;
+  grid-template-columns: minmax(20rem, .9fr) minmax(34rem, 1.1fr);
+  gap: 16px;
+  margin-top: 14px;
+  align-items: start;
+}
+.analysisTables section {
+  min-width: 0;
+  overflow: auto;
+}
+.analysisTables h2 {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 15px;
+}
+.tableSortButton {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+}
 .inlineToggle {
   min-width: 1.6rem;
   padding: 1px 4px;
@@ -369,6 +414,7 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   main,
   main.detailsOpen { grid-template-columns: 1fr; }
   .details { border-left: none; border-top: 1px solid var(--line); max-height: 45vh; }
+  .analysisTables { grid-template-columns: 1fr; }
 }
 .statusStrip {
   display: grid;
