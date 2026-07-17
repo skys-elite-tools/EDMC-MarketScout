@@ -47,6 +47,7 @@ const textColor = ref(savedDraft.textColor || '#f6fbff')
 const textStyle = ref(savedDraft.textStyle || 'classic')
 const textLayout = ref(savedDraft.textLayout || savedDraft.textStyle || 'classic')
 const stageRef = ref(null)
+const layoutMenuRef = ref(null)
 const stageWidth = ref(0)
 const defaultImageUrl = ref(placeholderImage)
 const uploadedImageUrl = ref(savedDraft.uploadedImageUrl || '')
@@ -204,6 +205,12 @@ function deleteSavedLayout(id) {
   }
   layoutSaveStatus.value = 'Deleted layout'
   setTimeout(() => { layoutSaveStatus.value = '' }, 1800)
+}
+
+function closeLayoutMenuOnOutsideClick(event) {
+  if (!layoutMenuOpen.value) return
+  if (layoutMenuRef.value?.contains(event.target)) return
+  layoutMenuOpen.value = false
 }
 
 function saveCurrentLayout() {
@@ -448,6 +455,7 @@ async function copyAnnouncement() {
 }
 
 onMounted(async () => {
+  document.addEventListener('pointerdown', closeLayoutMenuOnOutsideClick)
   await nextTick()
   updateStageSize()
   resizeObserver = new ResizeObserver(updateStageSize)
@@ -455,6 +463,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  document.removeEventListener('pointerdown', closeLayoutMenuOnOutsideClick)
   if (resizeObserver) resizeObserver.disconnect()
 })
 
@@ -505,7 +514,7 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
         <label>Upload image <input type="file" accept="image/*" @change="onFileChange" /></label>
         <div class="textLayoutMenuField">
           <span>Text Layout</span>
-          <div class="textLayoutMenu">
+          <div ref="layoutMenuRef" class="textLayoutMenu">
             <button type="button" class="textLayoutMenuButton" @click="layoutMenuOpen = !layoutMenuOpen">{{ currentLayoutLabel }} ▾</button>
             <div v-if="layoutMenuOpen" class="textLayoutMenuList">
               <button type="button" class="textLayoutMenuOption" :class="{ active: textLayout === 'classic' }" @click="selectTextLayout('classic')">Classic</button>
