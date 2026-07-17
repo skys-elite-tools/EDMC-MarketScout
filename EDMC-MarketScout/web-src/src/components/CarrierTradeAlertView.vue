@@ -519,6 +519,12 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
             <div v-if="layoutMenuOpen" class="textLayoutMenuList">
               <button type="button" class="textLayoutMenuOption" :class="{ active: textLayout === 'classic' }" @click="selectTextLayout('classic')">Classic</button>
               <button type="button" class="textLayoutMenuOption" :class="{ active: textLayout === 'floating' }" @click="selectTextLayout('floating')">Free Floating</button>
+              <div class="textLayoutMenuDivider"></div>
+              <div class="layoutSaveRow">
+                <label>Layout name <input v-model="layoutName" type="text" placeholder="My carrier layout" @keydown.enter.prevent="saveCurrentLayout" /></label>
+                <button type="button" class="saveLayoutButton" @click="saveCurrentLayout">Save new</button>
+                <span class="small layoutSaveStatus">{{ layoutSaveStatus }}</span>
+              </div>
               <div v-if="savedLayouts.length" class="textLayoutMenuDivider"></div>
               <div v-for="layout in savedLayouts" :key="layout.id" class="textLayoutMenuRow" :class="{ active: textLayout === `custom:${layout.id}` }">
                 <button type="button" class="textLayoutMenuOption custom" @click="selectTextLayout(`custom:${layout.id}`)">{{ layout.name }}</button>
@@ -528,11 +534,6 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
           </div>
         </div>
         <label>Text Color <input v-model="textColor" type="color" /></label>
-      </div>
-      <div class="layoutSaveRow">
-        <label>Layout name <input v-model="layoutName" type="text" placeholder="My carrier layout" /></label>
-        <button type="button" class="saveLayoutButton" @click="saveCurrentLayout">Save Current</button>
-        <span class="small">{{ layoutSaveStatus }}</span>
       </div>
       <h2>Trade</h2>
       <div class="carrierFormGrid">
