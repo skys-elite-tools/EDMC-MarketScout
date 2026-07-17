@@ -461,11 +461,31 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   gap: 8px;
   align-items: end;
 }
+.profitFieldWithOptions {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 5.5rem;
+}
 .fieldWithFont label {
   min-width: 0;
 }
 .fieldWithFont label:last-child {
   color: var(--accent);
+}
+.fieldWithFont .inlineCheckboxLabel {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 2rem;
+  min-height: 0;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(255,255,255,.025);
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+.carrierFormGrid .inlineCheckboxLabel input {
+  width: auto;
 }
 .carrierFormGrid input,
 .carrierFormGrid select {

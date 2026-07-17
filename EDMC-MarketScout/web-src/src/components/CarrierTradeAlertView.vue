@@ -32,6 +32,7 @@ const savedDraft = loadDraft()
 const defaultForm = {
   commodity: 'Gold',
   profit: '12,000',
+  includeProfitLabelInImage: true,
   quantity: '16k',
   type: 'Loading',
   carrierName: 'Fleet Carrier',
@@ -111,6 +112,7 @@ const fontSizes = ref({
 const padLetter = computed(() => (form.value.pads || 'Large').slice(0, 1).toUpperCase())
 const tradeTypeLower = computed(() => String(form.value.type || '').toLowerCase())
 const imageUrl = computed(() => uploadedImageUrl.value || defaultImageUrl.value)
+const imageProfitText = computed(() => `${adValue(form.value.profit)} Cr/t${form.value.includeProfitLabelInImage === false ? '' : ' profit'}`)
 
 function adValue(value) {
   return String(value || '').trim()
@@ -120,12 +122,12 @@ const layerText = computed(() => ({
   type: `Carrier ${tradeTypeLower.value}`,
   commodity: form.value.commodity || 'Commodity',
   route: `${form.value.station || 'Station'} in ${form.value.system || 'System'} | ${padLetter.value}-pads`,
-  profit: `${adValue(form.value.profit)} Cr/t profit · ${adValue(form.value.quantity)} tons`,
+  profit: `${imageProfitText.value} · ${adValue(form.value.quantity)} tons`,
   carrier: `${form.value.carrierName || 'Carrier Name'} · ${form.value.carrierId || 'Carrier ID'}`,
   station: form.value.station || 'Station',
   system: form.value.system || 'System',
   pads: `${padLetter.value}-pads`,
-  profitValue: `${adValue(form.value.profit)} Cr/t profit`,
+  profitValue: imageProfitText.value,
   quantity: `${adValue(form.value.quantity)} tons`,
   carrierName: form.value.carrierName || 'Carrier Name',
   carrierId: form.value.carrierId || 'Carrier ID',
@@ -543,8 +545,9 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
             <label>Commodity <input v-model="form.commodity" type="text" /></label>
             <label>Font size <input :value="fontSizeFor('commodity')" type="number" min="8" max="180" step="1" @input="setFontSize('commodity', $event.target.value)" /></label>
           </div>
-          <div class="fieldWithFont">
+          <div class="fieldWithFont profitFieldWithOptions">
             <label>Profit <input v-model="form.profit" type="text" /></label>
+            <label class="inlineCheckboxLabel"><input v-model="form.includeProfitLabelInImage" type="checkbox" /> Profit label</label>
             <label>Font size <input :value="fontSizeFor('profitValue')" type="number" min="8" max="180" step="1" @input="setFontSize('profitValue', $event.target.value)" /></label>
           </div>
           <div class="fieldWithFont">
