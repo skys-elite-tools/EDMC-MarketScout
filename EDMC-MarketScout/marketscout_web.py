@@ -230,6 +230,10 @@ def watched_commodities(conn: sqlite3.Connection) -> List[str]:
     val = setting_get(conn, "watched_commodities", _CONTEXT.get("primary_metals", ["Palladium", "Gold", "Silver"]))
     return [str(x) for x in val if str(x).strip()] if isinstance(val, list) else ["Palladium", "Gold", "Silver"]
 
+def best_buy_ignore_commodities(conn: sqlite3.Connection) -> List[str]:
+    val = setting_get(conn, "best_buy_ignore_commodities", [])
+    return [str(x) for x in val if str(x).strip()] if isinstance(val, list) else []
+
 def watched_columns(conn: sqlite3.Connection) -> List[Dict[str, str]]:
     default = [{"commodity": c, "side": "buy"} for c in watched_commodities(conn)]
     val = setting_get(conn, "watched_columns", default)
@@ -297,7 +301,11 @@ def api_commodity_stats(qs: Dict[str, List[str]]) -> Dict[str, Any]:
 
 def api_settings() -> Dict[str, Any]:
     with connect() as conn:
-        return {"watched_commodities": watched_commodities(conn), "watched_columns": watched_columns(conn)}
+        return {
+            "watched_commodities": watched_commodities(conn),
+            "watched_columns": watched_columns(conn),
+            "best_buy_ignore_commodities": best_buy_ignore_commodities(conn),
+        }
 
 def api_save_settings(payload: Dict[str, Any]) -> Dict[str, Any]:
     with connect() as conn:
@@ -309,6 +317,8 @@ def api_save_settings(payload: Dict[str, Any]) -> Dict[str, Any]:
                 if isinstance(item, dict) and item.get("commodity") and item.get("side") in ("buy", "sell"):
                     cols.append({"commodity": str(item["commodity"]), "side": str(item["side"])})
             setting_set(conn, "watched_columns", cols)
+        if "best_buy_ignore_commodities" in payload and isinstance(payload["best_buy_ignore_commodities"], list):
+            setting_set(conn, "best_buy_ignore_commodities", [str(x) for x in payload["best_buy_ignore_commodities"] if str(x).strip()])
         conn.commit()
     return {"ok": True}
 
@@ -380,6 +390,14 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
     with connect() as conn:
         display_cols = watched_columns(conn)
         watched = watched_commodities(conn)
+        ignored_best_buy = best_buy_ignore_commodities(conn)
+
+    ignored_sql = ""
+    ignored_sql_mp2 = ""
+    if ignored_best_buy:
+        ignored_names = ", ".join("'" + c.replace("'", "''") + "'" for c in ignored_best_buy)
+        ignored_sql = f" AND mp.commodity NOT IN ({ignored_names})"
+        ignored_sql_mp2 = f" AND mp2.commodity NOT IN ({ignored_names})"
 
     # Need all displayed commodities plus all stats commodities for Best Buy scoring.
     display_commodities = []
@@ -411,44 +429,44 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
         "MAX(mp.market_price_update_datetime) AS market_updated",
         # Best Buy score: (max_sell - current buy) * min(supply, 1000).
         "MAX(CASE WHEN cgs.max_sell IS NOT NULL AND mp.buy_price IS NOT NULL AND mp.buy_price > 0 "
-        "THEN (cgs.max_sell - mp.buy_price) * CASE WHEN COALESCE(mp.supply, 0) > 1000 THEN 1000 ELSE COALESCE(mp.supply, 0) END END) AS best_buy_score",
+        f"{ignored_sql} THEN (cgs.max_sell - mp.buy_price) * CASE WHEN COALESCE(mp.supply, 0) > 1000 THEN 1000 ELSE COALESCE(mp.supply, 0) END END) AS best_buy_score",
     ]
     # Commodity that produced the max Best Buy score. Ties are not important for scouting.
     select_cols.append(
         "(SELECT mp2.commodity FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
         "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 "
-        "ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_commodity"
+        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_commodity"
     )
     select_cols.append(
         "(SELECT mp2.buy_price FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
         "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 "
-        "ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_price"
+        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_price"
     )
     select_cols.append(
         "(SELECT mp2.supply FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
         "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 "
-        "ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_supply"
+        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_supply"
     )
     select_cols.append(
         "(SELECT cgs2.inara_id FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
         "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 "
-        "ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_inara_id"
+        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_inara_id"
     )
     select_cols.append(
         "(SELECT cgs2.max_sell FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
         "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 "
-        "ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_max_sell"
+        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_max_sell"
     )
     select_cols.append(
         "(SELECT CASE WHEN COALESCE(mp2.supply, 0) > 0 THEN (cgs2.max_sell - mp2.buy_price) END FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
         "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 "
-        "ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_potential_profit"
+        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_potential_profit"
     )
     for c in display_commodities:
         safe = c.replace("'", "''")

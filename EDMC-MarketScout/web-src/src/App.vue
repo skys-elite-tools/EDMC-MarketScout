@@ -21,9 +21,12 @@ const lastVersion = ref(null)
 const currentView = ref('stations')
 const displayColumns = ref([])
 const watchedCommodities = ref(['Palladium', 'Gold', 'Silver'])
+const bestBuyIgnoreCommodities = ref([])
 const allCommodities = ref([])
 const settingsVisible = ref(false)
+const bestBuyIgnoreVisible = ref(false)
 const commoditySearch = ref('')
+const bestBuyIgnoreSearch = ref('')
 const statusText = ref('Loading…')
 const latestJournalEvent = ref(null)
 const autoRefresh = ref(true)
@@ -205,11 +208,17 @@ async function loadCommoditySettings() {
   const data = await commoditiesRes.json()
   watchedCommodities.value = settings.watched_commodities || ['Palladium', 'Gold', 'Silver']
   displayColumns.value = settings.watched_columns || watchedCommodities.value.map(c => ({ commodity: c, side: 'buy' }))
-  allCommodities.value = Array.from(new Set([...(data.commodities || []), ...watchedCommodities.value])).sort()
+  bestBuyIgnoreCommodities.value = settings.best_buy_ignore_commodities || []
+  allCommodities.value = Array.from(new Set([...(data.commodities || []), ...watchedCommodities.value, ...bestBuyIgnoreCommodities.value])).sort()
 }
 
 const filteredCommodities = computed(() => {
   const filter = (commoditySearch.value || '').toLowerCase()
+  return allCommodities.value.filter(c => !filter || c.toLowerCase().includes(filter)).slice(0, 250)
+})
+
+const filteredBestBuyIgnoreCommodities = computed(() => {
+  const filter = (bestBuyIgnoreSearch.value || '').toLowerCase()
   return allCommodities.value.filter(c => !filter || c.toLowerCase().includes(filter)).slice(0, 250)
 })
 
@@ -218,6 +227,13 @@ function setWatchedCommodity(commodity, checked) {
   if (checked) set.add(commodity)
   else set.delete(commodity)
   watchedCommodities.value = Array.from(set)
+}
+
+function setBestBuyIgnoreCommodity(commodity, checked) {
+  const set = new Set(bestBuyIgnoreCommodities.value)
+  if (checked) set.add(commodity)
+  else set.delete(commodity)
+  bestBuyIgnoreCommodities.value = Array.from(set)
 }
 
 function setDisplayColumn(commodity, side, checked) {
@@ -241,9 +257,28 @@ async function saveCommoditySettings() {
   await loadStations()
 }
 
+async function saveBestBuyIgnoreSettings() {
+  await fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      best_buy_ignore_commodities: bestBuyIgnoreCommodities.value,
+    }),
+  })
+  bestBuyIgnoreVisible.value = false
+  await loadStations()
+}
+
 async function openCommoditySettings() {
   settingsVisible.value = !settingsVisible.value
+  if (settingsVisible.value) bestBuyIgnoreVisible.value = false
   if (settingsVisible.value) await loadCommoditySettings()
+}
+
+async function openBestBuyIgnoreSettings() {
+  bestBuyIgnoreVisible.value = !bestBuyIgnoreVisible.value
+  if (bestBuyIgnoreVisible.value) settingsVisible.value = false
+  if (bestBuyIgnoreVisible.value) await loadCommoditySettings()
 }
 
 async function pollStatus() {
@@ -295,20 +330,41 @@ onUnmounted(() => {
       :economy-preset-status="economyPresetStatus"
       @apply="applyCurrentView"
       @open-commodities="openCommoditySettings"
+      @open-best-buy-ignore-list="openBestBuyIgnoreSettings"
       @save-economy-preset="saveEconomyPreset"
     />
 
     <CommoditySettings
       :visible="settingsVisible"
+      title="Watched commodities"
+      description="Watched commodities drive highlighting/details. Select Buy/Sell columns separately for the table."
+      save-label="Save commodity settings"
       :commodities="filteredCommodities"
-      :watched-commodities="watchedCommodities"
+      :selected-commodities="watchedCommodities"
       :display-columns="displayColumns"
       :search="commoditySearch"
+      :show-display-columns="true"
       @close="settingsVisible = false"
       @save="saveCommoditySettings"
       @update:search="commoditySearch = $event"
-      @toggle-watched="setWatchedCommodity"
+      @toggle-selected="setWatchedCommodity"
       @toggle-display-column="setDisplayColumn"
+    />
+
+    <CommoditySettings
+      :visible="bestBuyIgnoreVisible"
+      title="Best Buy ignore list"
+      description="Ignored commodities are excluded when MarketScout chooses a station's Best Buy. This is useful for commodities that rarely sell near the galactic maximum, so they do not crowd out more practical opportunities."
+      save-label="Save ignore list"
+      :commodities="filteredBestBuyIgnoreCommodities"
+      :selected-commodities="bestBuyIgnoreCommodities"
+      :display-columns="[]"
+      :search="bestBuyIgnoreSearch"
+      :show-display-columns="false"
+      @close="bestBuyIgnoreVisible = false"
+      @save="saveBestBuyIgnoreSettings"
+      @update:search="bestBuyIgnoreSearch = $event"
+      @toggle-selected="setBestBuyIgnoreCommodity"
     />
 
     <main :class="{ detailsOpen: selectedRow }">

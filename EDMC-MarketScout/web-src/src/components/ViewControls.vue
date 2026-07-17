@@ -10,7 +10,7 @@ const props = defineProps({
   economyPresets: { type: Array, default: () => [] },
   economyPresetStatus: { type: String, default: '' },
 })
-const emit = defineEmits(['apply', 'open-commodities', 'save-economy-preset'])
+const emit = defineEmits(['apply', 'open-commodities', 'open-best-buy-ignore-list', 'save-economy-preset'])
 </script>
 
 <template>
@@ -43,6 +43,7 @@ const emit = defineEmits(['apply', 'open-commodities', 'save-economy-preset'])
       <div class="stationFilterActions">
         <button type="button" class="applyFiltersButton" @click="emit('apply')">Apply Filters</button>
         <button type="button" @click="emit('open-commodities')">Watched Commodities</button>
+        <button type="button" @click="emit('open-best-buy-ignore-list')">Best Buy Ignore List</button>
       </div>
     </template>
 

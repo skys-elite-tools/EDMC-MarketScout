@@ -656,6 +656,8 @@ def ensure_default_settings(conn: sqlite3.Connection) -> None:
         for c in DEFAULT_WATCHED_COMMODITIES:
             cols.append({"commodity": c, "side": "buy"})
         setting_set(conn, "watched_columns", cols)
+    if setting_get(conn, "best_buy_ignore_commodities") is None:
+        setting_set(conn, "best_buy_ignore_commodities", [])
 
 def ensure_default_commodity_global_stats(conn: sqlite3.Connection) -> None:
     load_commodities_importer_module().ensure_default_commodity_global_stats(conn, DEFAULT_COMMODITY_GLOBAL_STATS)
