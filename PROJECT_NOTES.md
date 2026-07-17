@@ -55,6 +55,7 @@ EDMC-MarketScout/
     commodities.csv          # Commodity catalog/stats input loaded on startup
     commodities_rare.csv     # Rare commodity source data loaded on startup
     engineers-unlock.csv     # Engineer unlock requirements loaded on startup
+    systems_data.csv         # Authoritative coordinates for relevant engineer/rare systems
   README.md
   web/                       # Prebuilt static Web UI served at runtime
   web-src/                   # Vue 3 + Vite source for developers
@@ -137,6 +138,7 @@ The local database is `marketscout.sqlite3` and is intentionally ignored from gi
 Main data concepts:
 
 - Systems: system-level data such as name/address, coordinates, population, security, economy/state context.
+- Systems data: authoritative coordinate table populated from `rawdata/systems_data.csv` and Journal `StarPos` sightings. This is separate from the visited/candidate `systems` table.
 - Stations: station-level data such as name, market ID, station type, pad size, economies, faction/state, source, source timestamps, fleet carrier flag.
 - Market prices: commodity rows per market/station. Current direction is to store all commodities, not just a fixed metal list.
 - Commodity global stats: catalog/config table populated from `rawdata/commodities.csv` with commodity display name, category, INARA ID, average buy/sell/profit, max sell, min buy, and max profit.

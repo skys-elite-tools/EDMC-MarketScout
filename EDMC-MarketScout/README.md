@@ -146,6 +146,11 @@ The Web UI includes a `Jackpot History` button that displays the stored samples.
 - MarketScout imports `rawdata/commodities_rare.csv` into `rare_commodities` with source station/system, usual supply, buy price, and optional galactic average price.
 - The Web UI has a `Rare Commodities` view with an engineering-only filter and fleet-carrier maximum sale profit estimate.
 
+## System coordinate data
+
+- MarketScout imports `rawdata/systems_data.csv` into `systems_data` on startup when the file SHA-256 changes.
+- Journal events with `StarPos` also upsert coordinates into `systems_data`; the existing `systems` table remains for visited/candidate system records.
+
 
 ## 0.1.22 notes
 

@@ -161,6 +161,21 @@ def remove_obsolete_rare_commodity_columns(conn) -> None:
 
 
 def migrate_db(conn) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS systems_data (
+            system_address INTEGER PRIMARY KEY,
+            system_name TEXT NOT NULL,
+            x REAL NOT NULL,
+            y REAL NOT NULL,
+            z REAL NOT NULL,
+            source TEXT,
+            recorded_datetime TEXT
+        )
+        """
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_systems_data_name ON systems_data(system_name)")
+
     for column, definition in COMMODITY_GLOBAL_STATS_COLUMNS.items():
         add_column_if_missing(conn, "commodity_global_stats", column, definition)
     conn.execute(
@@ -333,6 +348,65 @@ def placeholders(values: Sequence[object]) -> str:
 
 def normalized_match_sql(column: str) -> str:
     return f"lower(trim(replace({column}, char(160), ' ')))"
+
+
+def refresh_systems_from_csv(conn, plugin_dir: str) -> Dict[str, int]:
+    """Refresh authoritative system coordinates from optional rawdata/systems_data.csv."""
+    migrate_db(conn)
+    path = os.path.join(plugin_dir, "rawdata", "systems_data.csv")
+    if not os.path.exists(path):
+        conn.commit()
+        return {"imported": 0, "skipped": 0}
+
+    digest = sha256_file(path)
+    if last_import_sha(conn, "systems") == digest:
+        conn.commit()
+        return {"imported": 0, "skipped": 0, "unchanged": 1}
+
+    ts = now_utc_iso()
+    imported = 0
+    skipped = 0
+    with open(path, "r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            system_name = get(row, "system_name", "system", "name")
+            system_address = first_int(get(row, "system_address", "id64", "systemAddress"))
+            x = first_float(get(row, "x"))
+            y = first_float(get(row, "y"))
+            z = first_float(get(row, "z"))
+            if not system_name or system_address is None or x is None or y is None or z is None:
+                skipped += 1
+                continue
+
+            conn.execute(
+                """
+                INSERT INTO systems_data(
+                    system_address, system_name, x, y, z, source, recorded_datetime
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(system_address) DO UPDATE SET
+                    system_name=excluded.system_name,
+                    x=excluded.x,
+                    y=excluded.y,
+                    z=excluded.z,
+                    source=excluded.source,
+                    recorded_datetime=excluded.recorded_datetime
+                """,
+                (
+                    system_address,
+                    system_name,
+                    x,
+                    y,
+                    z,
+                    "spansh_systems",
+                    get(row, "spansh_updated_datetime", "updated_datetime", "date") or ts,
+                ),
+            )
+            imported += 1
+
+    record_import(conn, "systems", digest, ts)
+    conn.commit()
+    return {"imported": imported, "skipped": skipped, "unchanged": 0}
 
 
 def refresh_rare_commodities_from_csv(conn, plugin_dir: str) -> Dict[str, int]:

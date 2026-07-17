@@ -326,6 +326,16 @@ def init_db(conn: sqlite3.Connection) -> None:
             value_json TEXT
         );
 
+        CREATE TABLE IF NOT EXISTS systems_data (
+            system_address INTEGER PRIMARY KEY,
+            system_name TEXT NOT NULL,
+            x REAL NOT NULL,
+            y REAL NOT NULL,
+            z REAL NOT NULL,
+            source TEXT,
+            recorded_datetime TEXT
+        );
+
         CREATE TABLE IF NOT EXISTS commodity_global_stats (
             commodity TEXT PRIMARY KEY,
             category TEXT,
@@ -408,6 +418,20 @@ def add_column_if_missing(conn: sqlite3.Connection, table: str, column: str, def
 def migrate_db(conn: sqlite3.Connection) -> None:
     # 0.1.8 jackpot history/system state metadata.
     add_column_if_missing(conn, "systems", "system_faction_state", "TEXT")
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS systems_data (
+            system_address INTEGER PRIMARY KEY,
+            system_name TEXT NOT NULL,
+            x REAL NOT NULL,
+            y REAL NOT NULL,
+            z REAL NOT NULL,
+            source TEXT,
+            recorded_datetime TEXT
+        )
+        """
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_systems_data_name ON systems_data(system_name)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_jackpot_events_market_active ON jackpot_events(market_id, active)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_jackpot_samples_jackpot_time ON jackpot_samples(jackpot_id, sample_datetime)")
     # 0.1.3 candidate import/source/fleet-carrier metadata.
@@ -505,6 +529,36 @@ def record_system_from_event(entry: Dict[str, Any], state: Dict[str, Any]) -> No
             event_time(entry),
             "local_visit",
         ),
+    )
+    if x is not None and y is not None and z is not None:
+        upsert_systems_data(CONN, system_name, system_address, x, y, z, "journal", event_time(entry))
+
+
+def upsert_systems_data(
+    conn: sqlite3.Connection,
+    system_name: str,
+    system_address: Optional[int],
+    x: float,
+    y: float,
+    z: float,
+    source: str,
+    recorded_datetime: str,
+) -> None:
+    if system_address is None:
+        return
+    conn.execute(
+        """
+        INSERT INTO systems_data(system_address, system_name, x, y, z, source, recorded_datetime)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(system_address) DO UPDATE SET
+            system_name=excluded.system_name,
+            x=excluded.x,
+            y=excluded.y,
+            z=excluded.z,
+            source=excluded.source,
+            recorded_datetime=excluded.recorded_datetime
+        """,
+        (system_address, system_name, x, y, z, source, recorded_datetime),
     )
 
 
@@ -629,6 +683,13 @@ def refresh_rare_commodities_from_csv(conn: sqlite3.Connection, plugin_dir: str)
     except Exception:
         log_exception("refresh_rare_commodities_from_csv")
 
+def refresh_systems_from_csv(conn: sqlite3.Connection, plugin_dir: str) -> None:
+    """Refresh systems_data from optional rawdata/systems_data.csv."""
+    try:
+        load_commodities_importer_module().refresh_systems_from_csv(conn, plugin_dir)
+    except Exception:
+        log_exception("refresh_systems_from_csv")
+
 def refresh_engineers_unlock_from_csv(conn: sqlite3.Connection, plugin_dir: str) -> None:
     """Refresh engineers_unlock from optional rawdata/engineers-unlock.csv."""
     try:
@@ -637,6 +698,7 @@ def refresh_engineers_unlock_from_csv(conn: sqlite3.Connection, plugin_dir: str)
         log_exception("refresh_engineers_unlock_from_csv")
 
 def refresh_rawdata_imports(conn: sqlite3.Connection, plugin_dir: str) -> None:
+    refresh_systems_from_csv(conn, plugin_dir)
     refresh_commodity_global_stats_from_csv(conn, plugin_dir)
     refresh_rare_commodities_from_csv(conn, plugin_dir)
     refresh_engineers_unlock_from_csv(conn, plugin_dir)
