@@ -1,22 +1,26 @@
 # EDMC-MarketScout
 
-Local-only EDMarketConnector plugin for scouting station market/BGS conditions and selected metal prices.
+Local-only EDMarketConnector plugin for scouting station market/BGS conditions, commodity prices, rare commodities, engineer unlocks, trade ledger entries, and Fleet Carrier trade announcements.
 
 ## What it does
 
 - Adds one small `MarketScout` button to EDMC's main window.
 - Records system visits from Journal events.
 - Records station visits from Journal events.
-- Stores selected commodity market prices from EDMC CAPI data when available.
+- Stores commodity market prices from EDMC CAPI data when available, with a local `Market.json` fallback.
 - Stores everything locally in `marketscout.sqlite3` inside the plugin folder.
-- Opens a table window with filters, multi-field sorting, selectable visible columns, and configurable row highlighting.
+- Opens a local browser Web UI served from `127.0.0.1`.
+- Shows Stations, Jackpots, Ledger, Commodities, Rare Commodities, Analyze Commodities, and Carrier Trade Alert views.
+- Supports watched commodity columns and a Best Buy ignore list.
 - Imports candidate stations from supported CSV exports, currently Spansh station-search CSVs.
+- Imports maintained rawdata CSV files for commodity stats, rare commodities, engineer unlock requirements, and relevant system coordinates.
 - Tracks row/source metadata such as `local_visit` or `spansh`.
 - Can hide Fleet Carrier rows by default with an `Include fleet carriers` checkbox.
+- Provides a local Fleet Carrier trade alert image/text generator with downloadable PNG/JPG output.
 
 ## Privacy
 
-MarketScout itself has no network/upload code. It only writes to a local SQLite database.
+MarketScout itself has no network/upload code. It writes to a local SQLite database and serves local bundled Web UI assets on `127.0.0.1`.
 
 For a private scouting window, disable EDMC's own EDDN upload settings while scouting:
 
@@ -49,6 +53,27 @@ The Spansh template currently expects columns like:
 
 Spansh exports do not include Elite market IDs or system addresses, so MarketScout creates stable negative placeholder IDs. When you later actually visit a matching system/station, MarketScout attempts to merge the imported placeholder row into the real visited row.
 
+## Rawdata imports
+
+On startup, MarketScout refreshes selected local CSV data only when the file SHA-256 changes. Current files live under `EDMC-MarketScout/rawdata/`:
+
+- `commodities.csv` -> `commodity_global_stats`
+- `commodities_rare.csv` -> `rare_commodities`
+- `engineers-unlock.csv` -> `engineers_unlock`
+- `systems_data.csv` -> `systems_data`
+
+The helper scripts for regenerating these files live under `local-tools/` in the development workspace.
+
+## Web UI views
+
+- `Stations`: station scouting table, watched commodity columns, Best Buy, filters, and settings.
+- `Jackpots`: jackpot history samples.
+- `Ledger`: Journal trade ledger with optional LIFO details.
+- `Commodities`: global commodity stats.
+- `Rare Commodities`: rare commodity source table with engineering unlock labels, usual supply, distance, and 100x galactic-average carrier-sale estimates.
+- `Analyze Commodities`: paste a comma-separated commodity list and split matches into regular and rare commodity tables.
+- `Carrier Trade Alert`: create local Fleet Carrier trade announcements with draggable on-image text and copyable Discord/Reddit text.
+
 ## Version
 
 0.1.4 adds Spansh CSV candidate import, source/source-pulled metadata, optional sell/demand columns, Fleet Carrier flag/filter, and more robust CAPI marketdata parsing.
@@ -63,7 +88,7 @@ Spansh exports do not include Elite market IDs or system addresses, so MarketSco
 
 - Largest pad is inferred from station type when no explicit field is available.
 - Station faction state is read from the Journal if available; if Frontier/EDMC omits it for a specific event, it may remain blank until a later event provides it.
-- Market prices are stored only for commodities listed in `TARGET_COMMODITIES` near the top of `load.py`.
+- Market prices are stored for all captured commodities.
 - Candidate imports from Spansh have no market prices until you actually visit/update the station.
 - No route planner yet.
 
@@ -150,6 +175,12 @@ The Web UI includes a `Jackpot History` button that displays the stored samples.
 
 - MarketScout imports `rawdata/systems_data.csv` into `systems_data` on startup when the file SHA-256 changes.
 - Journal events with `StarPos` also upsert coordinates into `systems_data`; the existing `systems` table remains for visited/candidate system records.
+
+## Carrier Trade Alert
+
+- The Carrier Trade Alert Web UI state is stored in browser localStorage, including form values, active page, uploaded image data URL when storage quota allows, and saved text layouts.
+- Built-in text layouts are protected from overwrite; custom layouts can be saved, updated, selected, and deleted locally.
+- The image generator is client-side only and does not upload images or announcements.
 
 
 ## 0.1.22 notes

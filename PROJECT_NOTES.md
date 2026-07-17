@@ -75,8 +75,16 @@ EDMC-MarketScout/
         CommoditySettings.vue
         JackpotHistory.vue
         LedgerView.vue
+        CommoditiesView.vue
         RareCommoditiesView.vue
+        AnalyzeCommoditiesView.vue
+        CarrierTradeAlertView.vue
         FooterBar.vue
+local-tools/
+  inara-commodities/          # Parses INARA commodity stats into rawdata/commodities.csv
+  inara-commodities-rare/     # Parses rare commodity source data into rawdata/commodities_rare.csv
+  engineers/                  # Maintained engineer unlock CSV and parser/copy step
+  spansh-systems/             # Streams large Spansh galaxy_stations.json into rawdata/systems_data.csv
 DEVELOPERS.md                # Build/development instructions
 PROJECT_NOTES.md             # This file
 ```
@@ -97,9 +105,35 @@ Current views:
 - `Stations`: filters + current station table + details pane.
 - `Jackpots`: placeholder/future controls + jackpot history.
 - `Ledger`: placeholder/future controls + ledger table/filters.
-- `Rare Commodities`: rare commodity reference table with engineering-only filtering and carrier-sale profit estimates.
+- `Commodities`: commodity global stats from `commodity_global_stats`, sortable by commodity/category/max profit.
+- `Rare Commodities`: rare commodity reference table with engineering-only filtering, usual supply sorting, current-position distance, engineer unlock labels, and carrier-sale profit estimates based on 100x galactic average.
+- `Analyze Commodities`: paste a comma-separated commodity list and split matches into regular and rare commodity tables. The last pasted list is stored in browser localStorage.
+- `Carrier Trade Alert`: Fleet Carrier trade advertisement builder with editable form data, image upload, draggable text layers, downloadable PNG/JPG output, and copyable Discord/Reddit announcement text.
 
 The Python local web server provides JSON endpoints; Vue should not know about SQLite directly.
+
+### Browser-local UI state
+
+Several purely personal UI preferences are stored in browser localStorage, not SQLite:
+
+- `marketscout.activeView`: currently selected top-level Web UI view, restored after browser refresh.
+- `marketscout.analyzeCommodities.text`: last Analyze Commodities pasted list.
+- `marketscout.carrierTradeAlert.draft`: Carrier Trade Alert form values, text color, active layout, text positions/font sizes, and uploaded image data URL.
+- `marketscout.carrierTradeAlert.layouts`: user-saved Carrier Trade Alert text layouts.
+
+These values are local browser convenience state only. They should not be uploaded or treated as shared project data.
+
+### Carrier Trade Alert details
+
+Carrier Trade Alert intentionally has no backend persistence and no network integration. It is a local image/text generator:
+
+- The preview uses a 4:3 / 1200x900 target ratio for Reddit-friendly image output.
+- Users can upload a custom image; the uploaded image is stored in localStorage as a data URL as part of the draft when browser quota allows.
+- Text layers are draggable. Built-in layouts are `Classic` and `Free Floating`; custom saved layouts are managed from the Text Layout menu.
+- Built-in layout names are protected from overwrite. Saving a custom layout with an existing custom name updates that layout instead of creating duplicates.
+- Profit/quantity form fields are text, not numeric, so values such as `16k` or localized punctuation are allowed.
+- The `Profit label` checkbox affects only the on-image text by toggling the word `profit`; the generated announcement always keeps `/ton profit`.
+- Downloads render the current image and text layer positions into PNG or JPG client-side.
 
 ### Economy filter presets
 
@@ -131,6 +165,39 @@ npm run build
 
 If `package-lock.json` is deliberately changed, commit it. Do not commit `node_modules/`.
 
+## Raw data generation workflow
+
+MarketScout runtime imports from files under `EDMC-MarketScout/rawdata/`. The helper scripts under `local-tools/` are developer/maintainer tooling used to regenerate those rawdata files.
+
+Current rawdata files:
+
+- `rawdata/commodities.csv`: global commodity stats/catalog.
+- `rawdata/commodities_rare.csv`: rare commodity catalog.
+- `rawdata/engineers-unlock.csv`: engineer unlock requirements.
+- `rawdata/systems_data.csv`: relevant system coordinates for rare commodity and engineer systems.
+
+Current helper scripts:
+
+- `local-tools/inara-commodities/parse-inara-commodities.sh` runs `parse_inara_commodities.py` and writes `EDMC-MarketScout/rawdata/commodities.csv`.
+- `local-tools/inara-commodities-rare/parse-inara-rare-commodities.sh` runs `parse_inara_rare_commodities.py` and writes `EDMC-MarketScout/rawdata/commodities_rare.csv`.
+- `local-tools/engineers/parse-engineers-unlock.sh` consumes the maintained CSV `local-tools/engineers/engineers-unlock.csv` and writes/copies `EDMC-MarketScout/rawdata/engineers-unlock.csv`. `engineers-text.txt` was only bootstrap input and should not be required for future edits.
+- `local-tools/spansh-systems/extract-marketscout-systems.sh` streams a very large Spansh `galaxy_stations.json` dump and extracts only systems referenced by `engineers_unlock.engineer_system` and `rare_commodities.system_name`, writing `EDMC-MarketScout/rawdata/systems_data.csv`.
+
+The Spansh galaxy dump can be tens of GB. Never load it fully into memory; stream it and keep only the small target system-name set.
+
+### Startup rawdata imports
+
+Startup rawdata imports are SHA-256 gated through the `imports` table. Each importer computes the current file hash and skips work when it matches the last successful import.
+
+Known `imports.data_name` values:
+
+- `commodities`
+- `rare_commodities`
+- `engineers_unlock`
+- `systems_data`
+
+When a rawdata hash changes, the importer refreshes the corresponding table and then records the new hash and import timestamp. Commodity and rare-commodity imports are intended to overwrite corrected source data. Distance metadata in rare commodities such as `station_distance_ls` and `distance_from_sol_ly` should be preserved according to the importer rules and not casually overwritten by future imports.
+
 ## Database concepts
 
 The local database is `marketscout.sqlite3` and is intentionally ignored from git.
@@ -159,6 +226,7 @@ Current design intent:
 - Use `commodity_global_stats`/`rawdata/commodities.csv` as the authoritative catalog for the Web UI commodity selector.
 - Watched commodities control which commodity-specific columns are shown.
 - Best Buy calculation is independent of watched commodities and should consider all commodities with `max_sell` in `commodity_global_stats` that are present at a station.
+- Best Buy ignore list is user-configurable in the Stations controls. It is persisted in SQLite `settings` under `best_buy_ignore_commodities` and excludes selected commodities from Best Buy calculation.
 
 Default `rawdata/commodities.csv` includes at least:
 
@@ -308,10 +376,10 @@ Including `.git/` is useful if the archive stays reasonably small.
 
 ## Current baseline note
 
-As of the component refactor, the current relevant commit created during this workflow was:
+As of the Carrier Trade Alert profit-label option, the current relevant committed baseline is:
 
 ```text
-f864b01 Refactor Vue UI into components
+51f042f feat: ability to exclude the word profit from the image
 ```
 
 If a newer baseline is established, update this section.

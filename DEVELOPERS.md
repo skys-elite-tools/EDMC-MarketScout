@@ -60,6 +60,18 @@ EDMC-MarketScout/web/
 
 Commit both the source changes in `web-src/` and the compiled `web/` output so users get a ready-to-go plugin.
 
+Current top-level Web UI views are:
+
+- Stations
+- Jackpots
+- Ledger
+- Commodities
+- Rare Commodities
+- Analyze Commodities
+- Carrier Trade Alert
+
+Browser-only personal state uses localStorage for convenience, including the active view, Analyze Commodities pasted input, and Carrier Trade Alert drafts/custom text layouts.
+
 ## Python backend development
 
 The local Web UI API is implemented in `marketscout_web.py`. It binds to `127.0.0.1` only and should remain local-only.
@@ -76,11 +88,25 @@ After backend or Web UI changes:
 4. Verify the browser UI loads from `http://127.0.0.1:<port>/`.
 5. Check these views:
    - Stations
-   - Jackpot History
+   - Jackpots
    - Ledger
+   - Commodities
    - Rare Commodities
+   - Analyze Commodities
+   - Carrier Trade Alert
    - Commodities settings
+   - Best Buy ignore list
 6. If market data is involved, dock/open a market or use a known `Market.json` test case.
+
+For Carrier Trade Alert changes, verify:
+
+- form edits update the image text and announcement text
+- uploaded image preview persists after refresh when localStorage quota allows
+- text layers can be dragged
+- custom layouts can be saved, updated, selected, deleted, and closed by clicking outside the menu
+- PNG/JPG downloads render the visible text layout
+
+For rawdata/import changes, run the relevant parser under `local-tools/`, then restart MarketScout or run importer-oriented checks against a disposable database. Large Spansh JSON dumps must be streamed rather than loaded into memory.
 
 ## Packaging
 
