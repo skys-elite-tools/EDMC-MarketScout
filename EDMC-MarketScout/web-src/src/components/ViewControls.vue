@@ -102,5 +102,9 @@ const emit = defineEmits(['apply', 'open-commodities', 'open-best-buy-ignore-lis
     <template v-else-if="currentView === 'analyze'">
       <div class="controlGroupTitle">Analyze commodities</div>
     </template>
+
+    <template v-else-if="currentView === 'carrier'">
+      <div class="controlGroupTitle">Carrier trade alert</div>
+    </template>
   </section>
 </template>

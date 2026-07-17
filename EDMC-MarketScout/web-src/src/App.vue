@@ -11,6 +11,7 @@ import LedgerView from './components/LedgerView.vue'
 import RareCommoditiesView from './components/RareCommoditiesView.vue'
 import CommoditiesView from './components/CommoditiesView.vue'
 import AnalyzeCommoditiesView from './components/AnalyzeCommoditiesView.vue'
+import CarrierTradeAlertView from './components/CarrierTradeAlertView.vue'
 import FooterBar from './components/FooterBar.vue'
 import { columnKey, dedupeStationRows, query } from './utils.js'
 
@@ -149,7 +150,15 @@ async function loadAnalyzeCommodities() {
   statusText.value = `Analyze commodities · ${new Date().toLocaleTimeString()}`
 }
 
+async function loadCarrierTradeAlert() {
+  currentView.value = 'carrier'
+  rows.value = []
+  selectedIndex.value = -1
+  statusText.value = `Carrier trade alert · ${new Date().toLocaleTimeString()}`
+}
+
 function applyCurrentView() {
+  if (currentView.value === 'carrier') return loadCarrierTradeAlert()
   if (currentView.value === 'analyze') return loadAnalyzeCommodities()
   if (currentView.value === 'commodities') return loadCommodityStats()
   if (currentView.value === 'rare') return loadRareCommodities()
@@ -416,6 +425,9 @@ onUnmounted(() => {
         />
         <AnalyzeCommoditiesView
           v-else-if="currentView === 'analyze'"
+        />
+        <CarrierTradeAlertView
+          v-else-if="currentView === 'carrier'"
         />
       </section>
 
