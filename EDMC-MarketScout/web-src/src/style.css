@@ -355,7 +355,7 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 }
 .analysisTables {
   display: grid;
-  grid-template-columns: minmax(20rem, .9fr) minmax(34rem, 1.1fr);
+  grid-template-columns: minmax(18rem, .75fr) minmax(42rem, 1.25fr);
   gap: 16px;
   margin-top: 14px;
   align-items: start;
@@ -377,6 +377,12 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   font: inherit;
   font-weight: 800;
 }
+.analysisRegularTable th:nth-child(2),
+.analysisRegularTable td:nth-child(2) {
+  max-width: 8rem;
+}
+.analysisRareTable th:nth-child(1) { min-width: 10rem; }
+.analysisRareTable th:nth-child(3) { min-width: 10rem; }
 .inlineToggle {
   min-width: 1.6rem;
   padding: 1px 4px;

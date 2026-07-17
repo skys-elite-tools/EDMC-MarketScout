@@ -1,8 +1,18 @@
 <script setup>
-import { computed, ref } from 'vue'
-import { fmt, ly, money } from '../utils.js'
+import { computed, ref, watch } from 'vue'
+import { fmt, ly, money, num } from '../utils.js'
 
-const text = ref('')
+const STORAGE_KEY = 'marketscout.analyzeCommodities.text'
+
+function storedText() {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) || ''
+  } catch (err) {
+    return ''
+  }
+}
+
+const text = ref(storedText())
 const loading = ref(false)
 const regularRows = ref([])
 const rareRows = ref([])
@@ -12,6 +22,15 @@ const rareSort = ref('commodity')
 
 function sortText(a, b, key) {
   return String(a[key] || '').localeCompare(String(b[key] || ''))
+}
+
+function sortNumberDesc(a, b, key) {
+  const av = num(a[key])
+  const bv = num(b[key])
+  if (av === null && bv === null) return sortText(a, b, 'commodity')
+  if (av === null) return 1
+  if (bv === null) return -1
+  return bv - av || sortText(a, b, 'commodity')
 }
 
 const sortedRegular = computed(() => {
@@ -26,8 +45,20 @@ const sortedRegular = computed(() => {
 
 const sortedRare = computed(() => {
   const rows = [...rareRows.value]
-  rows.sort((a, b) => sortText(a, b, 'commodity'))
+  if (rareSort.value === 'usual_supply_desc') {
+    rows.sort((a, b) => sortNumberDesc(a, b, 'usual_supply'))
+  } else {
+    rows.sort((a, b) => sortText(a, b, 'commodity'))
+  }
   return rows
+})
+
+watch(text, (value) => {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, value)
+  } catch (err) {
+    // Ignore private browsing or storage quota failures.
+  }
 })
 
 async function analyze() {
@@ -66,7 +97,7 @@ async function analyze() {
     <div class="analysisTables">
       <section>
         <h2>Regular</h2>
-        <table>
+        <table class="analysisRegularTable">
           <thead>
             <tr>
               <th><button type="button" class="tableSortButton" @click="regularSort = 'commodity'">Commodity</button></th>
@@ -88,13 +119,14 @@ async function analyze() {
 
       <section>
         <h2>Rare</h2>
-        <table>
+        <table class="analysisRareTable">
           <thead>
             <tr>
               <th><button type="button" class="tableSortButton" @click="rareSort = 'commodity'">Commodity</button></th>
               <th>System</th>
               <th>Station</th>
               <th class="num" title="Distance from current system">Dist</th>
+              <th class="num" title="Usual supply"><button type="button" class="tableSortButton" @click="rareSort = 'usual_supply_desc'">Supply</button></th>
               <th class="num">Buy</th>
               <th class="num" title="100x galactic average">100x</th>
             </tr>
@@ -105,6 +137,7 @@ async function analyze() {
               <td>{{ fmt(row.system_name) }}</td>
               <td>{{ fmt(row.station_name) }}</td>
               <td class="num">{{ ly(row.distance_from_current_ly) }}</td>
+              <td class="num">{{ money(row.usual_supply) }}</td>
               <td class="num">{{ money(row.buy_price) }}</td>
               <td class="num">{{ money(row.galactic_average_100x) }}</td>
             </tr>

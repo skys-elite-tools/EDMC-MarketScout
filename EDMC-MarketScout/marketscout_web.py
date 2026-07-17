@@ -839,8 +839,8 @@ def api_analyze_commodities(payload: Dict[str, Any]) -> Dict[str, Any]:
                 row_to_dict(r)
                 for r in conn.execute(
                     """
-                    SELECT rc.commodity, rc.system_name, rc.station_name, rc.buy_price,
-                           rc.galactic_average_price,
+                    SELECT rc.commodity, rc.system_name, rc.station_name, rc.usual_supply,
+                           rc.buy_price, rc.galactic_average_price,
                            sd.x AS system_x, sd.y AS system_y, sd.z AS system_z,
                            CASE
                                WHEN rc.galactic_average_price IS NOT NULL
