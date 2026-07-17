@@ -2,7 +2,34 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import placeholderImage from '../assets/trade-placeholder.png'
 
-const form = ref({
+const LAYOUT_STORAGE_KEY = 'marketscout.carrierTradeAlert.layouts'
+const DRAFT_STORAGE_KEY = 'marketscout.carrierTradeAlert.draft'
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value))
+}
+
+function loadSavedLayouts() {
+  try {
+    const layouts = JSON.parse(window.localStorage.getItem(LAYOUT_STORAGE_KEY) || '[]')
+    return Array.isArray(layouts) ? layouts.filter(item => item?.id && item?.name && item?.mode) : []
+  } catch (err) {
+    return []
+  }
+}
+
+function loadDraft() {
+  try {
+    const draft = JSON.parse(window.localStorage.getItem(DRAFT_STORAGE_KEY) || '{}')
+    return draft && typeof draft === 'object' ? draft : {}
+  } catch (err) {
+    return {}
+  }
+}
+
+const savedDraft = loadDraft()
+
+const defaultForm = {
   commodity: 'Gold',
   profit: 12000,
   quantity: 16000,
@@ -12,24 +39,70 @@ const form = ref({
   station: 'Galileo',
   system: 'Sol',
   pads: 'Large',
-})
+}
 
-const textColor = ref('#f6fbff')
+const form = ref({ ...defaultForm, ...(savedDraft.form || {}) })
+
+const textColor = ref(savedDraft.textColor || '#f6fbff')
+const textStyle = ref(savedDraft.textStyle || 'classic')
+const textLayout = ref(savedDraft.textLayout || savedDraft.textStyle || 'classic')
 const stageRef = ref(null)
 const stageWidth = ref(0)
 const defaultImageUrl = ref(placeholderImage)
-const uploadedImageUrl = ref('')
+const uploadedImageUrl = ref(savedDraft.uploadedImageUrl || '')
 const copied = ref(false)
 let resizeObserver = null
 let activeDrag = null
 
-const layers = ref([
-  { key: 'type', x: 50, y: 18 },
-  { key: 'commodity', x: 50, y: 31 },
-  { key: 'route', x: 50, y: 48 },
-  { key: 'profit', x: 50, y: 59 },
-  { key: 'carrier', x: 50, y: 78 },
-])
+const savedLayouts = ref(loadSavedLayouts())
+
+const defaultLayerPositions = {
+  classic: {
+    type: { x: 50, y: 18 },
+    commodity: { x: 50, y: 31 },
+    route: { x: 50, y: 48 },
+    profit: { x: 50, y: 59 },
+    carrier: { x: 50, y: 78 },
+  },
+  floating: {
+    type: { x: 92, y: 16 },
+    commodity: { x: 92, y: 26 },
+    station: { x: 92, y: 39 },
+    system: { x: 92, y: 47 },
+    pads: { x: 92, y: 55 },
+    profitValue: { x: 92, y: 66 },
+    quantity: { x: 92, y: 74 },
+    carrierName: { x: 92, y: 84 },
+    carrierId: { x: 92, y: 91 },
+  },
+}
+
+const defaultFontSizes = {
+  classicType: 43,
+  classicCommodity: 103,
+  classicRoute: 41,
+  classicProfit: 42,
+  classicCarrier: 72,
+  type: 32,
+  commodity: 68,
+  station: 28,
+  system: 28,
+  pads: 24,
+  profitValue: 30,
+  quantity: 30,
+  carrierName: 42,
+  carrierId: 36,
+}
+
+const layerPositions = ref({
+  ...clone(defaultLayerPositions),
+  ...(savedDraft.layerPositions || {}),
+})
+
+const fontSizes = ref({
+  ...defaultFontSizes,
+  ...(savedDraft.fontSizes || {}),
+})
 
 const padLetter = computed(() => (form.value.pads || 'Large').slice(0, 1).toUpperCase())
 const tradeTypeLower = computed(() => String(form.value.type || '').toLowerCase())
@@ -55,29 +128,138 @@ const layerText = computed(() => ({
   route: `${form.value.station || 'Station'} in ${form.value.system || 'System'} | ${padLetter.value}-pads`,
   profit: `${formatNumber(form.value.profit)} Cr/t profit · ${formatNumber(form.value.quantity)} tons`,
   carrier: `${form.value.carrierName || 'Carrier Name'} · ${form.value.carrierId || 'Carrier ID'}`,
+  station: form.value.station || 'Station',
+  system: form.value.system || 'System',
+  pads: `${padLetter.value}-pads`,
+  profitValue: `${formatNumber(form.value.profit)} Cr/t profit`,
+  quantity: `${formatNumber(form.value.quantity)} tons`,
+  carrierName: form.value.carrierName || 'Carrier Name',
+  carrierId: form.value.carrierId || 'Carrier ID',
 }))
 
 const announcement = computed(() => {
   return `**${form.value.carrierName || 'Carrier Name'} (${form.value.carrierId || 'Carrier ID'})** is ${tradeTypeLower.value} **${form.value.commodity || 'Commodity'}** from **${form.value.station || 'Station'}** (${padLetter.value}-pads) in **${form.value.system || 'System'}**. **${formatNumber(form.value.profit)}**/ton profit, **${compactTons(form.value.quantity)}** tons.`
 })
 
-const layerSizes = {
-  type: { size: 0.036, weight: 800 },
-  commodity: { size: 0.086, weight: 950 },
-  route: { size: 0.034, weight: 750 },
-  profit: { size: 0.035, weight: 800 },
-  carrier: { size: 0.06, weight: 950 },
+const classicLayers = [
+  { key: 'type', sizeKey: 'classicType', weight: 800, align: 'center' },
+  { key: 'commodity', sizeKey: 'classicCommodity', weight: 950, align: 'center' },
+  { key: 'route', sizeKey: 'classicRoute', weight: 750, align: 'center' },
+  { key: 'profit', sizeKey: 'classicProfit', weight: 800, align: 'center' },
+  { key: 'carrier', sizeKey: 'classicCarrier', weight: 950, align: 'center' },
+]
+
+const floatingLayers = [
+  { key: 'type', sizeKey: 'type', weight: 800, align: 'right' },
+  { key: 'commodity', sizeKey: 'commodity', weight: 950, align: 'right' },
+  { key: 'station', sizeKey: 'station', weight: 800, align: 'right' },
+  { key: 'system', sizeKey: 'system', weight: 800, align: 'right' },
+  { key: 'pads', sizeKey: 'pads', weight: 750, align: 'right' },
+  { key: 'profitValue', sizeKey: 'profitValue', weight: 850, align: 'right' },
+  { key: 'quantity', sizeKey: 'quantity', weight: 850, align: 'right' },
+  { key: 'carrierName', sizeKey: 'carrierName', weight: 950, align: 'right' },
+  { key: 'carrierId', sizeKey: 'carrierId', weight: 900, align: 'right' },
+]
+
+const activeLayers = computed(() => (textStyle.value === 'floating' ? floatingLayers : classicLayers).map(layer => ({
+  ...layer,
+  ...(layerPositions.value[textStyle.value][layer.key] || { x: 50, y: 50 }),
+})))
+
+function persistSavedLayouts() {
+  try {
+    window.localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(savedLayouts.value))
+  } catch (err) {
+    // Ignore private browsing or storage quota failures.
+  }
+}
+
+function applyTextLayout(value) {
+  if (value === 'classic' || value === 'floating') {
+    textStyle.value = value
+    return
+  }
+  const layout = savedLayouts.value.find(item => `custom:${item.id}` === value)
+  if (!layout) return
+  textStyle.value = layout.mode === 'floating' ? 'floating' : 'classic'
+  if (layout.positions) layerPositions.value[textStyle.value] = clone(layout.positions)
+  if (layout.fontSizes) fontSizes.value = { ...fontSizes.value, ...clone(layout.fontSizes) }
+}
+
+function saveCurrentLayout() {
+  const name = window.prompt('Name this text layout')
+  const cleanName = String(name || '').trim()
+  if (!cleanName) return
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const layout = {
+    id,
+    name: cleanName,
+    mode: textStyle.value,
+    positions: clone(layerPositions.value[textStyle.value]),
+    fontSizes: clone(fontSizes.value),
+  }
+  savedLayouts.value = [...savedLayouts.value, layout]
+  persistSavedLayouts()
+  textLayout.value = `custom:${id}`
+}
+
+function persistDraft() {
+  const draft = {
+    form: form.value,
+    textColor: textColor.value,
+    textStyle: textStyle.value,
+    textLayout: textLayout.value,
+    layerPositions: layerPositions.value,
+    fontSizes: fontSizes.value,
+    uploadedImageUrl: uploadedImageUrl.value,
+  }
+  try {
+    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft))
+  } catch (err) {
+    // Large uploaded images can exceed browser storage quota.
+  }
+}
+
+function previewFontSize(layer) {
+  const exportedSize = Number(fontSizes.value[layer.sizeKey] || 32)
+  return Math.max(10, exportedSize * (stageWidth.value || 1200) / 1200)
+}
+
+function sizeKeyFor(field) {
+  if (textStyle.value === 'floating') return field
+  return {
+    type: 'classicType',
+    commodity: 'classicCommodity',
+    station: 'classicRoute',
+    system: 'classicRoute',
+    pads: 'classicRoute',
+    profitValue: 'classicProfit',
+    quantity: 'classicProfit',
+    carrierName: 'classicCarrier',
+    carrierId: 'classicCarrier',
+  }[field] || field
+}
+
+function fontSizeFor(field) {
+  return fontSizes.value[sizeKeyFor(field)]
+}
+
+function setFontSize(field, value) {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return
+  fontSizes.value[sizeKeyFor(field)] = Math.max(8, Math.min(180, Math.round(n)))
 }
 
 function layerStyle(layer) {
-  const spec = layerSizes[layer.key] || layerSizes.route
-  const size = Math.max(12, stageWidth.value * spec.size)
+  const size = previewFontSize(layer)
   return {
     left: `${layer.x}%`,
     top: `${layer.y}%`,
     color: textColor.value,
     fontSize: `${size}px`,
-    fontWeight: spec.weight,
+    fontWeight: layer.weight,
+    textAlign: layer.align,
+    transform: layer.align === 'right' ? 'translate(-100%, -50%)' : 'translate(-50%, -50%)',
   }
 }
 
@@ -159,10 +341,10 @@ function moveDrag(event) {
   const rect = stageRef.value.getBoundingClientRect()
   const x = ((event.clientX - activeDrag.dx - rect.left) / rect.width) * 100
   const y = ((event.clientY - activeDrag.dy - rect.top) / rect.height) * 100
-  const layer = layers.value.find(item => item.key === activeDrag.key)
-  if (!layer) return
-  layer.x = Math.min(96, Math.max(4, x))
-  layer.y = Math.min(94, Math.max(6, y))
+  const positions = layerPositions.value[textStyle.value]
+  if (!positions?.[activeDrag.key]) return
+  positions[activeDrag.key].x = Math.min(96, Math.max(4, x))
+  positions[activeDrag.key].y = Math.min(94, Math.max(6, y))
 }
 
 function stopDrag(event) {
@@ -172,8 +354,11 @@ function stopDrag(event) {
 function onFileChange(event) {
   const file = event.target.files?.[0]
   if (!file) return
-  if (uploadedImageUrl.value) URL.revokeObjectURL(uploadedImageUrl.value)
-  uploadedImageUrl.value = URL.createObjectURL(file)
+  const reader = new FileReader()
+  reader.onload = () => {
+    uploadedImageUrl.value = String(reader.result || '')
+  }
+  reader.readAsDataURL(file)
 }
 
 function drawCoverImage(ctx, image, width, height) {
@@ -193,11 +378,10 @@ function loadImage(src) {
 }
 
 function drawTextLayer(ctx, layer, width, height) {
-  const spec = layerSizes[layer.key] || layerSizes.route
   const text = layerText.value[layer.key] || ''
-  const fontSize = Math.max(12, width * spec.size)
-  ctx.font = `${spec.weight} ${fontSize}px system-ui, -apple-system, Segoe UI, sans-serif`
-  ctx.textAlign = 'center'
+  const fontSize = Math.max(10, Number(fontSizes.value[layer.sizeKey] || 32))
+  ctx.font = `${layer.weight} ${fontSize}px system-ui, -apple-system, Segoe UI, sans-serif`
+  ctx.textAlign = layer.align
   ctx.textBaseline = 'middle'
   ctx.fillStyle = textColor.value
   ctx.shadowColor = 'rgba(0,0,0,.82)'
@@ -217,7 +401,7 @@ async function downloadImage(format = 'png') {
   const ctx = canvas.getContext('2d')
   const img = await loadImage(imageUrl.value || placeholderImage)
   drawCoverImage(ctx, img, width, height)
-  for (const layer of layers.value) drawTextLayer(ctx, layer, width, height)
+  for (const layer of activeLayers.value) drawTextLayer(ctx, layer, width, height)
   const link = document.createElement('a')
   const commodity = String(form.value.commodity || 'commodity').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
   const isJpg = format === 'jpg'
@@ -241,10 +425,11 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (resizeObserver) resizeObserver.disconnect()
-  if (uploadedImageUrl.value) URL.revokeObjectURL(uploadedImageUrl.value)
 })
 
 watch(imageUrl, () => nextTick(updateStageSize))
+watch(textLayout, value => applyTextLayout(value))
+watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, uploadedImageUrl], persistDraft, { deep: true })
 </script>
 
 <template>
@@ -259,7 +444,7 @@ watch(imageUrl, () => nextTick(updateStageSize))
             <button type="button" title="Download JPG" @click="downloadImage('jpg')">JPG ↓</button>
           </div>
           <div
-            v-for="layer in layers"
+            v-for="layer in activeLayers"
             :key="layer.key"
             class="carrierTextLayer"
             :class="`carrierLayer-${layer.key}`"
@@ -287,38 +472,73 @@ watch(imageUrl, () => nextTick(updateStageSize))
       <h2>Image Options</h2>
       <div class="carrierImageTools">
         <label>Upload image <input type="file" accept="image/*" @change="onFileChange" /></label>
+        <label>Text Layout
+          <select v-model="textLayout">
+            <option value="classic">Classic</option>
+            <option value="floating">Free Floating</option>
+            <option v-for="layout in savedLayouts" :key="layout.id" :value="`custom:${layout.id}`">{{ layout.name }}</option>
+          </select>
+        </label>
         <label>Text Color <input v-model="textColor" type="color" /></label>
+        <button type="button" class="saveLayoutButton" @click="saveCurrentLayout">Save Current</button>
       </div>
       <h2>Trade</h2>
       <div class="carrierFormGrid">
         <fieldset class="tradeFieldset">
           <legend>Trade</legend>
-          <label>Commodity <input v-model="form.commodity" type="text" /></label>
-          <label>Profit <input v-model.number="form.profit" type="number" min="0" /></label>
-          <label>Quantity (tons) <input v-model.number="form.quantity" type="number" min="0" /></label>
-          <label>Type
-            <select v-model="form.type">
-              <option>Loading</option>
-              <option>Unloading</option>
-            </select>
-          </label>
+          <div class="fieldWithFont">
+            <label>Commodity <input v-model="form.commodity" type="text" /></label>
+            <label>Font size <input :value="fontSizeFor('commodity')" type="number" min="8" max="180" step="1" @input="setFontSize('commodity', $event.target.value)" /></label>
+          </div>
+          <div class="fieldWithFont">
+            <label>Profit <input v-model.number="form.profit" type="number" min="0" /></label>
+            <label>Font size <input :value="fontSizeFor('profitValue')" type="number" min="8" max="180" step="1" @input="setFontSize('profitValue', $event.target.value)" /></label>
+          </div>
+          <div class="fieldWithFont">
+            <label>Quantity (tons) <input v-model.number="form.quantity" type="number" min="0" /></label>
+            <label>Font size <input :value="fontSizeFor('quantity')" type="number" min="8" max="180" step="1" @input="setFontSize('quantity', $event.target.value)" /></label>
+          </div>
+          <div class="fieldWithFont">
+            <label>Type
+              <select v-model="form.type">
+                <option>Loading</option>
+                <option>Unloading</option>
+              </select>
+            </label>
+            <label>Font size <input :value="fontSizeFor('type')" type="number" min="8" max="180" step="1" @input="setFontSize('type', $event.target.value)" /></label>
+          </div>
         </fieldset>
         <fieldset class="carrierFieldset">
           <legend>Carrier</legend>
-          <label>Carrier Name <input v-model="form.carrierName" type="text" /></label>
-          <label>Carrier ID <input v-model="form.carrierId" type="text" /></label>
+          <div class="fieldWithFont">
+            <label>Carrier Name <input v-model="form.carrierName" type="text" /></label>
+            <label>Font size <input :value="fontSizeFor('carrierName')" type="number" min="8" max="180" step="1" @input="setFontSize('carrierName', $event.target.value)" /></label>
+          </div>
+          <div class="fieldWithFont">
+            <label>Carrier ID <input v-model="form.carrierId" type="text" /></label>
+            <label>Font size <input :value="fontSizeFor('carrierId')" type="number" min="8" max="180" step="1" @input="setFontSize('carrierId', $event.target.value)" /></label>
+          </div>
         </fieldset>
         <fieldset class="marketFieldset">
           <legend>Market</legend>
-          <label>Station <input v-model="form.station" type="text" /></label>
-          <label>System <input v-model="form.system" type="text" /></label>
-          <label>Pads
-            <select v-model="form.pads">
-              <option>Small</option>
-              <option>Medium</option>
-              <option>Large</option>
-            </select>
-          </label>
+          <div class="fieldWithFont">
+            <label>Station <input v-model="form.station" type="text" /></label>
+            <label>Font size <input :value="fontSizeFor('station')" type="number" min="8" max="180" step="1" @input="setFontSize('station', $event.target.value)" /></label>
+          </div>
+          <div class="fieldWithFont">
+            <label>System <input v-model="form.system" type="text" /></label>
+            <label>Font size <input :value="fontSizeFor('system')" type="number" min="8" max="180" step="1" @input="setFontSize('system', $event.target.value)" /></label>
+          </div>
+          <div class="fieldWithFont">
+            <label>Pads
+              <select v-model="form.pads">
+                <option>Small</option>
+                <option>Medium</option>
+                <option>Large</option>
+              </select>
+            </label>
+            <label>Font size <input :value="fontSizeFor('pads')" type="number" min="8" max="180" step="1" @input="setFontSize('pads', $event.target.value)" /></label>
+          </div>
         </fieldset>
       </div>
     </section>

@@ -455,15 +455,31 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 .tradeFieldset {
   grid-row: span 2;
 }
+.fieldWithFont {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5.5rem;
+  gap: 8px;
+  align-items: end;
+}
+.fieldWithFont label {
+  min-width: 0;
+}
+.fieldWithFont label:last-child {
+  color: var(--accent);
+}
 .carrierFormGrid input,
 .carrierFormGrid select {
   width: 100%;
 }
 .carrierImageTools {
   display: grid;
-  grid-template-columns: minmax(16rem, 1fr) 8rem;
+  grid-template-columns: minmax(12rem, 1fr) minmax(10rem, .7fr) 5rem auto;
   gap: 12px;
   align-items: end;
+}
+.saveLayoutButton {
+  white-space: nowrap;
+  height: 2rem;
 }
 .carrierImageStage {
   position: relative;
