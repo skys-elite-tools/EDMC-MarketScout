@@ -719,6 +719,7 @@ def engineering_unlock_map(conn: sqlite3.Connection) -> Dict[str, List[Dict[str,
         rows = conn.execute(
             """
             SELECT eu.engineer, eu.engineer_system, eu.required_commodity,
+                   eu.required_commodity_quantity,
                    sd.x AS x, sd.y AS y, sd.z AS z
             FROM engineers_unlock eu
             LEFT JOIN systems_data sd
@@ -737,6 +738,11 @@ def engineering_unlock_map(conn: sqlite3.Connection) -> Dict[str, List[Dict[str,
         label = str(row["engineer"] or "")
         if row["engineer_system"]:
             label = f"{label} @ {row['engineer_system']}"
+        if row["required_commodity_quantity"] is not None:
+            try:
+                label = f"{label} | x{int(row['required_commodity_quantity'])}"
+            except (TypeError, ValueError):
+                label = f"{label} | x{row['required_commodity_quantity']}"
         coords = None
         if row["x"] is not None and row["y"] is not None and row["z"] is not None:
             coords = (float(row["x"]), float(row["y"]), float(row["z"]))
