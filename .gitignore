@@ -8,6 +8,8 @@ __pycache__/
 
 # Runtime/local MarketScout data
 marketscout.sqlite3
+marketscout.config
+EDMC-MarketScout/marketscout.config
 marketscout-ui.json
 marketscout-economy-presets.json
 marketscout-market-debug.log

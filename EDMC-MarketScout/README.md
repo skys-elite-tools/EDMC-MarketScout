@@ -29,6 +29,17 @@ For a private scouting window, disable EDMC's own EDDN upload settings while sco
 
 Re-enable them later when you are ready to contribute data.
 
+## Configuration
+
+On startup, MarketScout creates `marketscout.config` in the plugin folder if it does not already exist. The default file is:
+
+```ini
+app.bind_address=127.0.0.1
+app.bind_port=40595
+```
+
+The fixed default port keeps browser localStorage state, such as Carrier Trade Alert layouts, available across EDMC/browser restarts. Users may edit this file if they need a different local address or port. Restart EDMC after changing it.
+
 ## Install
 
 1. In EDMC, open `File` > `Settings` > `Plugins` > `Open`.

@@ -10,7 +10,6 @@ import json
 import math
 import mimetypes
 import os
-import socket
 import sqlite3
 import threading
 import traceback
@@ -22,9 +21,13 @@ from urllib.parse import parse_qs, urlparse
 _SERVER: Optional[ThreadingHTTPServer] = None
 _THREAD: Optional[threading.Thread] = None
 _PORT: Optional[int] = None
+_BIND_ADDRESS = "127.0.0.1"
 _CONTEXT: Dict[str, Any] = {}
 _LATEST_JOURNAL_EVENT: Optional[Dict[str, Any]] = None
 ECONOMY_PRESETS_FILE = "marketscout-economy-presets.json"
+CONFIG_FILE = "marketscout.config"
+DEFAULT_BIND_ADDRESS = "127.0.0.1"
+DEFAULT_BIND_PORT = 40595
 DEFAULT_ECONOMY_PRESETS = [
     "Agriculture",
     "Colony",
@@ -40,23 +43,56 @@ DEFAULT_ECONOMY_PRESETS = [
 ]
 
 
+def load_web_config(plugin_dir: str) -> Dict[str, Any]:
+    """Load the tiny MarketScout config file, creating defaults when missing."""
+    path = os.path.join(plugin_dir, CONFIG_FILE)
+    defaults = {
+        "app.bind_address": DEFAULT_BIND_ADDRESS,
+        "app.bind_port": str(DEFAULT_BIND_PORT),
+    }
+    if not os.path.exists(path):
+        with open(path, "w", encoding="utf-8") as f:
+            for key, value in defaults.items():
+                f.write(f"{key}={value}\n")
+        raw = dict(defaults)
+    else:
+        raw = dict(defaults)
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                raw[key.strip()] = value.strip()
+
+    bind_address = raw.get("app.bind_address") or DEFAULT_BIND_ADDRESS
+    try:
+        bind_port = int(raw.get("app.bind_port") or DEFAULT_BIND_PORT)
+        if bind_port < 1 or bind_port > 65535:
+            raise ValueError
+    except (TypeError, ValueError):
+        bind_port = DEFAULT_BIND_PORT
+    return {"bind_address": bind_address, "bind_port": bind_port}
+
+
 def start_server(plugin_dir: str, db_path: str, target_commodities: List[str], primary_metals: List[str]) -> int:
     """Start the local web server if needed and return its port."""
-    global _SERVER, _THREAD, _PORT, _CONTEXT
+    global _SERVER, _THREAD, _PORT, _BIND_ADDRESS, _CONTEXT
     if _SERVER is not None and _PORT is not None:
         return _PORT
 
+    web_config = load_web_config(plugin_dir)
+    _BIND_ADDRESS = str(web_config["bind_address"])
     _CONTEXT = {
         "plugin_dir": plugin_dir,
         "web_dir": os.path.join(plugin_dir, "web"),
         "db_path": db_path,
         "target_commodities": list(target_commodities),
         "primary_metals": list(primary_metals),
+        "web_config": dict(web_config),
     }
 
-    # Bind to port 0 so the OS chooses an available local-only port. This avoids
-    # collisions and keeps the server private to this machine.
-    server = ThreadingHTTPServer(("127.0.0.1", 0), MarketScoutRequestHandler)
+    server = ThreadingHTTPServer((_BIND_ADDRESS, int(web_config["bind_port"])), MarketScoutRequestHandler)
     server.daemon_threads = True
     _PORT = int(server.server_address[1])
     _SERVER = server
@@ -81,7 +117,7 @@ def stop_server() -> None:
 def server_url() -> Optional[str]:
     if _PORT is None:
         return None
-    return f"http://127.0.0.1:{_PORT}/"
+    return f"http://{_BIND_ADDRESS}:{_PORT}/"
 
 
 def update_latest_journal_event(event: Dict[str, Any]) -> None:

@@ -50,6 +50,7 @@ h1 { margin: 0; font-size: 20px; }
 .mainNav { display: flex; gap: 6px; flex-wrap: wrap; }
 .mainNav button.active { border-color: var(--accent); background: #304761; color: white; }
 .topLinks, .footerLinks { display: flex; gap: 12px; align-items: center; color: var(--muted); }
+.hiddenFutureLink { display: none; }
 .viewControls {
   display: flex;
   gap: 8px 12px;
@@ -222,6 +223,16 @@ input, select, button {
 }
 button { cursor: pointer; background: #263142; }
 button:hover { border-color: var(--accent); }
+.linkButton {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+}
+.linkButton:hover {
+  text-decoration: underline;
+}
 main {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -704,6 +715,66 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   background: var(--panel3);
   color: var(--muted);
   font-size: 12px;
+}
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0,0,0,.62);
+}
+.aboutModal {
+  width: min(42rem, 100%);
+  max-height: min(78vh, 46rem);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  background: #111820;
+  box-shadow: 0 24px 80px rgba(0,0,0,.55);
+}
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.modalHeader h2 {
+  margin: 0;
+  color: var(--accent);
+}
+.iconButton {
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+}
+.githubLine {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  margin-top: 18px;
+}
+.githubIcon {
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+.aboutModal h3 {
+  margin: 20px 0 8px;
+  color: var(--accent2);
+}
+.thanksList {
+  margin: 8px 0 0;
+  padding-left: 1.2rem;
+}
+.thanksList li {
+  margin: 6px 0;
 }
 @media (max-width: 1200px) {
   .topBar { grid-template-columns: 1fr; align-items: start; }

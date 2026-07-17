@@ -125,6 +125,7 @@ __pycache__/
 *.pyc
 *.log
 marketscout.sqlite3
+marketscout.config
 marketscout-ui.json
 ```
 

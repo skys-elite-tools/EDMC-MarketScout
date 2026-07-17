@@ -39,7 +39,18 @@ End users should not need frontend build tools.
 - Vue/Vite/Node/npm are development/build-time tools only.
 - Release packages must include a ready-to-serve `web/` directory.
 - Do not include `node_modules/` in releases or patches.
-- Do not include runtime/local data such as `marketscout.sqlite3`, `marketscout-ui.json`, `marketscout-economy-presets.json`, logs, or `__pycache__/`.
+- Do not include runtime/local data such as `marketscout.sqlite3`, `marketscout.config`, `marketscout-ui.json`, `marketscout-economy-presets.json`, logs, or `__pycache__/`.
+
+### Web server configuration
+
+MarketScout creates `marketscout.config` in the plugin folder on startup if it does not exist. Defaults:
+
+```ini
+app.bind_address=127.0.0.1
+app.bind_port=40595
+```
+
+The fixed default port is intentional so browser localStorage state remains available across restarts. Users can edit the config and restart EDMC to use a different address/port.
 
 ## Repository structure
 

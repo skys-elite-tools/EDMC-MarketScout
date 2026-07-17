@@ -1648,8 +1648,8 @@ def open_modern_ui() -> None:
             messagebox.showerror("MarketScout", "MarketScout database is not initialized yet.")
             return
         web = load_web_module()
-        port = web.start_server(PLUGIN_DIR, DB_PATH, TARGET_COMMODITIES, PRIMARY_METALS)
-        url = f"http://127.0.0.1:{port}/"
+        web.start_server(PLUGIN_DIR, DB_PATH, TARGET_COMMODITIES, PRIMARY_METALS)
+        url = web.server_url() or "http://127.0.0.1:40595/"
         webbrowser.open(url)
         if WINDOW is not None:
             WINDOW.status_var.set(f"Opened MarketScout Web UI at {url}")

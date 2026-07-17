@@ -31,8 +31,7 @@ function choose(view) {
     </nav>
 
     <div class="topLinks">
-      <a href="#" title="Placeholder for future links">Links</a>
-      <a href="#" title="Placeholder for future donation link">Donate</a>
+      <a class="hiddenFutureLink" href="#" title="Placeholder for future donation link">Donate</a>
     </div>
 
   </header>
