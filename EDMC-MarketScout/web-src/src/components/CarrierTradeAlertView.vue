@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import placeholderImage from '../assets/trade-placeholder.png'
 
 const form = ref({
   commodity: 'Gold',
@@ -16,7 +17,7 @@ const form = ref({
 const textColor = ref('#f6fbff')
 const stageRef = ref(null)
 const stageWidth = ref(0)
-const defaultImageUrl = ref('')
+const defaultImageUrl = ref(placeholderImage)
 const uploadedImageUrl = ref('')
 const copied = ref(false)
 let resizeObserver = null
@@ -214,7 +215,7 @@ async function downloadImage(format = 'png') {
   canvas.width = width
   canvas.height = height
   const ctx = canvas.getContext('2d')
-  const img = await loadImage(imageUrl.value || drawDefaultBackdrop(width, height))
+  const img = await loadImage(imageUrl.value || placeholderImage)
   drawCoverImage(ctx, img, width, height)
   for (const layer of layers.value) drawTextLayer(ctx, layer, width, height)
   const link = document.createElement('a')
@@ -232,7 +233,6 @@ async function copyAnnouncement() {
 }
 
 onMounted(async () => {
-  defaultImageUrl.value = drawDefaultBackdrop()
   await nextTick()
   updateStageSize()
   resizeObserver = new ResizeObserver(updateStageSize)
