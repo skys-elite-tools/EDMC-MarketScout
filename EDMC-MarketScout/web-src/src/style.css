@@ -329,8 +329,9 @@ tr.ledgerSell.cheap { background: rgba(80,220,120,.10); }
 tr.engineeringRare { background: rgba(140,200,255,.045); }
 .rareTable th:nth-child(1) { min-width: 14rem; }
 .rareTable th:nth-child(3) { min-width: 14rem; }
-.rareTable th:nth-child(8),
-.rareTable th:nth-child(9) { min-width: 10rem; }
+.rareTable th:nth-child(5) { min-width: 6rem; }
+.rareTable th:nth-child(9),
+.rareTable th:nth-child(10) { min-width: 10rem; }
 .inlineToggle {
   min-width: 1.6rem;
   padding: 1px 4px;

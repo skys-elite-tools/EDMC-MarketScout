@@ -7,6 +7,7 @@ DB. It performs no external network requests and exposes no upload endpoints.
 from __future__ import annotations
 
 import json
+import math
 import mimetypes
 import os
 import socket
@@ -15,7 +16,7 @@ import threading
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 _SERVER: Optional[ThreadingHTTPServer] = None
@@ -625,13 +626,16 @@ def api_rare_commodities(qs: Dict[str, List[str]]) -> Dict[str, Any]:
                 rc.usual_supply,
                 rc.buy_price,
                 rc.galactic_average_price,
+                sd.x AS system_x,
+                sd.y AS system_y,
+                sd.z AS system_z,
                 CASE
                     WHEN rc.galactic_average_price IS NOT NULL
-                    THEN rc.galactic_average_price * 1000
-                END AS galactic_average_1000x,
+                    THEN rc.galactic_average_price * 100
+                END AS galactic_average_100x,
                 CASE
                     WHEN rc.galactic_average_price IS NOT NULL AND rc.buy_price IS NOT NULL
-                    THEN rc.galactic_average_price * 1000 - rc.buy_price
+                    THEN rc.galactic_average_price * 100 - rc.buy_price
                 END AS carrier_profit,
                 CASE
                     WHEN EXISTS (
@@ -642,23 +646,11 @@ def api_rare_commodities(qs: Dict[str, List[str]]) -> Dict[str, Any]:
                               lower(trim(replace(rc.commodity, char(160), ' ')))
                     )
                     THEN 1 ELSE 0
-                END AS is_engineering_rare,
-                (
-                    SELECT GROUP_CONCAT(
-                        eu.engineer ||
-                        CASE
-                            WHEN eu.engineer_system IS NOT NULL AND trim(eu.engineer_system) != ''
-                            THEN ' @ ' || eu.engineer_system
-                            ELSE ''
-                        END,
-                        ', '
-                    )
-                    FROM engineers_unlock eu
-                    WHERE eu.is_rare_commodity=1
-                      AND lower(trim(replace(eu.required_commodity, char(160), ' '))) =
-                          lower(trim(replace(rc.commodity, char(160), ' ')))
-                ) AS engineering_unlocks
+                END AS is_engineering_rare
             FROM rare_commodities rc
+            LEFT JOIN systems_data sd
+              ON lower(trim(replace(sd.system_name, char(160), ' '))) =
+                 lower(trim(replace(rc.system_name, char(160), ' ')))
         )
     """
     if where:
@@ -670,9 +662,108 @@ def api_rare_commodities(qs: Dict[str, List[str]]) -> Dict[str, Any]:
     with connect() as conn:
         try:
             rows = [row_to_dict(r) for r in conn.execute(sql, (lim,)).fetchall()]
+            current = latest_current_position(conn)
+            engineering = engineering_unlock_map(conn)
+            for row in rows:
+                row["distance_from_current_ly"] = distance_ly(
+                    current,
+                    (row.get("system_x"), row.get("system_y"), row.get("system_z")),
+                )
+                labels: List[str] = []
+                has_engineer_distance = False
+                for unlock in engineering.get(normalized_name(row.get("commodity")), []):
+                    label = unlock["label"]
+                    if current is not None:
+                        unlock_distance = distance_ly(
+                            (row.get("system_x"), row.get("system_y"), row.get("system_z")),
+                            unlock.get("coords"),
+                        )
+                        if unlock_distance is not None:
+                            label = f"{label} | {format_ly(unlock_distance)}"
+                            has_engineer_distance = True
+                    labels.append(label)
+                row["engineering_unlocks"] = ", ".join(labels)
+                row["engineering_unlocks_title"] = (
+                    "Distance from the commodity system to the engineer system."
+                    if has_engineer_distance else ""
+                )
         except sqlite3.OperationalError:
             rows = []
     return {"rows": rows, "count": len(rows)}
+
+
+def normalized_name(value: Any) -> str:
+    return " ".join(str(value or "").replace("\xa0", " ").strip().split()).casefold()
+
+
+def latest_current_position(conn: sqlite3.Connection) -> Optional[Tuple[float, float, float]]:
+    try:
+        row = conn.execute(
+            """
+            SELECT x, y, z
+            FROM systems
+            WHERE x IS NOT NULL AND y IS NOT NULL AND z IS NOT NULL
+            ORDER BY last_visit_datetime IS NULL, last_visit_datetime DESC
+            LIMIT 1
+            """
+        ).fetchone()
+    except sqlite3.OperationalError:
+        return None
+    if row is None:
+        return None
+    return (float(row["x"]), float(row["y"]), float(row["z"]))
+
+
+def engineering_unlock_map(conn: sqlite3.Connection) -> Dict[str, List[Dict[str, Any]]]:
+    try:
+        rows = conn.execute(
+            """
+            SELECT eu.engineer, eu.engineer_system, eu.required_commodity,
+                   sd.x AS x, sd.y AS y, sd.z AS z
+            FROM engineers_unlock eu
+            LEFT JOIN systems_data sd
+              ON lower(trim(replace(sd.system_name, char(160), ' '))) =
+                 lower(trim(replace(eu.engineer_system, char(160), ' ')))
+            WHERE eu.is_rare_commodity=1
+              AND eu.required_commodity IS NOT NULL
+              AND trim(eu.required_commodity) != ''
+            ORDER BY eu.engineer
+            """
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return {}
+    out: Dict[str, List[Dict[str, Any]]] = {}
+    for row in rows:
+        label = str(row["engineer"] or "")
+        if row["engineer_system"]:
+            label = f"{label} @ {row['engineer_system']}"
+        coords = None
+        if row["x"] is not None and row["y"] is not None and row["z"] is not None:
+            coords = (float(row["x"]), float(row["y"]), float(row["z"]))
+        out.setdefault(normalized_name(row["required_commodity"]), []).append({"label": label, "coords": coords})
+    return out
+
+
+def distance_ly(
+    a: Optional[Tuple[Any, Any, Any]],
+    b: Optional[Tuple[Any, Any, Any]],
+) -> Optional[float]:
+    if a is None or b is None:
+        return None
+    try:
+        ax, ay, az = float(a[0]), float(a[1]), float(a[2])
+        bx, by, bz = float(b[0]), float(b[1]), float(b[2])
+    except (TypeError, ValueError):
+        return None
+    return math.sqrt((ax - bx) ** 2 + (ay - by) ** 2 + (az - bz) ** 2)
+
+
+def format_ly(value: float) -> str:
+    if abs(value) < 0.005:
+        return "0 Ly"
+    if value < 10:
+        return f"{value:.2f} Ly"
+    return f"{value:.1f} Ly"
 
 
 def api_ledger_summary(qs: Dict[str, List[str]]) -> Dict[str, Any]:

@@ -12,6 +12,14 @@ export function money(v) {
   return n === null ? '—' : Math.round(n).toLocaleString()
 }
 
+export function ly(v) {
+  const n = num(v)
+  if (n === null) return '—'
+  if (Math.abs(n) < 0.005) return '0'
+  const digits = n < 10 ? 2 : 1
+  return n.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 })
+}
+
 export const POTENTIAL_PROFIT_LOW_MAX = 20000
 export const POTENTIAL_PROFIT_MEDIUM_MAX = 35000
 export const POTENTIAL_PROFIT_DISPLAY_THRESHOLD = 10000

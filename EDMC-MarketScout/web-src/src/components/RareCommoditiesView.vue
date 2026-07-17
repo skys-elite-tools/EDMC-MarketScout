@@ -1,5 +1,5 @@
 <script setup>
-import { fmt, money, num } from '../utils.js'
+import { fmt, ly, money, num } from '../utils.js'
 
 defineProps({
   rows: { type: Array, default: () => [] },
@@ -9,9 +9,9 @@ defineProps({
 function profitTitle(row) {
   const avg = money(row.galactic_average_price)
   if (avg === '—') {
-    return 'Profit if sold at 1000x galactic average which is the maximum for fleet carriers.'
+    return 'Profit if sold at 100x galactic average which is the maximum for fleet carriers.'
   }
-  return `Galactic Average = ${avg} Cr. Profit if sold at 1000x galactic average, which is the maximum for fleet carriers.`
+  return `Galactic Average = ${avg} Cr. Profit if sold at 100x galactic average, which is the maximum for fleet carriers.`
 }
 
 function profitClass(row) {
@@ -29,10 +29,11 @@ function profitClass(row) {
         <th>System</th>
         <th>Station</th>
         <th class="num">St. dist</th>
+        <th class="num">Distance</th>
         <th class="num">Usual Supply</th>
         <th class="num">Buy Price</th>
         <th class="num">Galactic Average</th>
-        <th class="num">1000x Galactic Average</th>
+        <th class="num">100x Galactic Average</th>
         <th class="num">Profit</th>
       </tr>
     </thead>
@@ -42,14 +43,15 @@ function profitClass(row) {
         :key="row.commodity || idx"
         :class="[{ selected: idx === selectedIndex, engineeringRare: row.is_engineering_rare }]"
       >
-        <td><div class="cellMain">{{ fmt(row.commodity) }}</div><div v-if="row.is_engineering_rare" class="cellSub">{{ fmt(row.engineering_unlocks) }}</div></td>
+        <td><div class="cellMain">{{ fmt(row.commodity) }}</div><div v-if="row.is_engineering_rare" class="cellSub" :title="row.engineering_unlocks_title || ''">{{ fmt(row.engineering_unlocks) }}</div></td>
         <td>{{ fmt(row.system_name) }}</td>
         <td>{{ fmt(row.station_name) }}</td>
         <td class="num">{{ money(row.station_distance_ls) }}</td>
+        <td class="num">{{ ly(row.distance_from_current_ly) }}</td>
         <td class="num">{{ money(row.usual_supply) }}</td>
         <td class="num">{{ money(row.buy_price) }}</td>
         <td class="num">{{ money(row.galactic_average_price) }}</td>
-        <td class="num">{{ money(row.galactic_average_1000x) }}</td>
+        <td class="num">{{ money(row.galactic_average_100x) }}</td>
         <td class="num" :title="profitTitle(row)"><span class="profit" :class="profitClass(row)">{{ money(row.carrier_profit) }}</span></td>
       </tr>
     </tbody>
