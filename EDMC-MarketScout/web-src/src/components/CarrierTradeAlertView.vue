@@ -31,8 +31,8 @@ const savedDraft = loadDraft()
 
 const defaultForm = {
   commodity: 'Gold',
-  profit: 12000,
-  quantity: 16000,
+  profit: '12,000',
+  quantity: '16k',
   type: 'Loading',
   carrierName: 'Fleet Carrier',
   carrierId: 'ABC-123',
@@ -108,37 +108,27 @@ const padLetter = computed(() => (form.value.pads || 'Large').slice(0, 1).toUppe
 const tradeTypeLower = computed(() => String(form.value.type || '').toLowerCase())
 const imageUrl = computed(() => uploadedImageUrl.value || defaultImageUrl.value)
 
-function formatNumber(value) {
-  const n = Number(value)
-  if (!Number.isFinite(n)) return String(value || '')
-  return Math.round(n).toLocaleString()
-}
-
-function compactTons(value) {
-  const n = Number(value)
-  if (!Number.isFinite(n)) return String(value || '')
-  if (n >= 1000 && n % 1000 === 0) return `${Math.round(n / 1000)}k`
-  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`
-  return formatNumber(n)
+function adValue(value) {
+  return String(value || '').trim()
 }
 
 const layerText = computed(() => ({
   type: `Carrier ${tradeTypeLower.value}`,
   commodity: form.value.commodity || 'Commodity',
   route: `${form.value.station || 'Station'} in ${form.value.system || 'System'} | ${padLetter.value}-pads`,
-  profit: `${formatNumber(form.value.profit)} Cr/t profit · ${formatNumber(form.value.quantity)} tons`,
+  profit: `${adValue(form.value.profit)} Cr/t profit · ${adValue(form.value.quantity)} tons`,
   carrier: `${form.value.carrierName || 'Carrier Name'} · ${form.value.carrierId || 'Carrier ID'}`,
   station: form.value.station || 'Station',
   system: form.value.system || 'System',
   pads: `${padLetter.value}-pads`,
-  profitValue: `${formatNumber(form.value.profit)} Cr/t profit`,
-  quantity: `${formatNumber(form.value.quantity)} tons`,
+  profitValue: `${adValue(form.value.profit)} Cr/t profit`,
+  quantity: `${adValue(form.value.quantity)} tons`,
   carrierName: form.value.carrierName || 'Carrier Name',
   carrierId: form.value.carrierId || 'Carrier ID',
 }))
 
 const announcement = computed(() => {
-  return `**${form.value.carrierName || 'Carrier Name'} (${form.value.carrierId || 'Carrier ID'})** is ${tradeTypeLower.value} **${form.value.commodity || 'Commodity'}** from **${form.value.station || 'Station'}** (${padLetter.value}-pads) in **${form.value.system || 'System'}**. **${formatNumber(form.value.profit)}**/ton profit, **${compactTons(form.value.quantity)}** tons.`
+  return `**${form.value.carrierName || 'Carrier Name'} (${form.value.carrierId || 'Carrier ID'})** is ${tradeTypeLower.value} **${form.value.commodity || 'Commodity'}** from **${form.value.station || 'Station'}** (${padLetter.value}-pads) in **${form.value.system || 'System'}**. **${adValue(form.value.profit)}**/ton profit, **${adValue(form.value.quantity)}** tons.`
 })
 
 const classicLayers = [
@@ -491,11 +481,11 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
             <label>Font size <input :value="fontSizeFor('commodity')" type="number" min="8" max="180" step="1" @input="setFontSize('commodity', $event.target.value)" /></label>
           </div>
           <div class="fieldWithFont">
-            <label>Profit <input v-model.number="form.profit" type="number" min="0" /></label>
+            <label>Profit <input v-model="form.profit" type="text" /></label>
             <label>Font size <input :value="fontSizeFor('profitValue')" type="number" min="8" max="180" step="1" @input="setFontSize('profitValue', $event.target.value)" /></label>
           </div>
           <div class="fieldWithFont">
-            <label>Quantity (tons) <input v-model.number="form.quantity" type="number" min="0" /></label>
+            <label>Quantity (tons) <input v-model="form.quantity" type="text" /></label>
             <label>Font size <input :value="fontSizeFor('quantity')" type="number" min="8" max="180" step="1" @input="setFontSize('quantity', $event.target.value)" /></label>
           </div>
           <div class="fieldWithFont">
