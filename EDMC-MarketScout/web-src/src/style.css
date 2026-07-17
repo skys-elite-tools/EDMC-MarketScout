@@ -400,9 +400,22 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 .analysisRareTable th:nth-child(1) { min-width: 10rem; }
 .analysisRareTable th:nth-child(3) { min-width: 10rem; }
 .carrierTradeAlert {
+  --carrier-preview-width: 36rem;
   padding: 12px 16px 18px;
   display: grid;
-  gap: 14px;
+  grid-template-columns: minmax(24rem, var(--carrier-preview-width)) minmax(22rem, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.carrierLeftPane {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.carrierFormPane {
+  align-self: start;
+  display: grid;
+  gap: 10px;
 }
 .carrierSection {
   min-width: 0;
@@ -414,8 +427,9 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 }
 .carrierFormGrid {
   display: grid;
-  grid-template-columns: minmax(18rem, 1.2fr) minmax(16rem, .9fr) minmax(16rem, .9fr);
+  grid-template-columns: minmax(15rem, .92fr) minmax(16rem, 1fr);
   gap: 12px;
+  align-items: start;
 }
 .carrierFormGrid fieldset {
   border: 1px solid var(--line);
@@ -438,20 +452,23 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   font-size: 12px;
   margin-bottom: 8px;
 }
+.tradeFieldset {
+  grid-row: span 2;
+}
 .carrierFormGrid input,
 .carrierFormGrid select {
   width: 100%;
 }
 .carrierImageTools {
   display: grid;
-  grid-template-columns: minmax(18rem, 1fr) minmax(18rem, 1fr) 8rem;
+  grid-template-columns: minmax(16rem, 1fr) 8rem;
   gap: 12px;
   align-items: end;
 }
 .carrierImageStage {
   position: relative;
   aspect-ratio: 4 / 3;
-  width: min(100%, 60rem);
+  width: min(100%, var(--carrier-preview-width));
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -505,7 +522,7 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: start;
-  max-width: 72rem;
+  max-width: var(--carrier-preview-width);
 }
 .announcementBox textarea {
   width: 100%;
@@ -564,9 +581,12 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   main.detailsOpen { grid-template-columns: 1fr; }
   .details { border-left: none; border-top: 1px solid var(--line); max-height: 45vh; }
   .analysisTables { grid-template-columns: 1fr; }
+  .carrierTradeAlert,
   .carrierFormGrid,
   .carrierImageTools,
   .announcementBox { grid-template-columns: 1fr; }
+  .carrierImageStage,
+  .announcementBox { width: 100%; max-width: none; }
 }
 .statusStrip {
   display: grid;

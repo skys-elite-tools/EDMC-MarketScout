@@ -249,10 +249,49 @@ watch(imageUrl, () => nextTick(updateStageSize))
 
 <template>
   <div class="carrierTradeAlert">
-    <section class="carrierSection">
+    <div class="carrierLeftPane">
+      <section class="carrierSection">
+        <h2>Image</h2>
+        <div ref="stageRef" class="carrierImageStage">
+          <img v-if="imageUrl" :src="imageUrl" alt="" />
+          <div class="imageDownloadButtons" aria-label="Download image">
+            <button type="button" title="Download PNG" @click="downloadImage('png')">PNG ↓</button>
+            <button type="button" title="Download JPG" @click="downloadImage('jpg')">JPG ↓</button>
+          </div>
+          <div
+            v-for="layer in layers"
+            :key="layer.key"
+            class="carrierTextLayer"
+            :class="`carrierLayer-${layer.key}`"
+            :style="layerStyle(layer)"
+            @pointerdown="startDrag($event, layer)"
+            @pointermove="moveDrag"
+            @pointerup="stopDrag"
+            @pointercancel="stopDrag"
+          >
+            {{ layerText[layer.key] }}
+          </div>
+        </div>
+      </section>
+
+      <section class="carrierSection">
+        <h2>Announcement</h2>
+        <div class="announcementBox">
+          <textarea :value="announcement" readonly rows="4"></textarea>
+          <button type="button" class="copySymbolButton" :title="copied ? 'Copied' : 'Copy announcement'" @click="copyAnnouncement">{{ copied ? '✓' : '⧉' }}</button>
+        </div>
+      </section>
+    </div>
+
+    <section class="carrierSection carrierFormPane">
+      <h2>Image Options</h2>
+      <div class="carrierImageTools">
+        <label>Upload image <input type="file" accept="image/*" @change="onFileChange" /></label>
+        <label>Text Color <input v-model="textColor" type="color" /></label>
+      </div>
       <h2>Trade</h2>
       <div class="carrierFormGrid">
-        <fieldset>
+        <fieldset class="tradeFieldset">
           <legend>Trade</legend>
           <label>Commodity <input v-model="form.commodity" type="text" /></label>
           <label>Profit <input v-model.number="form.profit" type="number" min="0" /></label>
@@ -264,12 +303,12 @@ watch(imageUrl, () => nextTick(updateStageSize))
             </select>
           </label>
         </fieldset>
-        <fieldset>
+        <fieldset class="carrierFieldset">
           <legend>Carrier</legend>
           <label>Carrier Name <input v-model="form.carrierName" type="text" /></label>
           <label>Carrier ID <input v-model="form.carrierId" type="text" /></label>
         </fieldset>
-        <fieldset>
+        <fieldset class="marketFieldset">
           <legend>Market</legend>
           <label>Station <input v-model="form.station" type="text" /></label>
           <label>System <input v-model="form.system" type="text" /></label>
@@ -281,43 +320,6 @@ watch(imageUrl, () => nextTick(updateStageSize))
             </select>
           </label>
         </fieldset>
-      </div>
-    </section>
-
-    <section class="carrierSection">
-      <h2>Image</h2>
-      <div class="carrierImageTools">
-        <label>Image <span class="small">Default sci-fi backdrop is used until a file is selected.</span></label>
-        <label>Upload image <input type="file" accept="image/*" @change="onFileChange" /></label>
-        <label>Text Color <input v-model="textColor" type="color" /></label>
-      </div>
-      <div ref="stageRef" class="carrierImageStage">
-        <img v-if="imageUrl" :src="imageUrl" alt="" />
-        <div class="imageDownloadButtons" aria-label="Download image">
-          <button type="button" title="Download PNG" @click="downloadImage('png')">PNG ↓</button>
-          <button type="button" title="Download JPG" @click="downloadImage('jpg')">JPG ↓</button>
-        </div>
-        <div
-          v-for="layer in layers"
-          :key="layer.key"
-          class="carrierTextLayer"
-          :class="`carrierLayer-${layer.key}`"
-          :style="layerStyle(layer)"
-          @pointerdown="startDrag($event, layer)"
-          @pointermove="moveDrag"
-          @pointerup="stopDrag"
-          @pointercancel="stopDrag"
-        >
-          {{ layerText[layer.key] }}
-        </div>
-      </div>
-    </section>
-
-    <section class="carrierSection">
-      <h2>Announcement</h2>
-      <div class="announcementBox">
-        <textarea :value="announcement" readonly rows="4"></textarea>
-        <button type="button" class="copySymbolButton" :title="copied ? 'Copied' : 'Copy announcement'" @click="copyAnnouncement">{{ copied ? '✓' : '⧉' }}</button>
       </div>
     </section>
   </div>
