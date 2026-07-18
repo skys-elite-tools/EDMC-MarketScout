@@ -522,20 +522,25 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   font-weight: 800;
 }
 .qrCode {
-  display: grid;
-  grid-template-columns: repeat(var(--qr-size), 1fr);
   width: 11rem;
   aspect-ratio: 1;
-  padding: 10px;
   border: 1px solid var(--line);
   border-radius: 4px;
   background: white;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
 }
-.qrCode span {
-  background: white;
+.qrCode img {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
-.qrCode span.on {
-  background: #05080d;
+.qrCodeStatus {
+  color: #05080d;
+  padding: 10px;
+  text-align: center;
+  font-size: 12px;
 }
 .carrierTradeAlert {
   --carrier-preview-width: 36rem;
