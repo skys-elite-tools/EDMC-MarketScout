@@ -48,6 +48,8 @@ const allCommodities = ref([])
 const commoditiesCatalogLoaded = ref(false)
 const settingsVisible = ref(false)
 const bestBuyIgnoreVisible = ref(false)
+const helpArticle = ref('')
+const helpRequestId = ref(0)
 const commoditySearch = ref('')
 const bestBuyIgnoreSearch = ref('')
 const statusText = ref('Loading…')
@@ -102,6 +104,11 @@ function setSelected(idx) {
 
 function closeDetails() {
   selectedIndex.value = -1
+}
+
+function openHelp(article = '') {
+  helpArticle.value = article
+  helpRequestId.value += 1
 }
 
 async function loadStations() {
@@ -383,6 +390,7 @@ onUnmounted(() => {
       @open-commodities="openCommoditySettings"
       @open-best-buy-ignore-list="openBestBuyIgnoreSettings"
       @save-economy-preset="saveEconomyPreset"
+      @open-help="openHelp"
     />
 
     <CommoditySettings
@@ -474,6 +482,9 @@ onUnmounted(() => {
       />
     </main>
 
-    <FooterBar />
+    <FooterBar
+      :help-article="helpArticle"
+      :help-request-id="helpRequestId"
+    />
   </div>
 </template>

@@ -1,7 +1,13 @@
 <script setup>
-import { ref } from 'vue'
+import { nextTick, ref, watch } from 'vue'
+
+const props = defineProps({
+  helpArticle: { type: String, default: '' },
+  helpRequestId: { type: Number, default: 0 },
+})
 
 const aboutOpen = ref(false)
+const helpOpen = ref(false)
 
 const thanks = [
   ['Elite:Dangerous Market Connector (EDMC)', 'https://github.com/EDCD/EDMarketConnector'],
@@ -11,6 +17,17 @@ const thanks = [
   ['EDDiscovery', 'https://github.com/EDDiscovery/EDDiscovery'],
   ['The very helpful people in the P.T.N.', 'https://pilotstradenetwork.com/'],
 ]
+
+async function openHelp(article = '') {
+  helpOpen.value = true
+  if (!article) return
+  await nextTick()
+  document.getElementById(`help-${article}`)?.scrollIntoView({ block: 'start' })
+}
+
+watch(() => props.helpRequestId, () => {
+  openHelp(props.helpArticle)
+})
 </script>
 
 <template>
@@ -18,6 +35,7 @@ const thanks = [
     <span>MarketScout Web UI</span>
     <span class="footerLinks">
       <button type="button" class="linkButton" @click="aboutOpen = true">About</button>
+      <button type="button" class="linkButton" @click="openHelp()">Help</button>
       <a class="hiddenFutureLink" href="#">Donation placeholder</a>
     </span>
   </footer>
@@ -49,6 +67,21 @@ const thanks = [
           <a :href="href" target="_blank" rel="noreferrer">{{ label }}</a>
         </li>
       </ul>
+    </section>
+  </div>
+
+  <div v-if="helpOpen" class="modalBackdrop" @click.self="helpOpen = false">
+    <section class="aboutModal helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <div class="modalHeader">
+        <h2 id="helpTitle">Help</h2>
+        <button type="button" class="iconButton" title="Close" @click="helpOpen = false">×</button>
+      </div>
+
+      <article id="help-edmc-running" class="helpArticle">
+        <h3>Data Is Recorded While EDMC Is Running</h3>
+        <p>MarketScout receives live Journal and market callbacks from EDMC while EDMC and the plugin are running. EDMC does not normally replay your full historical Journal stream to plugins, so MarketScout cannot reconstruct station visits or market snapshots from before it was installed or before EDMC was open.</p>
+        <p>For best results, start EDMC before flying, docking, opening station markets, or trading.</p>
+      </article>
     </section>
   </div>
 </template>

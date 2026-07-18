@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import EconomyPresetInput from './EconomyPresetInput.vue'
 import EconomicStateInput from './EconomicStateInput.vue'
 const props = defineProps({
@@ -12,57 +13,101 @@ const props = defineProps({
   economyPresets: { type: Array, default: () => [] },
   economyPresetStatus: { type: String, default: '' },
 })
-const emit = defineEmits(['apply', 'open-commodities', 'open-best-buy-ignore-list', 'save-economy-preset'])
+const emit = defineEmits(['apply', 'open-commodities', 'open-best-buy-ignore-list', 'save-economy-preset', 'open-help'])
+
+const pageMetaByView = {
+  stations: {
+    title: 'Stations',
+    description: 'Lists scouting data for stations visited while EDMC was running.',
+  },
+  jackpots: {
+    title: 'Jackpots',
+    description: 'Tracks high-value buy opportunities and how they change over time.',
+  },
+  ledger: {
+    title: 'Ledger',
+    description: 'Shows Journal buy and sell entries with profit and trade-rate context.',
+  },
+  rare: {
+    title: 'Rare Commodities',
+    description: 'Lists rare commodity sources, engineering unlock needs, and travel distances.',
+  },
+  commodities: {
+    title: 'Commodities',
+    description: 'Browses imported global commodity stats used by Best Buy calculations.',
+  },
+  analyze: {
+    title: 'Analyze Commodities',
+    description: 'Matches pasted commodity lists against regular and rare commodity data.',
+  },
+  carrier: {
+    title: 'Carrier Trade Announcements',
+    description: 'Creates Fleet Carrier trade announcement images and shareable text.',
+  },
+  config: {
+    title: 'Configuration',
+    description: 'Manages the local web address, shared port, and optional LAN access.',
+  },
+}
+const pageMeta = computed(() => pageMetaByView[props.currentView] || { title: 'MarketScout', description: '' })
+const hasControls = computed(() => !['analyze', 'carrier', 'config'].includes(props.currentView))
 </script>
 
 <template>
   <section class="viewControls" :class="{ stationControls: currentView === 'stations' }">
-    <template v-if="currentView === 'stations'">
-      <div class="controlGroupTitle">Station filters</div>
-      <div class="stationFilterFields">
-        <label>System <input v-model="filters.system" type="text" /></label>
-        <label>Station <input v-model="filters.station" type="text" /></label>
-        <EconomyPresetInput
-          v-model="filters.economy"
-          :presets="economyPresets"
-          :save-status="economyPresetStatus"
-          @save="emit('save-economy-preset')"
-        />
-        <EconomicStateInput v-model="filters.state" />
-        <label class="sourceFilter">Source
-          <select v-model="filters.source">
-            <option>Any</option>
-            <option>local_visit</option>
-            <option>spansh</option>
-            <option>imported</option>
-          </select>
-        </label>
-        <label>Highlight price ≤ <input v-model.number="filters.priceThreshold" type="number" /></label>
-        <label>Strong supply ≥ <input v-model.number="filters.supplyThreshold" type="number" /></label>
-        <label>Limit <input v-model.number="filters.limit" type="number" min="1" max="2000" /></label>
-        <label class="check includeFleetCarriers"><input v-model="filters.includeFc" type="checkbox" /> Include fleet carriers</label>
-      </div>
-      <div class="stationFilterActions">
-        <button type="button" class="applyFiltersButton" @click="emit('apply')">Apply Filters</button>
-        <button type="button" class="countButton" @click="emit('open-commodities')">
-          <span>Watched Commodities</span>
-          <span class="buttonCount">{{ watchedCount }} selected</span>
-        </button>
-        <button type="button" class="countButton" @click="emit('open-best-buy-ignore-list')">
-          <span>Best Buy Ignore List</span>
-          <span class="buttonCount">{{ bestBuyIgnoreCount }} selected</span>
-        </button>
-      </div>
-    </template>
+    <div class="viewControlsHeader">
+      <div class="controlGroupTitle">{{ pageMeta.title }}</div>
+      <p v-if="currentView === 'stations'" class="viewControlsDescription">
+        Lists scouting data for stations visited
+        <button type="button" class="inlineHelpLink" @click="emit('open-help', 'edmc-running')">while EDMC was running</button>.
+      </p>
+      <p v-else class="viewControlsDescription">{{ pageMeta.description }}</p>
+    </div>
+
+    <div v-if="hasControls" class="viewControlsBody" :class="{ stationControlsBody: currentView === 'stations' }">
+      <template v-if="currentView === 'stations'">
+        <div class="stationFilterFields">
+          <label>System <input v-model="filters.system" type="text" /></label>
+          <label>Station <input v-model="filters.station" type="text" /></label>
+          <EconomyPresetInput
+            v-model="filters.economy"
+            :presets="economyPresets"
+            :save-status="economyPresetStatus"
+            @save="emit('save-economy-preset')"
+          />
+          <EconomicStateInput v-model="filters.state" />
+          <label class="sourceFilter">Source
+            <select v-model="filters.source">
+              <option>Any</option>
+              <option>local_visit</option>
+              <option>spansh</option>
+              <option>imported</option>
+            </select>
+          </label>
+          <label>Highlight price ≤ <input v-model.number="filters.priceThreshold" type="number" /></label>
+          <label>Strong supply ≥ <input v-model.number="filters.supplyThreshold" type="number" /></label>
+          <label>Limit <input v-model.number="filters.limit" type="number" min="1" max="2000" /></label>
+          <label class="check includeFleetCarriers"><input v-model="filters.includeFc" type="checkbox" /> Include fleet carriers</label>
+        </div>
+        <div class="stationFilterActions">
+          <button type="button" class="applyFiltersButton" @click="emit('apply')">Apply Filters</button>
+          <button type="button" class="countButton" @click="emit('open-commodities')">
+            <span>Watched Commodities</span>
+            <span class="buttonCount">{{ watchedCount }} selected</span>
+          </button>
+          <button type="button" class="countButton" @click="emit('open-best-buy-ignore-list')">
+            <span>Best Buy Ignore List</span>
+            <span class="buttonCount">{{ bestBuyIgnoreCount }} selected</span>
+          </button>
+        </div>
+      </template>
 
     <template v-else-if="currentView === 'jackpots'">
-      <div class="controlGroupTitle">Jackpot controls</div>
       <label>Limit <input v-model.number="filters.limit" type="number" min="1" max="2000" /></label>
       <button type="button" @click="emit('apply')">Refresh</button>
     </template>
 
     <template v-else-if="currentView === 'ledger'">
-      <div class="controlGroupTitle">Ledger controls</div>
       <label>Commodity <input v-model="ledgerFilters.commodity" type="text" placeholder="Gold" /></label>
       <label>Trade Type
         <select v-model="ledgerFilters.eventType"><option>Any</option><option>buy</option><option>sell</option></select>
@@ -73,7 +118,6 @@ const emit = defineEmits(['apply', 'open-commodities', 'open-best-buy-ignore-lis
     </template>
 
     <template v-else-if="currentView === 'rare'">
-      <div class="controlGroupTitle">Rare commodity controls</div>
       <label>Sort
         <select v-model="rareFilters.sort">
           <option value="profit_desc">Profit large to small</option>
@@ -86,7 +130,6 @@ const emit = defineEmits(['apply', 'open-commodities', 'open-best-buy-ignore-lis
     </template>
 
     <template v-else-if="currentView === 'commodities'">
-      <div class="controlGroupTitle">Commodity controls</div>
       <label>Sort
         <select v-model="commodityFilters.sort">
           <option value="commodity_asc">Commodity asc</option>
@@ -96,17 +139,6 @@ const emit = defineEmits(['apply', 'open-commodities', 'open-best-buy-ignore-lis
       </label>
       <button type="button" @click="emit('apply')">Apply</button>
     </template>
-
-    <template v-else-if="currentView === 'analyze'">
-      <div class="controlGroupTitle">Analyze commodities</div>
-    </template>
-
-    <template v-else-if="currentView === 'carrier'">
-      <div class="controlGroupTitle">Carrier trade announcements</div>
-    </template>
-
-    <template v-else-if="currentView === 'config'">
-      <div class="controlGroupTitle">Configuration</div>
-    </template>
+    </div>
   </section>
 </template>

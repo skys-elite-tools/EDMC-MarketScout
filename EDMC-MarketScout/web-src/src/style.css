@@ -155,25 +155,50 @@ h1 { margin: 0; font-size: 20px; }
 .topLinks, .footerLinks { display: flex; gap: 12px; align-items: center; color: var(--muted); }
 .hiddenFutureLink { display: none; }
 .viewControls {
-  display: flex;
-  gap: 8px 12px;
-  flex-wrap: wrap;
-  align-items: end;
+  display: grid;
+  gap: 10px;
+  align-items: stretch;
   padding: 10px 16px;
   border-bottom: 1px solid var(--line);
   background: var(--panel2);
 }
-.viewControls.stationControls {
+.viewControlsHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.viewControlsDescription {
+  margin: 0;
+  color: var(--muted);
+  min-width: 0;
+}
+.inlineHelpLink {
+  color: var(--accent);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+.inlineHelpLink:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+.viewControlsBody {
+  display: flex;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  align-items: end;
+}
+.viewControlsBody.stationControlsBody {
   display: grid;
-  grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr) minmax(12rem, 16rem);
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem);
   gap: 12px 16px;
   align-items: stretch;
 }
-.controlGroupTitle { align-self: center; color: var(--accent); font-weight: 800; margin-right: 4px; }
-.stationControls .controlGroupTitle {
-  align-self: start;
-  padding-top: 1.45rem;
-}
+.controlGroupTitle { color: var(--accent); font-weight: 800; margin-right: 4px; }
 .stationFilterFields {
   display: flex;
   gap: 8px 12px;
@@ -304,11 +329,8 @@ h1 { margin: 0; font-size: 20px; }
   .economyPresetControls { grid-template-columns: 1fr; }
 }
 @media (max-width: 950px) {
-  .viewControls.stationControls {
+  .viewControlsBody.stationControlsBody {
     grid-template-columns: 1fr;
-  }
-  .stationControls .controlGroupTitle {
-    padding-top: 0;
   }
   .stationFilterActions {
     flex-direction: row;
@@ -1112,6 +1134,15 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 .aboutModal h3 {
   margin: 20px 0 8px;
   color: var(--accent2);
+}
+.helpArticle {
+  scroll-margin-top: 12px;
+}
+.helpArticle h3 {
+  margin: 0 0 8px;
+}
+.helpArticle p {
+  color: var(--muted);
 }
 .templateEditorGrid {
   display: grid;
