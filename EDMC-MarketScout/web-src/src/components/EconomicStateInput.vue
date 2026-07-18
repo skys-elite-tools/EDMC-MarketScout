@@ -68,6 +68,10 @@ function updateValue(value) {
 }
 
 function openFilteredMenu() {
+  if (showAll.value) {
+    menuOpen.value = true
+    return
+  }
   showAll.value = false
   menuOpen.value = true
 }
