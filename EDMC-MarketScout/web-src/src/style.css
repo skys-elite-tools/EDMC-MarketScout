@@ -43,16 +43,32 @@ a:hover { text-decoration: underline; }
 }
 h1 { margin: 0; font-size: 20px; }
 .subtitle { margin: 2px 0 0; color: var(--muted); }
-.mainNav { display: flex; gap: 6px; flex-wrap: wrap; }
-.mainNav button.active { border-color: var(--accent); background: #304761; color: white; }
-.mainNav .navLinkButton {
-  border-color: transparent;
-  background: transparent;
-  color: var(--accent);
+.mainNav { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.mainNav .navButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 7px 10px;
+  border-color: rgba(140,200,255,.28);
+  background: rgba(38,49,66,.86);
+  font-weight: 800;
 }
-.mainNav .navLinkButton.active {
-  border-color: rgba(140,200,255,.55);
-  background: rgba(140,200,255,.1);
+.mainNav .navButton:hover {
+  border-color: rgba(140,200,255,.68);
+  background: #304052;
+}
+.mainNav .navButton.active {
+  border-color: var(--accent);
+  background: #304761;
+  color: white;
+}
+.navButtonIcon {
+  width: 26px;
+  height: 26px;
+  object-fit: cover;
+  border-radius: 5px;
+  flex: 0 0 auto;
 }
 .topLinks, .footerLinks { display: flex; gap: 12px; align-items: center; color: var(--muted); }
 .hiddenFutureLink { display: none; }
