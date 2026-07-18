@@ -6,20 +6,23 @@ const loading = ref(true)
 const saving = ref(false)
 const status = ref('')
 const error = ref('')
+const localAddress = ref('127.0.0.1')
 const bindPort = ref(40595)
 const lanEnabled = ref(false)
 const lanBindAddress = ref('')
 const active = ref({})
 const defaults = ref({ bind_address: '127.0.0.1', bind_port: 40595, lan_enabled: false, lan_bind_address: '' })
-const suggestions = ref(['127.0.0.1', 'localhost'])
+const loopbackSuggestions = ref(['127.0.0.1', 'localhost'])
+const lanSuggestions = ref([])
 const mdns = ref({})
 const configFile = ref('marketscout.config')
 const urlCopied = ref(false)
 const qrDataUrl = ref('')
 const qrError = ref('')
 
-const localUrl = computed(() => `http://${defaults.value.bind_address}:${bindPort.value || defaults.value.bind_port}/`)
+const localUrl = computed(() => `http://${localAddress.value || defaults.value.bind_address}:${bindPort.value || defaults.value.bind_port}/`)
 const shareUrl = computed(() => `http://${lanBindAddress.value || defaults.value.lan_bind_address}:${bindPort.value || defaults.value.bind_port}/`)
+const saveDisabled = computed(() => saving.value || (lanEnabled.value && !String(lanBindAddress.value || '').trim()))
 const isShareableAddress = computed(() => {
   if (!lanEnabled.value) return false
   const value = String(lanBindAddress.value || '').trim().toLowerCase()
@@ -39,12 +42,14 @@ async function loadConfig() {
     const res = await fetch('/api/config', { cache: 'no-store' })
     const data = await res.json()
     if (!data.ok) throw new Error(data.error || 'Could not load configuration')
+    defaults.value = data.defaults || defaults.value
+    localAddress.value = data.config?.bind_address || defaults.value.bind_address
     bindPort.value = data.config?.bind_port || defaults.value.bind_port
     lanEnabled.value = Boolean(data.config?.lan_enabled)
     lanBindAddress.value = data.config?.lan_bind_address || defaults.value.lan_bind_address
     active.value = data.active || {}
-    defaults.value = data.defaults || defaults.value
-    suggestions.value = data.suggested_bind_addresses || suggestions.value
+    loopbackSuggestions.value = data.suggested_loopback_addresses || loopbackSuggestions.value
+    lanSuggestions.value = data.suggested_lan_addresses || lanSuggestions.value
     mdns.value = data.mdns || {}
     configFile.value = data.config_file || configFile.value
   } catch (err) {
@@ -63,6 +68,7 @@ async function saveConfig() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        bind_address: localAddress.value,
         bind_port: bindPort.value,
         lan_enabled: lanEnabled.value,
         lan_bind_address: lanBindAddress.value,
@@ -70,6 +76,7 @@ async function saveConfig() {
     })
     const data = await res.json()
     if (!data.ok) throw new Error(data.error || 'Could not save configuration')
+    localAddress.value = data.config?.bind_address || localAddress.value
     bindPort.value = data.config?.bind_port || bindPort.value
     lanEnabled.value = Boolean(data.config?.lan_enabled)
     lanBindAddress.value = data.config?.lan_bind_address || lanBindAddress.value
@@ -81,21 +88,13 @@ async function saveConfig() {
   }
 }
 
-function useAddress(value) {
-  lanBindAddress.value = value
-  if (isShareableAddressValue(value)) lanEnabled.value = true
+function useLocalAddress(value) {
+  localAddress.value = value
 }
 
-function isShareableAddressValue(value) {
-  const normalized = String(value || '').trim().toLowerCase()
-  const parts = normalized.split('.')
-  if (normalized === 'localhost' || normalized === '0.0.0.0' || normalized.includes(':')) return false
-  if (parts.length !== 4) return false
-  const numbers = parts.map((part) => Number(part))
-  if (numbers.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false
-  if (numbers[0] === 127) return false
-  if (numbers[0] === 169 && numbers[1] === 254) return false
-  return true
+function useLanAddress(value) {
+  lanBindAddress.value = value
+  lanEnabled.value = true
 }
 
 onMounted(loadConfig)
@@ -141,32 +140,47 @@ async function copyShareUrl() {
       <template v-else>
         <div class="configurationGrid">
           <label>Local address
-            <input :value="defaults.bind_address" type="text" disabled />
+            <input v-model="localAddress" type="text" list="localAddressSuggestions" />
           </label>
+          <datalist id="localAddressSuggestions">
+            <option v-for="value in loopbackSuggestions" :key="value" :value="value" />
+          </datalist>
 
-          <label>Listening port
+          <label>Port
             <input v-model.number="bindPort" type="number" min="1" max="65535" />
           </label>
-
-          <label class="configCheckbox">Enable LAN access
-            <input v-model="lanEnabled" type="checkbox" />
-          </label>
-
-          <label>LAN address
-            <input v-model="lanBindAddress" type="text" list="bindAddressSuggestions" />
-          </label>
-          <datalist id="bindAddressSuggestions">
-            <option v-for="value in suggestions" :key="value" :value="value" />
-          </datalist>
         </div>
 
         <div class="suggestedAddresses">
           <span>Quick fill</span>
-          <button v-for="value in suggestions" :key="value" type="button" @click="useAddress(value)">{{ value }}</button>
+          <button v-for="value in loopbackSuggestions" :key="value" type="button" @click="useLocalAddress(value)">{{ value }}</button>
+        </div>
+
+        <label class="configCheckbox configStandaloneCheckbox">Enable LAN Address
+          <input v-model="lanEnabled" type="checkbox" />
+        </label>
+
+        <div class="configurationGrid">
+          <label>LAN address
+            <input v-model="lanBindAddress" type="text" list="lanAddressSuggestions" :disabled="!lanEnabled" />
+          </label>
+          <datalist id="lanAddressSuggestions">
+            <option v-for="value in lanSuggestions" :key="value" :value="value" />
+          </datalist>
+
+          <label>Port
+            <span class="configStaticValue">{{ bindPort }}</span>
+          </label>
+        </div>
+
+        <div class="suggestedAddresses">
+          <span>LAN quick fill</span>
+          <button v-for="value in lanSuggestions" :key="value" type="button" @click="useLanAddress(value)">{{ value }}</button>
+          <span v-if="!lanSuggestions.length" class="configHint">No LAN IPv4 address detected.</span>
         </div>
 
         <div class="configurationActions">
-          <button type="button" :disabled="saving" @click="saveConfig">{{ saving ? 'Saving…' : 'Save Configuration' }}</button>
+          <button type="button" :disabled="saveDisabled" @click="saveConfig">{{ saving ? 'Saving…' : 'Save Configuration' }}</button>
           <button type="button" @click="loadConfig">Reload</button>
           <span v-if="status" class="configStatus">{{ status }}</span>
           <span v-if="error" class="configError">{{ error }}</span>

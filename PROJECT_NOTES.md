@@ -52,9 +52,9 @@ app.lan_enabled=0
 app.lan_bind_address=
 ```
 
-MarketScout always starts a local listener on `127.0.0.1`. The fixed default port is intentional so browser localStorage state remains available across restarts. Users can edit the config and restart EDMC to use a different port or to enable an additional LAN listener.
+MarketScout always starts a local listener on a loopback address. The fixed default port is intentional so browser localStorage state remains available across restarts. Users can edit the config and restart EDMC to use a different loopback address, a different port, or an additional LAN listener.
 
-The Web UI exposes these values in the top-menu `Config` page. Suggested LAN addresses include `127.0.0.1`, `localhost`, and locally detected IPv4 addresses, but QR sharing is shown only for enabled non-loopback IPv4 LAN addresses. Changing the listen port or LAN settings requires restarting EDMC because the HTTP server socket is already bound. mDNS advertising as `marketscout.local` is not enabled for beta; doing it reliably should use a real Zeroconf/mDNS implementation rather than a hand-rolled shortcut.
+The Web UI exposes these values in the top-menu `Config` page. Local address quick-fill options include only loopback addresses such as `127.0.0.1`, `localhost`, and detected loopback aliases. LAN suggestions are kept separate, and QR sharing is shown only for enabled non-loopback IPv4 LAN addresses. Changing the listen port or LAN settings requires restarting EDMC because the HTTP server socket is already bound. mDNS advertising as `marketscout.local` is not enabled for beta; doing it reliably should use a real Zeroconf/mDNS implementation rather than a hand-rolled shortcut.
 
 ## Repository structure
 

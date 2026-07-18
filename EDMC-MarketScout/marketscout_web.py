@@ -72,8 +72,8 @@ def load_web_config(plugin_dir: str) -> Dict[str, Any]:
                 key, value = line.split("=", 1)
                 raw[key.strip()] = value.strip()
 
-    bind_address = DEFAULT_BIND_ADDRESS
     legacy_bind_address = raw.get("app.bind_address") or DEFAULT_BIND_ADDRESS
+    bind_address = legacy_bind_address if is_loopback_host(legacy_bind_address) else DEFAULT_BIND_ADDRESS
     lan_bind_address = raw.get("app.lan_bind_address") or ""
     lan_enabled = str(raw.get("app.lan_enabled") or "0").strip().lower() in {"1", "true", "yes", "on"}
     if legacy_bind_address not in {DEFAULT_BIND_ADDRESS, "localhost"} and not lan_bind_address:
@@ -93,19 +93,30 @@ def load_web_config(plugin_dir: str) -> Dict[str, Any]:
     }
 
 
-def save_web_config(plugin_dir: str, bind_port: int, lan_enabled: bool = False, lan_bind_address: str = "") -> Dict[str, Any]:
+def save_web_config(plugin_dir: str, bind_address: str, bind_port: int, lan_enabled: bool = False, lan_bind_address: str = "") -> Dict[str, Any]:
     path = os.path.join(plugin_dir, CONFIG_FILE)
     with open(path, "w", encoding="utf-8") as f:
-        f.write(f"app.bind_address={DEFAULT_BIND_ADDRESS}\n")
+        f.write(f"app.bind_address={bind_address}\n")
         f.write(f"app.bind_port={bind_port}\n")
         f.write(f"app.lan_enabled={1 if lan_enabled else 0}\n")
         f.write(f"app.lan_bind_address={lan_bind_address}\n")
     return {
-        "bind_address": DEFAULT_BIND_ADDRESS,
+        "bind_address": bind_address,
         "bind_port": bind_port,
         "lan_enabled": lan_enabled,
         "lan_bind_address": lan_bind_address,
     }
+
+
+def is_loopback_host(value: str) -> bool:
+    value = str(value or "").strip().lower()
+    if value == "localhost":
+        return True
+    try:
+        address = ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    return address.version == 4 and address.is_loopback
 
 
 def is_shareable_ipv4(value: str) -> bool:
@@ -162,6 +173,26 @@ def detected_bind_addresses() -> List[str]:
     return addresses
 
 
+def detected_loopback_addresses(addresses: List[str]) -> List[str]:
+    values = ["127.0.0.1", "localhost"]
+    seen = set(values)
+    for value in addresses:
+        if is_loopback_host(value) and value not in seen:
+            values.append(value)
+            seen.add(value)
+    return values
+
+
+def detected_lan_addresses(addresses: List[str]) -> List[str]:
+    values = []
+    seen = set()
+    for value in addresses:
+        if is_shareable_ipv4(value) and value not in seen:
+            values.append(value)
+            seen.add(value)
+    return values
+
+
 def start_server(plugin_dir: str, db_path: str, target_commodities: List[str], primary_metals: List[str]) -> int:
     """Start the local web server if needed and return its port."""
     global _SERVERS, _THREADS, _PORT, _BIND_ADDRESS, _LAN_BIND_ADDRESS, _LAN_PORT, _LAN_ENABLED, _CONTEXT
@@ -169,7 +200,7 @@ def start_server(plugin_dir: str, db_path: str, target_commodities: List[str], p
         return _PORT
 
     web_config = load_web_config(plugin_dir)
-    _BIND_ADDRESS = DEFAULT_BIND_ADDRESS
+    _BIND_ADDRESS = str(web_config.get("bind_address") or DEFAULT_BIND_ADDRESS)
     _LAN_BIND_ADDRESS = str(web_config.get("lan_bind_address") or "").strip()
     _LAN_ENABLED = bool(web_config.get("lan_enabled")) and is_shareable_ipv4(_LAN_BIND_ADDRESS)
     _CONTEXT = {
@@ -466,8 +497,14 @@ def api_config() -> Dict[str, Any]:
     plugin_dir = _CONTEXT.get("plugin_dir") or os.getcwd()
     config = load_web_config(plugin_dir)
     suggestions = detected_bind_addresses()
+    loopback_suggestions = detected_loopback_addresses(suggestions)
+    lan_suggestions = detected_lan_addresses(suggestions)
+    if config.get("bind_address") and config["bind_address"] not in loopback_suggestions:
+        loopback_suggestions.append(config["bind_address"])
     if config.get("lan_bind_address") and config["lan_bind_address"] not in suggestions:
         suggestions.append(config["lan_bind_address"])
+    if config.get("lan_bind_address") and config["lan_bind_address"] not in lan_suggestions:
+        lan_suggestions.append(config["lan_bind_address"])
     return {
         "ok": True,
         "config": config,
@@ -487,6 +524,8 @@ def api_config() -> Dict[str, Any]:
             "lan_bind_address": "",
         },
         "suggested_bind_addresses": suggestions,
+        "suggested_loopback_addresses": loopback_suggestions,
+        "suggested_lan_addresses": lan_suggestions,
         "config_file": CONFIG_FILE,
         "mdns": {
             "available": False,
@@ -497,6 +536,9 @@ def api_config() -> Dict[str, Any]:
 
 
 def api_save_config(payload: Dict[str, Any]) -> Dict[str, Any]:
+    bind_address = str(payload.get("bind_address") or "").strip()
+    if not is_loopback_host(bind_address):
+        return {"ok": False, "error": "Local address must be localhost or a loopback IPv4 address"}
     lan_enabled = bool(payload.get("lan_enabled"))
     lan_bind_address = str(payload.get("lan_bind_address") or "").strip()
     if lan_bind_address and (any(ch.isspace() for ch in lan_bind_address) or "/" in lan_bind_address):
@@ -511,9 +553,10 @@ def api_save_config(payload: Dict[str, Any]) -> Dict[str, Any]:
         return {"ok": False, "error": "Port must be a number from 1 to 65535"}
 
     plugin_dir = _CONTEXT.get("plugin_dir") or os.getcwd()
-    config = save_web_config(plugin_dir, bind_port, lan_enabled, lan_bind_address)
+    config = save_web_config(plugin_dir, bind_address, bind_port, lan_enabled, lan_bind_address)
     restart_required = (
-        bind_port != _PORT
+        bind_address != _BIND_ADDRESS
+        or bind_port != _PORT
         or lan_enabled != _LAN_ENABLED
         or (lan_bind_address if lan_enabled else "") != (_LAN_BIND_ADDRESS if _LAN_ENABLED else "")
     )

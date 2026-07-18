@@ -40,9 +40,9 @@ app.lan_enabled=0
 app.lan_bind_address=
 ```
 
-MarketScout always listens on `127.0.0.1` for same-computer access. The fixed default port keeps browser localStorage state, such as Carrier Trade Announcements layouts, available across EDMC/browser restarts. Users may edit this file if they need a different port or want to enable an additional LAN listener. Restart EDMC after changing it.
+MarketScout always uses a loopback address for same-computer access. The fixed default port keeps browser localStorage state, such as Carrier Trade Announcements layouts, available across EDMC/browser restarts. Users may edit this file if they need a different loopback address, a different port, or an additional LAN listener. Restart EDMC after changing it.
 
-The Web UI also has a `Config` page at the end of the top navigation. It can edit the same port and optional LAN listener, with quick-fill options for `127.0.0.1`, `localhost`, and detected local IPv4 addresses. It shows a QR code only when LAN access is enabled with a shareable IPv4 address, so another same-network device can open the UI more easily. Restart EDMC after saving listening changes.
+The Web UI also has a `Config` page at the end of the top navigation. It can edit the local loopback address, the shared port, and the optional LAN listener. Local quick-fill options only include loopback addresses such as `127.0.0.1`, `localhost`, and `127.0.1.1` when detected. It shows a QR code only when LAN access is enabled with a shareable IPv4 address, so another same-network device can open the UI more easily. Restart EDMC after saving listening changes.
 
 Keep `app.lan_enabled=0` if you want MarketScout reachable only from this computer. Enabling LAN access can make the Web UI reachable from other devices on your local network.
 

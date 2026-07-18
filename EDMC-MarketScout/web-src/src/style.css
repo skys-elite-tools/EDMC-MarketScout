@@ -465,15 +465,33 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   color: var(--muted);
   font-size: 12px;
 }
-.configurationGrid label.configCheckbox {
+.configurationGrid label.configCheckbox,
+.configStandaloneCheckbox {
   flex-direction: row;
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
   min-height: 2rem;
 }
-.configurationGrid label.configCheckbox input {
+.configurationGrid label.configCheckbox input,
+.configStandaloneCheckbox input {
   width: auto;
+}
+.configStandaloneCheckbox {
+  display: flex;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 12px;
+}
+.configStaticValue {
+  min-height: 2rem;
+  display: flex;
+  align-items: center;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(255,255,255,.035);
+  padding: 5px 7px;
 }
 .suggestedAddresses {
   display: flex;
@@ -489,6 +507,10 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 }
 .suggestedAddresses button {
   padding: 4px 8px;
+}
+.configHint {
+  color: var(--muted);
+  font-size: 12px;
 }
 .configurationActions {
   display: flex;
