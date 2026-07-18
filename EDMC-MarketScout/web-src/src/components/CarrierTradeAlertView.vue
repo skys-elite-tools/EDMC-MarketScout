@@ -45,6 +45,7 @@ const defaultForm = {
 }
 
 const form = ref({ ...defaultForm, ...(savedDraft.form || {}) })
+const defaultCustomAnnouncementTitleTemplate = '[carrier_name] ([[carrier_id]])'
 const defaultCustomAnnouncementTemplate = '**[carrier_name] ([[carrier_id]])** is trading at **[trade_station_name]** [trade_station_type_if_planetary_in_parentheses] in **[trade_system]**. **[profit_k]**/unit profit, **[quantity_k]** units.'
 
 const textColor = ref(savedDraft.textColor || '#f6fbff')
@@ -56,8 +57,10 @@ const stageWidth = ref(0)
 const defaultImageUrl = ref(placeholderImage)
 const uploadedImageUrl = ref(savedDraft.uploadedImageUrl || '')
 const copied = ref(false)
-const customCopied = ref(false)
+const customTitleCopied = ref(false)
+const customBodyCopied = ref(false)
 const customTemplateModalOpen = ref(false)
+const customAnnouncementTitleTemplate = ref(savedDraft.customAnnouncementTitleTemplate || defaultCustomAnnouncementTitleTemplate)
 const customAnnouncementTemplate = ref(savedDraft.customAnnouncementTemplate || defaultCustomAnnouncementTemplate)
 const layoutName = ref('')
 const layoutSaveStatus = ref('')
@@ -134,11 +137,13 @@ function tokenThousand(value) {
 }
 
 const customAnnouncementTokens = computed(() => ({
+  commodity: form.value.commodity || 'Commodity',
   carrier_name: form.value.carrierName || 'Carrier Name',
   carrier_id: form.value.carrierId || 'Carrier ID',
   carrier_system: form.value.carrierSystem || 'Carrier System',
   buying_selling: tradeTypeLower.value === 'unloading' ? 'selling' : 'buying',
   loading_unloading: tradeTypeLower.value === 'unloading' ? 'unloading' : 'loading',
+  from_to: tradeTypeLower.value === 'unloading' ? 'from' : 'to',
   carrier_trade_operation_from_to: tradeTypeLower.value === 'unloading' ? 'Buy from' : 'Sell to',
   station_trade_operation_from_to: tradeTypeLower.value === 'unloading' ? 'Sell to' : 'Buy from',
   trade_system: form.value.system || 'System',
@@ -155,11 +160,13 @@ const customAnnouncementTokens = computed(() => ({
 }))
 
 const customTokenList = [
+  ['commodity', 'Commodity name.'],
   ['carrier_name', 'Fleet Carrier display name.'],
   ['carrier_id', 'Fleet Carrier callsign/id. Double brackets render one visible bracket pair, such as [[carrier_id]] -> [ABC-123].'],
   ['carrier_system', 'Carrier system entered in the Carrier section.'],
   ['buying_selling', 'Shows selling for Unloading trades and buying for Loading trades.'],
   ['loading_unloading', 'Shows loading or unloading based on the selected trade type.'],
+  ['from_to', 'Shows to for Loading trades and from for Unloading trades.'],
   ['carrier_trade_operation_from_to', 'Carrier-side trade action: Sell to for Loading, Buy from for Unloading.'],
   ['station_trade_operation_from_to', 'Station-side trade action: Buy from for Loading, Sell to for Unloading.'],
   ['trade_system', 'Trade station system.'],
@@ -198,12 +205,17 @@ const announcement = computed(() => {
   return `**${form.value.carrierName || 'Carrier Name'} (${form.value.carrierId || 'Carrier ID'})** is ${tradeTypeLower.value} **${form.value.commodity || 'Commodity'}** ${direction} **${form.value.station || 'Station'}** (${padText}) in **${form.value.system || 'System'}**. **${adValue(form.value.profit)}**/${profitUnit} profit, **${adValue(form.value.quantity)}** ${quantityUnit}.`
 })
 
-const customAnnouncement = computed(() => customAnnouncementTemplate.value.replace(/\[([a-z_]+)\]/g, (match, token) => {
-  if (Object.prototype.hasOwnProperty.call(customAnnouncementTokens.value, token)) {
-    return customAnnouncementTokens.value[token]
-  }
-  return match
-}))
+function renderCustomTemplate(template) {
+  return String(template || '').replace(/\[([a-z_]+)\]/g, (match, token) => {
+    if (Object.prototype.hasOwnProperty.call(customAnnouncementTokens.value, token)) {
+      return customAnnouncementTokens.value[token]
+    }
+    return match
+  })
+}
+
+const customAnnouncementTitle = computed(() => renderCustomTemplate(customAnnouncementTitleTemplate.value))
+const customAnnouncement = computed(() => renderCustomTemplate(customAnnouncementTemplate.value))
 
 const classicLayers = [
   { key: 'type', sizeKey: 'classicType', weight: 800, align: 'center' },
@@ -259,7 +271,8 @@ function applyTextLayout(value) {
   textStyle.value = layout.mode === 'floating' ? 'floating' : 'classic'
   if (layout.positions) layerPositions.value[textStyle.value] = clone(layout.positions)
   if (layout.fontSizes) fontSizes.value = { ...fontSizes.value, ...clone(layout.fontSizes) }
-  if (layout.customAnnouncementTemplate) customAnnouncementTemplate.value = layout.customAnnouncementTemplate
+  if (Object.prototype.hasOwnProperty.call(layout, 'customAnnouncementTitleTemplate')) customAnnouncementTitleTemplate.value = layout.customAnnouncementTitleTemplate
+  if (Object.prototype.hasOwnProperty.call(layout, 'customAnnouncementTemplate')) customAnnouncementTemplate.value = layout.customAnnouncementTemplate
 }
 
 function selectTextLayout(value) {
@@ -302,6 +315,7 @@ function saveCurrentLayout() {
     mode: textStyle.value,
     positions: clone(layerPositions.value[textStyle.value]),
     fontSizes: clone(fontSizes.value),
+    customAnnouncementTitleTemplate: customAnnouncementTitleTemplate.value,
     customAnnouncementTemplate: customAnnouncementTemplate.value,
   }
   savedLayouts.value = existing
@@ -322,6 +336,7 @@ function persistDraft() {
     layerPositions: layerPositions.value,
     fontSizes: fontSizes.value,
     uploadedImageUrl: uploadedImageUrl.value,
+    customAnnouncementTitleTemplate: customAnnouncementTitleTemplate.value,
     customAnnouncementTemplate: customAnnouncementTemplate.value,
   }
   try {
@@ -527,10 +542,16 @@ async function copyAnnouncement() {
   setTimeout(() => { copied.value = false }, 1800)
 }
 
-async function copyCustomAnnouncement() {
+async function copyCustomAnnouncementTitle() {
+  await navigator.clipboard.writeText(customAnnouncementTitle.value)
+  customTitleCopied.value = true
+  setTimeout(() => { customTitleCopied.value = false }, 1800)
+}
+
+async function copyCustomAnnouncementBody() {
   await navigator.clipboard.writeText(customAnnouncement.value)
-  customCopied.value = true
-  setTimeout(() => { customCopied.value = false }, 1800)
+  customBodyCopied.value = true
+  setTimeout(() => { customBodyCopied.value = false }, 1800)
 }
 
 onMounted(async () => {
@@ -548,7 +569,7 @@ onUnmounted(() => {
 
 watch(imageUrl, () => nextTick(updateStageSize))
 watch(textLayout, value => applyTextLayout(value))
-watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, uploadedImageUrl, customAnnouncementTemplate], persistDraft, { deep: true })
+watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, uploadedImageUrl, customAnnouncementTitleTemplate, customAnnouncementTemplate], persistDraft, { deep: true })
 </script>
 
 <template>
@@ -578,22 +599,38 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
         </div>
       </section>
 
-      <section class="carrierSection">
-        <h2>Announcement</h2>
-        <div class="announcementBox">
-          <textarea :value="announcement" readonly rows="4"></textarea>
+      <fieldset class="outputPanel">
+        <legend>Announcement</legend>
+        <div class="outputPanelHeader">
+          <h2>Discord/Reddit text</h2>
           <button type="button" class="copySymbolButton" :title="copied ? 'Copied' : 'Copy announcement'" @click="copyAnnouncement">{{ copied ? '✓' : '⧉' }}</button>
         </div>
-      </section>
+        <p class="outputText">{{ announcement }}</p>
+      </fieldset>
 
-      <section class="carrierSection">
-        <h2>Custom announcement (for forums, reddit and more)</h2>
-        <div class="announcementBox">
-          <textarea :value="customAnnouncement" readonly rows="5"></textarea>
-          <button type="button" class="copySymbolButton" :title="customCopied ? 'Copied' : 'Copy custom announcement'" @click="copyCustomAnnouncement">{{ customCopied ? '✓' : '⧉' }}</button>
+      <fieldset class="outputPanel">
+        <legend>Custom Announcement</legend>
+        <div class="outputPanelHeader">
+          <h2>For forums, reddit and more</h2>
+        </div>
+        <div class="customAnnouncementOutput">
+          <div class="customOutputSection">
+            <div class="customOutputHeader">
+              <span>Title</span>
+              <button type="button" class="copySymbolButton smallCopyButton" :title="customTitleCopied ? 'Copied' : 'Copy custom title'" @click="copyCustomAnnouncementTitle">{{ customTitleCopied ? '✓' : '⧉' }}</button>
+            </div>
+            <p class="outputTitle">{{ customAnnouncementTitle }}</p>
+          </div>
+          <div class="customOutputSection">
+            <div class="customOutputHeader">
+              <span>Body</span>
+              <button type="button" class="copySymbolButton smallCopyButton" :title="customBodyCopied ? 'Copied' : 'Copy custom body'" @click="copyCustomAnnouncementBody">{{ customBodyCopied ? '✓' : '⧉' }}</button>
+            </div>
+            <p class="outputText">{{ customAnnouncement }}</p>
+          </div>
         </div>
         <button type="button" class="editTemplateButton" @click="customTemplateModalOpen = true">Edit template</button>
-      </section>
+      </fieldset>
     </div>
 
     <section class="carrierSection carrierFormPane">
@@ -712,9 +749,14 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
               <code v-for="[token, help] in customTokenList" :key="token" :title="help">[{{ token }}]</code>
             </div>
           </div>
-          <label class="templateTextArea">Template
-            <textarea v-model="customAnnouncementTemplate" rows="14" spellcheck="false"></textarea>
-          </label>
+          <div class="templateFields">
+            <label>Announcement Title
+              <input v-model="customAnnouncementTitleTemplate" type="text" spellcheck="false" />
+            </label>
+            <label class="templateTextArea">Announcement Body
+              <textarea v-model="customAnnouncementTemplate" rows="14" spellcheck="false"></textarea>
+            </label>
+          </div>
         </div>
         <div class="modalActions">
           <button type="button" @click="customTemplateModalOpen = false">Done</button>
