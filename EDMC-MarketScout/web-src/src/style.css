@@ -510,6 +510,12 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 .qrSharePanel p {
   margin: 0 0 8px;
 }
+.qrSharePanelMuted {
+  grid-template-columns: minmax(0, 1fr);
+}
+.qrSharePanelMuted h3 {
+  color: var(--muted);
+}
 .shareUrl {
   overflow-wrap: anywhere;
   color: var(--text);

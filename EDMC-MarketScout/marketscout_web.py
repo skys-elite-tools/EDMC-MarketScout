@@ -87,17 +87,38 @@ def save_web_config(plugin_dir: str, bind_address: str, bind_port: int) -> Dict[
 def detected_bind_addresses() -> List[str]:
     addresses = ["127.0.0.1", "localhost"]
     seen = set(addresses)
+
+    def add_address(value: str) -> None:
+        value = str(value or "").strip()
+        if value and value not in seen:
+            addresses.append(value)
+            seen.add(value)
+
+    try:
+        import fcntl
+        import struct
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            for _index, name in socket.if_nameindex():
+                if_name = name.encode("utf-8")[:15]
+                request = struct.pack("256s", if_name)
+                try:
+                    result = fcntl.ioctl(sock.fileno(), 0x8915, request)
+                except OSError:
+                    continue
+                add_address(socket.inet_ntoa(result[20:24]))
+        finally:
+            sock.close()
+    except Exception:
+        pass
+
     try:
         host = socket.gethostname()
         for value in socket.gethostbyname_ex(host)[2]:
-            if value and value not in seen:
-                addresses.append(value)
-                seen.add(value)
+            add_address(value)
         for info in socket.getaddrinfo(host, None, socket.AF_INET, socket.SOCK_STREAM):
-            value = info[4][0]
-            if value and value not in seen:
-                addresses.append(value)
-                seen.add(value)
+            add_address(info[4][0])
     except Exception:
         pass
     return addresses

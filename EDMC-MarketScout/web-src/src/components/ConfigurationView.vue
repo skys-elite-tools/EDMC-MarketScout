@@ -15,6 +15,17 @@ const configFile = ref('marketscout.config')
 const urlCopied = ref(false)
 
 const shareUrl = computed(() => `http://${bindAddress.value || defaults.value.bind_address}:${bindPort.value || defaults.value.bind_port}/`)
+const isShareableAddress = computed(() => {
+  const value = String(bindAddress.value || '').trim().toLowerCase()
+  const parts = value.split('.')
+  if (value === 'localhost' || value === '0.0.0.0' || value.includes(':')) return false
+  if (parts.length !== 4) return false
+  const numbers = parts.map((part) => Number(part))
+  if (numbers.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false
+  if (numbers[0] === 127) return false
+  if (numbers[0] === 169 && numbers[1] === 254) return false
+  return true
+})
 const qrCode = computed(() => makeQrCode(shareUrl.value))
 
 async function loadConfig() {
@@ -325,7 +336,7 @@ function qrPenalty(modules) {
           <span v-if="error" class="configError">{{ error }}</span>
         </div>
 
-        <div class="qrSharePanel">
+        <div v-if="isShareableAddress" class="qrSharePanel">
           <div>
             <h3>Open From Another Device</h3>
             <p>Scan this QR code from a device on the same network. It uses the address and port currently shown above.</p>
@@ -338,6 +349,13 @@ function qrPenalty(modules) {
               :key="index"
               :class="{ on: cell }"
             ></span>
+          </div>
+        </div>
+        <div v-else class="qrSharePanel qrSharePanelMuted">
+          <div>
+            <h3>Open From Another Device</h3>
+            <p>Choose a LAN IPv4 address, such as a 192.168.x.x or 10.x.x.x address, to show a QR code for another device.</p>
+            <p class="shareUrl">{{ shareUrl }}</p>
           </div>
         </div>
       </template>
