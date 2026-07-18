@@ -32,16 +32,12 @@ a:hover { text-decoration: underline; }
   background: var(--panel);
 }
 .brandBlock { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.logoPlaceholder {
+.appLogo {
   width: 38px;
   height: 38px;
+  object-fit: cover;
   border-radius: 10px;
-  display: grid;
-  place-items: center;
-  font-weight: 900;
-  letter-spacing: .03em;
-  color: #071018;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: block;
   box-shadow: 0 0 20px rgba(140, 200, 255, .18);
   flex: 0 0 auto;
 }

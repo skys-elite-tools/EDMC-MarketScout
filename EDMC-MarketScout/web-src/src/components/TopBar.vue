@@ -1,4 +1,6 @@
 <script setup>
+import logoUrl from '../assets/marketscout-logo-v1.png'
+
 const props = defineProps({
   currentView: { type: String, required: true },
 })
@@ -13,7 +15,7 @@ function choose(view) {
 <template>
   <header class="topBar">
     <div class="brandBlock">
-      <div class="logoPlaceholder">MS</div>
+      <img class="appLogo" :src="logoUrl" alt="MarketScout logo" />
       <div>
         <h1>EDMC-MarketScout</h1>
         <p class="subtitle">Local-only scouting database. No uploads, no external scripts.</p>
