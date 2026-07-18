@@ -306,6 +306,8 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
                 return self.send_json(api_economy_presets())
             if path == "/api/commodities":
                 return self.send_json(api_commodities())
+            if path == "/api/station-filter-options":
+                return self.send_json(api_station_filter_options())
             if path == "/api/settings":
                 return self.send_json(api_settings())
             if path == "/api/config":
@@ -482,6 +484,45 @@ def api_commodity_stats(qs: Dict[str, List[str]]) -> Dict[str, Any]:
         except sqlite3.OperationalError:
             rows = []
     return {"rows": rows, "count": len(rows), "sort": sort}
+
+
+def api_station_filter_options() -> Dict[str, Any]:
+    with connect() as conn:
+        try:
+            systems = [
+                r[0]
+                for r in conn.execute(
+                    """
+                    SELECT DISTINCT system_name
+                    FROM systems
+                    WHERE system_name IS NOT NULL
+                      AND TRIM(system_name) != ''
+                      AND (last_visit_datetime IS NOT NULL OR source = 'local_visit')
+                    ORDER BY system_name COLLATE NOCASE
+                    LIMIT 5000
+                    """
+                ).fetchall()
+            ]
+        except sqlite3.OperationalError:
+            systems = []
+        try:
+            stations = [
+                r[0]
+                for r in conn.execute(
+                    """
+                    SELECT DISTINCT station_name
+                    FROM stations
+                    WHERE station_name IS NOT NULL
+                      AND TRIM(station_name) != ''
+                      AND (last_station_visit_datetime IS NOT NULL OR source = 'local_visit')
+                    ORDER BY station_name COLLATE NOCASE
+                    LIMIT 5000
+                    """
+                ).fetchall()
+            ]
+        except sqlite3.OperationalError:
+            stations = []
+    return {"systems": systems, "stations": stations}
 
 
 def api_settings() -> Dict[str, Any]:

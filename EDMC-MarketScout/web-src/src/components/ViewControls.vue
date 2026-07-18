@@ -12,6 +12,8 @@ const props = defineProps({
   bestBuyIgnoreCount: { type: Number, default: 0 },
   economyPresets: { type: Array, default: () => [] },
   economyPresetStatus: { type: String, default: '' },
+  systemSuggestions: { type: Array, default: () => [] },
+  stationSuggestions: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['apply', 'open-commodities', 'open-best-buy-ignore-list', 'save-economy-preset', 'open-help'])
 
@@ -67,8 +69,18 @@ const hasControls = computed(() => !['analyze', 'carrier', 'config'].includes(pr
     <div v-if="hasControls" class="viewControlsBody" :class="{ stationControlsBody: currentView === 'stations' }">
       <template v-if="currentView === 'stations'">
         <div class="stationFilterFields">
-          <label>System <input v-model="filters.system" type="text" /></label>
-          <label>Station <input v-model="filters.station" type="text" /></label>
+          <label>System
+            <input v-model="filters.system" type="text" list="marketscoutSystemSuggestions" />
+            <datalist id="marketscoutSystemSuggestions">
+              <option v-for="system in systemSuggestions" :key="system" :value="system" />
+            </datalist>
+          </label>
+          <label>Station
+            <input v-model="filters.station" type="text" list="marketscoutStationSuggestions" />
+            <datalist id="marketscoutStationSuggestions">
+              <option v-for="station in stationSuggestions" :key="station" :value="station" />
+            </datalist>
+          </label>
           <EconomyPresetInput
             v-model="filters.economy"
             :presets="economyPresets"

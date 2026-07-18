@@ -57,6 +57,7 @@ const latestJournalEvent = ref(null)
 const autoRefresh = ref(true)
 const economyPresets = ref([])
 const economyPresetStatus = ref('')
+const stationFilterOptions = ref({ systems: [], stations: [] })
 
 const filters = ref({
   system: '',
@@ -229,6 +230,15 @@ async function loadEconomyPresets() {
   economyPresets.value = data.presets || []
 }
 
+async function loadStationFilterOptions() {
+  const res = await fetch('/api/station-filter-options', { cache: 'no-store' })
+  const data = await res.json()
+  stationFilterOptions.value = {
+    systems: data.systems || [],
+    stations: data.stations || [],
+  }
+}
+
 async function saveEconomyPreset() {
   const value = (filters.value.economy || '').trim()
   if (!value) {
@@ -346,14 +356,14 @@ async function pollStatus() {
     return
   }
   if (lastVersion.value !== null && data.data_version !== lastVersion.value) {
-    await applyCurrentView()
+    await Promise.all([applyCurrentView(), loadStationFilterOptions()])
   }
   lastVersion.value = data.data_version
 }
 
 let pollTimer = null
 onMounted(async () => {
-  await Promise.all([loadCommoditySettings(), loadEconomyPresets()])
+  await Promise.all([loadCommoditySettings(), loadEconomyPresets(), loadStationFilterOptions()])
   await pollStatus()
   await applyCurrentView()
   pollTimer = setInterval(pollStatus, 2000)
@@ -386,6 +396,8 @@ onUnmounted(() => {
       :best-buy-ignore-count="bestBuyIgnoreCommodities.length"
       :economy-presets="economyPresets"
       :economy-preset-status="economyPresetStatus"
+      :system-suggestions="stationFilterOptions.systems"
+      :station-suggestions="stationFilterOptions.stations"
       @apply="applyCurrentView"
       @open-commodities="openCommoditySettings"
       @open-best-buy-ignore-list="openBestBuyIgnoreSettings"
