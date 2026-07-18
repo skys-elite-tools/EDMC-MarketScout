@@ -13,7 +13,7 @@ Primary goals:
 - Compute and display Best Buy opportunities from locally stored market data and configured commodity stats.
 - Track jackpot history over time so the user can see how fast opportunities decay.
 - Track a trade ledger with buy/sell events, Journal-based profit, and optional LIFO statistics.
-- Provide a modern browser-based local Web UI while keeping the original Tk/classic UI as fallback.
+- Provide a modern browser-based local Web UI as the only supported MarketScout UI.
 - Never upload data from MarketScout itself unless a future feature is explicitly opt-in.
 
 ## Privacy rules
@@ -23,7 +23,7 @@ MarketScout itself should remain local-only by default.
 Current privacy assumptions:
 
 - MarketScout writes to local SQLite only.
-- MarketScout’s Web UI server binds to `127.0.0.1` only.
+- MarketScout’s Web UI server binds to a loopback address by default, with optional maintainer/user-enabled LAN access.
 - MarketScout must not send data to EDDN, Inara, EDSM, Spansh, Discord, or any other remote service unless a future feature explicitly opts in.
 - Candidate import should use CSV/manual import, not scraping.
 - Scraping public websites should not be added.
@@ -62,7 +62,7 @@ Important files/directories:
 
 ```text
 EDMC-MarketScout/
-  load.py                    # EDMC plugin entry point and main legacy/Tk/plugin logic
+  load.py                    # EDMC plugin entry point and core journal/CAPI handling
   marketscout_importer.py    # CSV import logic, currently including Spansh templates
   marketscout_ledger.py      # Trade ledger logic and LIFO/statistics calculations
   marketscout_web.py         # Local HTTP server and JSON API endpoints
@@ -335,7 +335,7 @@ This is based on latest known market data at the time of the trade, usually befo
 ## UI/readability decisions
 
 - Web UI is the primary modern UI.
-- Classic Tk UI remains as fallback and should not be heavily modified unless explicitly requested.
+- The old classic Tk MarketScout window has been removed; new UI work belongs in the Web UI.
 - Source column is hidden by default but available in details/optional contexts.
 - Station name should stand out visually from system name, because multiple stations in the same system are common.
 - The Web UI should favor compact tables plus details panes rather than extremely wide tables.

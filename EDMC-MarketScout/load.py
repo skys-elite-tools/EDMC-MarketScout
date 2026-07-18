@@ -19,9 +19,6 @@ from collections.abc import Mapping
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
-
 try:
     from config import config as EDMC_CONFIG
 except Exception:
@@ -33,7 +30,6 @@ PLUGIN_VERSION = "0.1.22"
 DEFAULT_HIGHLIGHT_PRICE = 6000
 DEFAULT_HIGHLIGHT_SUPPLY = 10000
 JACKPOT_SAMPLE_INTERVAL_MINUTES = 30
-UI_SCHEMA_VERSION = 2
 
 # Defaults only. From 0.1.14 onward MarketScout stores every commodity it sees.
 # These lists control first-run watched columns/highlighting only.
@@ -51,8 +47,6 @@ DEFAULT_COMMODITY_GLOBAL_STATS = {
 
 DB_PATH: Optional[str] = None
 CONN: Optional[sqlite3.Connection] = None
-ROOT: Optional[tk.Misc] = None
-WINDOW: Optional["MarketScoutWindow"] = None
 PLUGIN_DIR: Optional[str] = None
 WEB_MODULE: Any = None
 LEDGER_MODULE: Any = None
@@ -132,24 +126,9 @@ def load_json_config(filename: str, default: Any) -> Any:
         return default
 
 
-def save_json_config(filename: str, value: Any) -> None:
-    try:
-        path = plugin_config_path(filename)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(value, f, indent=2, sort_keys=True)
-    except Exception:
-        log_exception("save_json_config")
-
-
 def load_ui_config() -> Dict[str, Any]:
     data = load_json_config("marketscout-ui.json", {})
     return data if isinstance(data, dict) else {}
-
-
-def update_ui_config(**kwargs: Any) -> None:
-    data = load_ui_config()
-    data.update(kwargs)
-    save_json_config("marketscout-ui.json", data)
 
 
 def now_utc_iso() -> str:
@@ -186,13 +165,12 @@ def plugin_stop() -> None:
         CONN = None
 
 
-def plugin_app(parent: tk.Frame) -> tk.Widget:
-    """Add compact buttons to EDMC's main window."""
-    global ROOT
-    ROOT = parent
+def plugin_app(parent: Any) -> Any:
+    """Add the MarketScout Web UI button to EDMC's main window."""
+    from tkinter import ttk
+
     frame = ttk.Frame(parent)
-    ttk.Button(frame, text="Scout", command=open_window).pack(side=tk.LEFT, padx=(0, 2))
-    ttk.Button(frame, text="Web", command=open_modern_ui).pack(side=tk.LEFT)
+    ttk.Button(frame, text="MarketScout", command=open_modern_ui).pack(side="left")
     return frame
 
 
@@ -222,8 +200,6 @@ def journal_entry(cmdr: str, is_beta: bool, system: str, station: str, entry: Di
             load_ledger_module().record_trade_event(CONN, system, station, entry, state)
 
         CONN.commit()
-        if WINDOW is not None:
-            WINDOW.status_var.set(f"Last event: {name} at {now_utc_iso()}")
     except Exception:
         log_exception("journal_entry")
     return None
@@ -262,13 +238,8 @@ def cmdr_data(data: Any, is_beta: bool) -> Optional[str]:
             inserted = record_marketdata(marketdata, data)
             CONN.commit()
             log_market_debug("cmdr_data marketdata processed", {"tracked_rows_written": inserted})
-            if WINDOW is not None:
-                WINDOW.status_var.set(f"Market data stored: {inserted} tracked rows at {now_utc_iso()}")
-                WINDOW.refresh()
         else:
             log_market_debug("cmdr_data no marketdata found", summarize_capi_data(data))
-            if WINDOW is not None:
-                WINDOW.status_var.set("No marketdata found in EDMC CAPI payload; see marketscout-market-debug.log")
     except Exception:
         log_exception("cmdr_data")
     return None
@@ -1645,27 +1616,14 @@ def open_modern_ui() -> None:
     """Start the local browser UI and open it in the default browser."""
     try:
         if DB_PATH is None or PLUGIN_DIR is None:
-            messagebox.showerror("MarketScout", "MarketScout database is not initialized yet.")
+            log_exception("open_modern_ui_not_initialized")
             return
         web = load_web_module()
         web.start_server(PLUGIN_DIR, DB_PATH, TARGET_COMMODITIES, PRIMARY_METALS)
         url = web.server_url() or "http://127.0.0.1:40595/"
         webbrowser.open(url)
-        if WINDOW is not None:
-            WINDOW.status_var.set(f"Opened MarketScout Web UI at {url}")
-    except Exception as e:
+    except Exception:
         log_exception("open_modern_ui")
-        messagebox.showerror("MarketScout", f"Could not open Web UI:\n{e}")
-
-def open_window() -> None:
-    global WINDOW
-    if ROOT is None:
-        return
-    if WINDOW is None or not WINDOW.exists():
-        WINDOW = MarketScoutWindow(ROOT)
-    else:
-        WINDOW.lift()
-        WINDOW.refresh()
 
 
 def log_exception(where: str) -> None:
@@ -1678,557 +1636,3 @@ def log_exception(where: str) -> None:
     except Exception:
         pass
 
-
-class MarketScoutWindow:
-    def __init__(self, parent: tk.Misc) -> None:
-        self.parent = parent
-        self.win = tk.Toplevel(parent)
-        self.win.title(f"ED Market Scout {PLUGIN_VERSION}")
-        self.win.geometry("1300x700")
-        self.status_var = tk.StringVar(value="Local-only recorder. No uploads are performed by this plugin.")
-        self.sort_specs: List[Tuple[str, str]] = []
-        self.column_headings: Dict[str, str] = {}
-        self.visible_columns: List[str] = []
-        ui_config = load_ui_config()
-        self.highlight_price_var = tk.StringVar(value=str(first_int(ui_config.get("highlight_price")) or DEFAULT_HIGHLIGHT_PRICE))
-        self.highlight_supply_var = tk.StringVar(value=str(first_int(ui_config.get("highlight_supply")) or DEFAULT_HIGHLIGHT_SUPPLY))
-        self._build_ui()
-        self.refresh()
-
-    def exists(self) -> bool:
-        try:
-            return bool(self.win.winfo_exists())
-        except Exception:
-            return False
-
-    def lift(self) -> None:
-        self.win.lift()
-        self.win.focus_force()
-
-    def _build_ui(self) -> None:
-        filter_frame = ttk.LabelFrame(self.win, text="Filters")
-        filter_frame.pack(fill=tk.X, padx=6, pady=6)
-
-        self.system_filter = tk.StringVar()
-        self.station_filter = tk.StringVar()
-        self.economy_filter = tk.StringVar(value="Extraction, Refinery")
-        self.state_filter = tk.StringVar()
-        self.pad_filter = tk.StringVar(value="Any")
-        self.source_filter = tk.StringVar(value="Any")
-        self.include_fleet_carriers_var = tk.BooleanVar(value=False)
-        self.age_days_filter = tk.StringVar()
-        self.min_supply_filter = tk.StringVar()
-        self.price_filters: Dict[str, tk.StringVar] = {c: tk.StringVar() for c in TARGET_COMMODITIES[:4]}
-
-        r = 0
-        ttk.Label(filter_frame, text="System contains").grid(row=r, column=0, sticky=tk.W)
-        ttk.Entry(filter_frame, textvariable=self.system_filter, width=18).grid(row=r, column=1, sticky=tk.W, padx=3)
-        ttk.Label(filter_frame, text="Station contains").grid(row=r, column=2, sticky=tk.W)
-        ttk.Entry(filter_frame, textvariable=self.station_filter, width=18).grid(row=r, column=3, sticky=tk.W, padx=3)
-        ttk.Label(filter_frame, text="Economy contains any").grid(row=r, column=4, sticky=tk.W)
-        ttk.Entry(filter_frame, textvariable=self.economy_filter, width=24).grid(row=r, column=5, sticky=tk.W, padx=3)
-        ttk.Label(filter_frame, text="State contains").grid(row=r, column=6, sticky=tk.W)
-        ttk.Entry(filter_frame, textvariable=self.state_filter, width=22).grid(row=r, column=7, sticky=tk.W, padx=3)
-
-        r += 1
-        col = 0
-        for commodity, var in self.price_filters.items():
-            ttk.Label(filter_frame, text=f"{commodity} buy <=").grid(row=r, column=col, sticky=tk.W)
-            ttk.Entry(filter_frame, textvariable=var, width=8).grid(row=r, column=col + 1, sticky=tk.W, padx=3)
-            col += 2
-        ttk.Label(filter_frame, text="Min supply").grid(row=r, column=col, sticky=tk.W)
-        ttk.Entry(filter_frame, textvariable=self.min_supply_filter, width=8).grid(row=r, column=col + 1, sticky=tk.W, padx=3)
-
-        r += 1
-        ttk.Label(filter_frame, text="Market age <= days").grid(row=r, column=0, sticky=tk.W)
-        ttk.Entry(filter_frame, textvariable=self.age_days_filter, width=8).grid(row=r, column=1, sticky=tk.W, padx=3)
-        ttk.Label(filter_frame, text="Pad").grid(row=r, column=2, sticky=tk.W)
-        ttk.Combobox(filter_frame, textvariable=self.pad_filter, values=["Any", "L", "M", "S", "Unknown"], width=10, state="readonly").grid(row=r, column=3, sticky=tk.W, padx=3)
-        ttk.Label(filter_frame, text="Source").grid(row=r, column=4, sticky=tk.W)
-        ttk.Combobox(filter_frame, textvariable=self.source_filter, values=["Any", "local_visit", "spansh", "imported"], width=12, state="readonly").grid(row=r, column=5, sticky=tk.W, padx=3)
-        ttk.Checkbutton(filter_frame, text="Include fleet carriers", variable=self.include_fleet_carriers_var).grid(row=r, column=6, sticky=tk.W, padx=3)
-        ttk.Button(filter_frame, text="Import CSV...", command=self.import_csv).grid(row=r, column=7, sticky=tk.W, padx=3)
-
-        r += 1
-        ttk.Button(filter_frame, text="Apply", command=self.refresh).grid(row=r, column=4, sticky=tk.W, padx=3)
-        ttk.Button(filter_frame, text="Clear", command=self.clear_filters).grid(row=r, column=5, sticky=tk.W, padx=3)
-        ttk.Button(filter_frame, text="Refresh", command=self.refresh).grid(row=r, column=6, sticky=tk.W, padx=3)
-        ttk.Button(filter_frame, text="Columns...", command=self.open_column_selector).grid(row=r, column=7, sticky=tk.W, padx=3)
-
-        r += 1
-        ttk.Label(filter_frame, text="Highlight price <=").grid(row=r, column=0, sticky=tk.W)
-        ttk.Entry(filter_frame, textvariable=self.highlight_price_var, width=8).grid(row=r, column=1, sticky=tk.W, padx=3)
-        ttk.Label(filter_frame, text="Strong supply >=").grid(row=r, column=2, sticky=tk.W)
-        ttk.Entry(filter_frame, textvariable=self.highlight_supply_var, width=8).grid(row=r, column=3, sticky=tk.W, padx=3)
-        ttk.Label(filter_frame, text="Blue = cheap; green = cheap + high supply").grid(row=r, column=4, columnspan=4, sticky=tk.W, padx=3)
-
-        sort_frame = ttk.LabelFrame(self.win, text="Multi-field sort")
-        sort_frame.pack(fill=tk.X, padx=6, pady=(0, 6))
-        sort_columns = [
-            "market_updated", "station_visit", "source_pulled", "system", "station", "state", "economies",
-            "population", "security", "pad", "arrival_ls", "source", "source_updated", "market_source_updated",
-        ]
-        for commodity in TARGET_COMMODITIES:
-            sort_columns.extend([
-                f"{commodity}_buy", f"{commodity}_sell", f"{commodity}_supply", f"{commodity}_demand"
-            ])
-        self.sort_vars: List[tk.StringVar] = []
-        self.sort_dir_vars: List[tk.StringVar] = []
-        for i in range(3):
-            ttk.Label(sort_frame, text=f"Sort {i+1}").grid(row=0, column=i*3, sticky=tk.W, padx=(4, 2))
-            sv = tk.StringVar(value="" if i else "market_updated")
-            dv = tk.StringVar(value="DESC" if i == 0 else "ASC")
-            self.sort_vars.append(sv)
-            self.sort_dir_vars.append(dv)
-            ttk.Combobox(sort_frame, textvariable=sv, values=[""] + sort_columns, width=18, state="readonly").grid(row=0, column=i*3+1, sticky=tk.W)
-            ttk.Combobox(sort_frame, textvariable=dv, values=["ASC", "DESC"], width=6, state="readonly").grid(row=0, column=i*3+2, sticky=tk.W, padx=(2, 8))
-        ttk.Button(sort_frame, text="Apply Sort", command=self.refresh).grid(row=0, column=10, sticky=tk.W)
-
-        table_frame = ttk.Frame(self.win)
-        table_frame.pack(fill=tk.BOTH, expand=True, padx=6, pady=6)
-
-        self.columns = [
-            "flag", "location", "system", "station", "type", "pad", "fleet_carrier", "state", "economies", "system_economy",
-            "security", "population", "arrival_ls", "source", "source_pulled",
-            "source_updated", "market_source_updated", "planetary",
-            "system_visit", "station_visit", "market_updated",
-        ]
-        # Compact metal columns display two values in one cell, e.g. buy price on
-        # the first line and supply on the second line. This keeps the common
-        # scouting view narrow while retaining the detailed single-value columns.
-        for c in PRIMARY_METALS:
-            self.columns += [f"{c}_buy_compact", f"{c}_sell_compact"]
-        # Detailed columns, ordered the way the scouting workflow usually reads:
-        # buy/supply first, then sell/demand.
-        for c in PRIMARY_METALS:
-            self.columns += [f"{c}_buy", f"{c}_supply"]
-        for c in PRIMARY_METALS:
-            self.columns += [f"{c}_sell", f"{c}_demand"]
-        for c in TARGET_COMMODITIES:
-            if c not in PRIMARY_METALS:
-                self.columns += [f"{c}_buy", f"{c}_supply", f"{c}_sell", f"{c}_demand"]
-
-        self.tree = ttk.Treeview(table_frame, columns=self.columns, show="headings")
-        vsb = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
-        hsb = ttk.Scrollbar(table_frame, orient="horizontal", command=self.tree.xview)
-        self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
-        self.tree.grid(row=0, column=0, sticky="nsew")
-        vsb.grid(row=0, column=1, sticky="ns")
-        hsb.grid(row=1, column=0, sticky="ew")
-        table_frame.columnconfigure(0, weight=1)
-        table_frame.rowconfigure(0, weight=1)
-
-        self.column_headings = {
-            "flag": "Flag", "location": "System / Station", "system": "System", "station": "Station", "type": "Type", "pad": "Pad",
-            "fleet_carrier": "Fleet Carrier", "state": "Faction State",
-            "economies": "Station Economies", "system_economy": "System Econ", "security": "Security", "population": "Population",
-            "arrival_ls": "Arrival LS", "source": "Source", "source_pulled": "Source Pulled",
-            "source_updated": "Source Updated", "market_source_updated": "Market Src Updated",
-            "planetary": "Planetary",
-            "system_visit": "System Visit", "station_visit": "Station Visit", "market_updated": "Market Updated",
-        }
-        for c in TARGET_COMMODITIES:
-            self.column_headings[f"{c}_buy"] = f"{c} Buy"
-            self.column_headings[f"{c}_supply"] = f"{c} Supply"
-            self.column_headings[f"{c}_sell"] = f"{c} Sell"
-            self.column_headings[f"{c}_demand"] = f"{c} Demand"
-        for c in PRIMARY_METALS:
-            self.column_headings[f"{c}_buy_compact"] = f"{c} Buy"
-            self.column_headings[f"{c}_sell_compact"] = f"{c} Sell"
-
-        for col in self.columns:
-            text = self.column_headings.get(col, col.replace("_", " "))
-            self.tree.heading(col, text=text, command=lambda c=col: self.sort_by_header(c))
-            width = 110
-            if col in ("system", "station", "economies", "state"):
-                width = 170
-            if col == "location":
-                width = 260
-            if col.endswith(("_buy", "_sell", "_supply", "_demand")) or col in ("pad", "type", "source", "planetary"):
-                width = 85
-            if col.endswith("_compact"):
-                width = 95
-            if col in ("source_pulled", "source_updated", "market_source_updated"):
-                width = 145
-            if col == "flag":
-                width = 125
-            self.tree.column(col, width=width, stretch=True)
-
-        self.tree.tag_configure("cheap", background="#d8ecff")
-        self.tree.tag_configure("strong", background="#d8ffd8")
-        # Give compact two-line cells enough vertical room. Some themes may still
-        # cap Treeview row height; the Flag column remains as a fallback.
-        try:
-            ttk.Style().configure("Treeview", rowheight=42)
-        except Exception:
-            pass
-
-        self.visible_columns = self.load_visible_columns()
-        self.apply_visible_columns(save=False)
-
-        status = ttk.Label(self.win, textvariable=self.status_var, anchor=tk.W)
-        status.pack(fill=tk.X, padx=6, pady=(0, 6))
-
-    def default_visible_columns(self) -> List[str]:
-        # Keep first-run display compact while still useful for cheap-metal scouting.
-        preferred = [
-            "flag", "location", "state", "economies", "security", "population", "source",
-            "station_visit", "market_updated",
-            "Palladium_buy_compact", "Gold_buy_compact", "Silver_buy_compact",
-            "Palladium_sell_compact", "Gold_sell_compact", "Silver_sell_compact",
-        ]
-        return [c for c in preferred if c in self.columns]
-
-    def load_visible_columns(self) -> List[str]:
-        data = load_ui_config()
-        cols = data.get("visible_columns")
-        if data.get("ui_schema_version") == UI_SCHEMA_VERSION and isinstance(cols, list):
-            valid = [c for c in cols if c in self.columns]
-            if valid:
-                return valid
-        # 0.1.6 introduced compact two-line columns and a new default order.
-        # Use the new defaults once after upgrade so users see the new layout.
-        update_ui_config(ui_schema_version=UI_SCHEMA_VERSION)
-        return self.default_visible_columns()
-
-    def apply_visible_columns(self, save: bool = True) -> None:
-        valid = [c for c in self.visible_columns if c in self.columns]
-        if not valid:
-            valid = self.default_visible_columns() or self.columns[:1]
-        self.visible_columns = valid
-        try:
-            self.tree.configure(displaycolumns=self.visible_columns)
-        except Exception:
-            self.tree.configure(displaycolumns="#all")
-        if save:
-            update_ui_config(visible_columns=self.visible_columns, ui_schema_version=UI_SCHEMA_VERSION)
-        self.status_var.set(f"Showing {len(self.visible_columns)} of {len(self.columns)} columns. Database: {DB_PATH}")
-
-    def open_column_selector(self) -> None:
-        dialog = tk.Toplevel(self.win)
-        dialog.title("MarketScout columns")
-        dialog.transient(self.win)
-        dialog.grab_set()
-
-        outer = ttk.Frame(dialog, padding=8)
-        outer.pack(fill=tk.BOTH, expand=True)
-        ttk.Label(outer, text="Choose which columns are visible in the table.").pack(anchor=tk.W, pady=(0, 6))
-
-        canvas = tk.Canvas(outer, borderwidth=0, highlightthickness=0, width=560, height=360)
-        vsb = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
-        inner = ttk.Frame(canvas)
-        inner.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=inner, anchor="nw")
-        canvas.configure(yscrollcommand=vsb.set)
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        vsb.pack(side=tk.RIGHT, fill=tk.Y)
-
-        vars_by_col: Dict[str, tk.BooleanVar] = {}
-        for i, col in enumerate(self.columns):
-            var = tk.BooleanVar(value=col in self.visible_columns)
-            vars_by_col[col] = var
-            label = self.column_headings.get(col, col.replace("_", " "))
-            ttk.Checkbutton(inner, text=label, variable=var).grid(row=i // 3, column=i % 3, sticky=tk.W, padx=8, pady=2)
-
-        def set_all(value: bool) -> None:
-            for var in vars_by_col.values():
-                var.set(value)
-
-        def set_compact() -> None:
-            compact = set(self.default_visible_columns())
-            for col, var in vars_by_col.items():
-                var.set(col in compact)
-
-        def set_core_only() -> None:
-            core = {"flag", "location", "state", "economies", "station_visit", "market_updated",
-                    "Palladium_buy_compact", "Gold_buy_compact", "Silver_buy_compact"}
-            for col, var in vars_by_col.items():
-                var.set(col in core)
-
-        def apply_and_close() -> None:
-            selected = [col for col in self.columns if vars_by_col[col].get()]
-            if not selected:
-                messagebox.showwarning("MarketScout", "Select at least one column.", parent=dialog)
-                return
-            self.visible_columns = selected
-            self.apply_visible_columns(save=True)
-            dialog.destroy()
-
-        buttons = ttk.Frame(outer)
-        buttons.pack(fill=tk.X, pady=(8, 0))
-        ttk.Button(buttons, text="All", command=lambda: set_all(True)).pack(side=tk.LEFT, padx=3)
-        ttk.Button(buttons, text="None", command=lambda: set_all(False)).pack(side=tk.LEFT, padx=3)
-        ttk.Button(buttons, text="Compact", command=set_compact).pack(side=tk.LEFT, padx=3)
-        ttk.Button(buttons, text="Core", command=set_core_only).pack(side=tk.LEFT, padx=3)
-        ttk.Button(buttons, text="Cancel", command=dialog.destroy).pack(side=tk.RIGHT, padx=3)
-        ttk.Button(buttons, text="Apply", command=apply_and_close).pack(side=tk.RIGHT, padx=3)
-
-    def import_csv(self) -> None:
-        if CONN is None:
-            return
-        path = filedialog.askopenfilename(
-            parent=self.win,
-            title="Import candidate stations CSV",
-            filetypes=[("CSV files", "*.csv"), ("All files", "*")],
-        )
-        if not path:
-            return
-        source_dialog = tk.Toplevel(self.win)
-        source_dialog.title("Import source")
-        source_dialog.transient(self.win)
-        source_dialog.grab_set()
-        frame = ttk.Frame(source_dialog, padding=8)
-        frame.pack(fill=tk.BOTH, expand=True)
-        ttk.Label(frame, text="CSV source/template").grid(row=0, column=0, sticky=tk.W, padx=3, pady=3)
-        source_var = tk.StringVar(value="auto")
-        ttk.Combobox(frame, textvariable=source_var, values=["auto", "spansh"], width=16, state="readonly").grid(row=0, column=1, sticky=tk.W, padx=3, pady=3)
-
-        def do_import() -> None:
-            try:
-                importer = load_importer_module()
-                result = importer.import_candidates_csv(CONN, path, source_var.get())
-                source_dialog.destroy()
-                self.status_var.set(
-                    f"Imported {result.get('imported')} {result.get('source')} candidates; skipped {result.get('skipped')}."
-                )
-                self.refresh()
-                messagebox.showinfo(
-                    "MarketScout",
-                    f"Imported {result.get('imported')} candidate station(s) from {result.get('source')}.\n"
-                    f"Skipped: {result.get('skipped')}\nPulled at: {result.get('pulled_at')}",
-                    parent=self.win,
-                )
-            except Exception as e:
-                log_exception("import_csv")
-                messagebox.showerror("MarketScout", f"Import failed:\n{e}", parent=self.win)
-
-        buttons = ttk.Frame(frame)
-        buttons.grid(row=1, column=0, columnspan=2, sticky=tk.E, pady=(8, 0))
-        ttk.Button(buttons, text="Cancel", command=source_dialog.destroy).pack(side=tk.RIGHT, padx=3)
-        ttk.Button(buttons, text="Import", command=do_import).pack(side=tk.RIGHT, padx=3)
-
-    def clear_filters(self) -> None:
-        self.system_filter.set("")
-        self.station_filter.set("")
-        self.economy_filter.set("")
-        self.state_filter.set("")
-        self.pad_filter.set("Any")
-        self.source_filter.set("Any")
-        self.include_fleet_carriers_var.set(False)
-        self.age_days_filter.set("")
-        self.min_supply_filter.set("")
-        for v in self.price_filters.values():
-            v.set("")
-        self.refresh()
-
-    def sort_by_header(self, col: str) -> None:
-        current = self.sort_vars[0].get()
-        if current == col:
-            self.sort_dir_vars[0].set("ASC" if self.sort_dir_vars[0].get() == "DESC" else "DESC")
-        else:
-            self.sort_vars[0].set(col)
-            self.sort_dir_vars[0].set("ASC")
-        self.refresh()
-
-    def refresh(self) -> None:
-        if CONN is None:
-            return
-        for row in self.tree.get_children():
-            self.tree.delete(row)
-        try:
-            sql, params = self.build_query()
-            self.save_highlight_settings()
-            rows = CONN.execute(sql, params).fetchall()
-            for row in rows:
-                tag, flag = self.row_highlight(row)
-                values = []
-                keys = row.keys()
-                for col in self.columns:
-                    if col == "flag":
-                        values.append(flag)
-                    elif col == "location":
-                        values.append(self.format_location(row))
-                    elif col.endswith("_buy_compact"):
-                        commodity = col[:-12]
-                        values.append(self.format_price_pair(row, commodity, "buy_price"))
-                    elif col.endswith("_sell_compact"):
-                        commodity = col[:-13]
-                        values.append(self.format_price_pair(row, commodity, "sell_price"))
-                    else:
-                        values.append(row[col] if col in keys else "")
-                tags = (tag,) if tag else ()
-                self.tree.insert("", tk.END, values=values, tags=tags)
-            self.status_var.set(f"{len(rows)} rows. Showing {len(self.visible_columns)} of {len(self.columns)} columns. Database: {DB_PATH}")
-        except Exception as e:
-            log_exception("refresh")
-            messagebox.showerror("MarketScout", f"Could not refresh table:\n{e}")
-
-    def format_location(self, row: sqlite3.Row) -> str:
-        system = row["system"] if "system" in row.keys() and row["system"] is not None else ""
-        station = row["station"] if "station" in row.keys() and row["station"] is not None else ""
-        pad = row["pad"] if "pad" in row.keys() and row["pad"] is not None else ""
-        second = station
-        if pad:
-            second = f"{second} | Pad {pad}" if second else f"Pad {pad}"
-        return f"{system}\n{second}" if second else str(system)
-
-    def format_price_pair(self, row: sqlite3.Row, commodity: str, price_kind: str) -> str:
-        # price_kind: buy_price => show buy + supply; sell_price => show sell + demand
-        keys = row.keys()
-        price_col = f"{commodity}_buy" if price_kind == "buy_price" else f"{commodity}_sell"
-        qty_col = f"{commodity}_supply" if price_kind == "buy_price" else f"{commodity}_demand"
-        price = row[price_col] if price_col in keys and row[price_col] is not None else ""
-        qty = row[qty_col] if qty_col in keys and row[qty_col] is not None else ""
-        if price == "" and qty == "":
-            return ""
-        if price == "":
-            return f"—\n{qty}"
-        if qty == "":
-            return f"{price}\n—"
-        return f"{price}\n{qty}"
-
-    def save_highlight_settings(self) -> None:
-        price = first_int(self.highlight_price_var.get())
-        supply = first_int(self.highlight_supply_var.get())
-        if price is None:
-            price = DEFAULT_HIGHLIGHT_PRICE
-            self.highlight_price_var.set(str(price))
-        if supply is None:
-            supply = DEFAULT_HIGHLIGHT_SUPPLY
-            self.highlight_supply_var.set(str(supply))
-        update_ui_config(highlight_price=price, highlight_supply=supply)
-
-    def row_highlight(self, row: sqlite3.Row) -> Tuple[str, str]:
-        price_threshold = first_int(self.highlight_price_var.get()) or DEFAULT_HIGHLIGHT_PRICE
-        supply_threshold = first_int(self.highlight_supply_var.get()) or DEFAULT_HIGHLIGHT_SUPPLY
-
-        cheap_commodities: List[str] = []
-        strong_commodities: List[str] = []
-        keys = row.keys()
-        for commodity in PRIMARY_METALS:
-            buy_col = f"{commodity}_buy"
-            supply_col = f"{commodity}_supply"
-            if buy_col not in keys:
-                continue
-            buy_price = first_int(row[buy_col])
-            supply = first_int(row[supply_col]) if supply_col in keys else None
-            # ED/CAPI/Market.json can use 0 for unavailable/no-buy commodities.
-            # Do not treat 0 or negative values as cheap discoveries.
-            if buy_price is not None and buy_price > 0 and buy_price <= price_threshold:
-                cheap_commodities.append(commodity)
-                if supply is not None and supply >= supply_threshold:
-                    strong_commodities.append(commodity)
-
-        if strong_commodities:
-            return "strong", "★★ " + ", ".join(strong_commodities)
-        if cheap_commodities:
-            return "cheap", "★ " + ", ".join(cheap_commodities)
-        return "", ""
-
-    def build_query(self) -> Tuple[str, List[Any]]:
-        select_cols = [
-            "s.system_name AS system",
-            "st.station_name AS station",
-            "st.station_type AS type",
-            "COALESCE(st.largest_pad, 'Unknown') AS pad",
-            "CASE WHEN COALESCE(st.is_fleet_carrier, 0)=1 THEN 'Yes' ELSE '' END AS fleet_carrier",
-            "st.station_faction_state AS state",
-            "COALESCE(st.station_economies_json, st.station_economy) AS economies",
-            "s.system_economy AS system_economy",
-            "s.security AS security",
-            "s.population AS population",
-            "st.distance_to_arrival_ls AS arrival_ls",
-            "COALESCE(st.source, s.source, CASE WHEN st.last_station_visit_datetime IS NOT NULL THEN 'local_visit' ELSE '' END) AS source",
-            "COALESCE(st.source_pulled_datetime, s.source_pulled_datetime) AS source_pulled",
-            "COALESCE(st.source_data_updated_datetime, s.source_data_updated_datetime) AS source_updated",
-            "st.market_source_updated_datetime AS market_source_updated",
-            "CASE WHEN st.planetary=1 THEN 'Yes' WHEN st.planetary=0 THEN '' ELSE '' END AS planetary",
-            "s.last_visit_datetime AS system_visit",
-            "st.last_station_visit_datetime AS station_visit",
-            "MAX(mp.market_price_update_datetime) AS market_updated",
-        ]
-        for c in TARGET_COMMODITIES:
-            select_cols.append(f"MAX(CASE WHEN mp.commodity='{c}' THEN mp.buy_price END) AS {c}_buy")
-            select_cols.append(f"MAX(CASE WHEN mp.commodity='{c}' THEN mp.sell_price END) AS {c}_sell")
-            select_cols.append(f"MAX(CASE WHEN mp.commodity='{c}' THEN mp.supply END) AS {c}_supply")
-            select_cols.append(f"MAX(CASE WHEN mp.commodity='{c}' THEN mp.demand END) AS {c}_demand")
-
-        sql = "SELECT " + ", ".join(select_cols) + " FROM stations st LEFT JOIN systems s ON s.system_address=st.system_address LEFT JOIN market_prices mp ON mp.market_id=st.market_id"
-        where: List[str] = []
-        having: List[str] = []
-        params: List[Any] = []
-
-        if self.system_filter.get().strip():
-            where.append("s.system_name LIKE ?")
-            params.append(f"%{self.system_filter.get().strip()}%")
-        if self.station_filter.get().strip():
-            where.append("st.station_name LIKE ?")
-            params.append(f"%{self.station_filter.get().strip()}%")
-        if self.state_filter.get().strip():
-            where.append("st.station_faction_state LIKE ?")
-            params.append(f"%{self.state_filter.get().strip()}%")
-        econ_terms = [x.strip() for x in self.economy_filter.get().split(",") if x.strip()]
-        if econ_terms:
-            parts = []
-            for term in econ_terms:
-                parts.append("COALESCE(st.station_economies_json, st.station_economy, '') LIKE ?")
-                params.append(f"%{term}%")
-            where.append("(" + " OR ".join(parts) + ")")
-        pad = self.pad_filter.get()
-        if pad and pad != "Any":
-            if pad == "Unknown":
-                where.append("st.largest_pad IS NULL")
-            else:
-                where.append("st.largest_pad = ?")
-                params.append(pad)
-        if not self.include_fleet_carriers_var.get():
-            where.append("COALESCE(st.is_fleet_carrier, 0) = 0")
-        source = self.source_filter.get()
-        if source and source != "Any":
-            if source == "imported":
-                where.append("COALESCE(st.source, s.source, '') != 'local_visit'")
-            else:
-                where.append("COALESCE(st.source, s.source, '') = ?")
-                params.append(source)
-
-        if where:
-            sql += " WHERE " + " AND ".join(where)
-        sql += " GROUP BY st.market_id"
-
-        for c, var in self.price_filters.items():
-            val = first_int(var.get())
-            if val is not None:
-                having.append(f"{c}_buy <= ?")
-                params.append(val)
-        min_supply = first_int(self.min_supply_filter.get())
-        if min_supply is not None:
-            supply_checks = [f"({c}_supply IS NOT NULL AND {c}_supply >= ?)" for c in TARGET_COMMODITIES]
-            having.append("(" + " OR ".join(supply_checks) + ")")
-            params.extend([min_supply] * len(TARGET_COMMODITIES))
-        age_days = first_int(self.age_days_filter.get())
-        if age_days is not None:
-            having.append("market_updated >= datetime('now', ?)")
-            params.append(f"-{age_days} days")
-        if having:
-            sql += " HAVING " + " AND ".join(having)
-
-        order_parts = []
-        allowed = {c: c for c in self.columns}
-        # Compact/display-only columns are not SQL aliases. Map them to a useful
-        # sortable backing column when a user clicks their header.
-        allowed["location"] = "system"
-        for c in PRIMARY_METALS:
-            allowed[f"{c}_buy_compact"] = f"{c}_buy"
-            allowed[f"{c}_sell_compact"] = f"{c}_sell"
-        for sv, dv in zip(self.sort_vars, self.sort_dir_vars):
-            col = sv.get().strip()
-            if not col:
-                continue
-            direction = "DESC" if dv.get() == "DESC" else "ASC"
-            if col in allowed:
-                sql_col = allowed[col]
-                order_parts.append(f"{sql_col} IS NULL, {sql_col} {direction}")
-        if not order_parts:
-            order_parts = ["market_updated IS NULL", "market_updated DESC", "station_visit DESC"]
-        sql += " ORDER BY " + ", ".join(order_parts)
-        return sql, params

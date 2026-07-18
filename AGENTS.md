@@ -23,7 +23,7 @@ EDMC-MarketScout is a local-only EDMarketConnector plugin for scouting Elite Dan
 - End users must not need Node/npm.
 - If changing `web-src/`, run `npm run build` and include the updated `web/` output.
 - Do not commit `node_modules/`, runtime SQLite databases, logs, or local UI/preset JSON files.
-- Do not remove the classic Tk UI unless explicitly requested.
+- The classic Tk MarketScout window was intentionally removed for the beta; keep new UI work in the Web UI.
 
 ## Verification
 After Python changes:

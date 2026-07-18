@@ -55,7 +55,7 @@ Keep `app.lan_enabled=0` if you want MarketScout reachable only from this comput
 
 ## CSV import
 
-Open the MarketScout window, click `Import CSV...`, choose a CSV file, and choose either `auto` or `spansh` as the template.
+MarketScout includes local-only support code for importing supported candidate-station CSV exports. The beta UI is web-only, so any future user-facing CSV import flow should be added to the Web UI rather than reintroducing the old classic window.
 
 The Spansh template currently expects columns like:
 

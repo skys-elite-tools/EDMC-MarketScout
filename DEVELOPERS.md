@@ -85,7 +85,7 @@ After backend or Web UI changes:
 
 1. Install/replace the plugin folder in EDMC's plugin directory.
 2. Restart EDMC.
-3. Click `Web` in the EDMC MarketScout button row.
+3. Click `MarketScout` in the EDMC plugin button row.
 4. Verify the browser UI loads from `http://127.0.0.1:<port>/`.
 5. Check these views:
    - Stations
