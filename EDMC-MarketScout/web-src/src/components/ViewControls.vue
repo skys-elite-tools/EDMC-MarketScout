@@ -57,14 +57,12 @@ const emit = defineEmits(['apply', 'open-commodities', 'open-best-buy-ignore-lis
 
     <template v-else-if="currentView === 'jackpots'">
       <div class="controlGroupTitle">Jackpot controls</div>
-      <div class="placeholderBox">Reserved for future jackpot filters, comparisons, exports, and timeline controls.</div>
       <label>Limit <input v-model.number="filters.limit" type="number" min="1" max="2000" /></label>
       <button type="button" @click="emit('apply')">Refresh</button>
     </template>
 
     <template v-else-if="currentView === 'ledger'">
       <div class="controlGroupTitle">Ledger controls</div>
-      <div class="placeholderBox">Reserved for future ledger summaries, charts, trip grouping, and export controls.</div>
       <label>Commodity <input v-model="ledgerFilters.commodity" type="text" placeholder="Gold" /></label>
       <label>Trade Type
         <select v-model="ledgerFilters.eventType"><option>Any</option><option>buy</option><option>sell</option></select>
