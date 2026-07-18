@@ -103,6 +103,55 @@ h1 { margin: 0; font-size: 20px; }
   width: 100%;
   text-align: left;
 }
+.mobileNav {
+  display: none;
+  position: relative;
+  justify-self: end;
+}
+.mobileNavToggle {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-content: center;
+  gap: 5px;
+  padding: 0;
+  border-color: rgba(140,200,255,.28);
+  background: rgba(38,49,66,.86);
+}
+.mobileNavToggle span {
+  width: 22px;
+  height: 2px;
+  display: block;
+  border-radius: 999px;
+  background: var(--text);
+}
+.mobileNavToggle.active,
+.mobileNavToggle:hover {
+  border-color: var(--accent);
+  background: #304761;
+}
+.mobileNavMenu {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  gap: 4px;
+  width: min(19rem, calc(100vw - 32px));
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0b1016;
+  box-shadow: 0 12px 30px rgba(0,0,0,.35);
+}
+.mobileNavItem {
+  justify-content: flex-start;
+}
+.mobileNavDivider {
+  height: 1px;
+  margin: 2px 0;
+  background: var(--line);
+}
 .topLinks, .footerLinks { display: flex; gap: 12px; align-items: center; color: var(--muted); }
 .hiddenFutureLink { display: none; }
 .viewControls {
@@ -1133,6 +1182,19 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 }
 @media (max-width: 1200px) {
   .topBar { grid-template-columns: 1fr; align-items: start; }
+}
+@media (max-width: 1000px) {
+  .topBar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+  .mainNav,
+  .topLinks {
+    display: none;
+  }
+  .mobileNav {
+    display: block;
+  }
 }
 @media (max-width: 1100px) {
   .statusStrip { grid-template-columns: 1fr; }

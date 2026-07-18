@@ -18,20 +18,28 @@ const navItems = [
   { view: 'stations', label: 'Stations', icon: stationIcon },
   { view: 'jackpots', label: 'Jackpots', icon: jackpotsIcon },
   { view: 'ledger', label: 'Ledger', icon: ledgerIcon },
-  { view: 'rare', label: 'Rare Commodities', icon: rareIcon },
   { view: 'carrier', label: 'Carrier Trade Announcements', icon: carrierIcon },
   { view: 'config', label: 'Config', icon: configIcon },
 ]
 const commodityItems = [
   { view: 'commodities', label: 'List Commodities', icon: commoditiesIcon },
+  { view: 'rare', label: 'Rare Commodities', icon: rareIcon },
   { view: 'analyze', label: 'Analyze Commodities', icon: analyzeIcon },
 ]
 const commoditiesMenuOpen = ref(false)
+const mobileMenuOpen = ref(false)
 const commoditiesMenuRef = ref(null)
-const commoditiesActive = computed(() => props.currentView === 'commodities' || props.currentView === 'analyze')
+const mobileMenuRef = ref(null)
+const commoditiesActive = computed(() => commodityItems.some((item) => item.view === props.currentView))
+const mobileNavGroups = computed(() => [
+  navItems.slice(0, 3),
+  commodityItems,
+  navItems.slice(3),
+])
 
 function choose(view) {
   commoditiesMenuOpen.value = false
+  mobileMenuOpen.value = false
   if (view === props.currentView) emit('refresh')
   else emit('update:currentView', view)
 }
@@ -40,9 +48,17 @@ function toggleCommoditiesMenu() {
   commoditiesMenuOpen.value = !commoditiesMenuOpen.value
 }
 
+function toggleMobileMenu() {
+  mobileMenuOpen.value = !mobileMenuOpen.value
+}
+
 function handleDocumentClick(event) {
-  if (!commoditiesMenuRef.value || commoditiesMenuRef.value.contains(event.target)) return
-  commoditiesMenuOpen.value = false
+  if (commoditiesMenuRef.value && !commoditiesMenuRef.value.contains(event.target)) {
+    commoditiesMenuOpen.value = false
+  }
+  if (mobileMenuRef.value && !mobileMenuRef.value.contains(event.target)) {
+    mobileMenuOpen.value = false
+  }
 }
 
 onMounted(() => document.addEventListener('click', handleDocumentClick))
@@ -116,6 +132,39 @@ onBeforeUnmount(() => document.removeEventListener('click', handleDocumentClick)
 
     <div class="topLinks">
       <a class="hiddenFutureLink" href="#" title="Placeholder for future donation link">Donate</a>
+    </div>
+
+    <div ref="mobileMenuRef" class="mobileNav">
+      <button
+        type="button"
+        class="mobileNavToggle"
+        :class="{ active: mobileMenuOpen }"
+        :aria-expanded="mobileMenuOpen"
+        aria-haspopup="menu"
+        aria-label="Open navigation menu"
+        @click.stop="toggleMobileMenu"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div v-if="mobileMenuOpen" class="mobileNavMenu" role="menu">
+        <template v-for="(group, groupIndex) in mobileNavGroups" :key="groupIndex">
+          <div v-if="groupIndex > 0" class="mobileNavDivider"></div>
+          <button
+            v-for="item in group"
+            :key="item.view"
+            type="button"
+            class="navMenuItem mobileNavItem"
+            :class="{ active: currentView === item.view }"
+            role="menuitem"
+            @click="choose(item.view)"
+          >
+            <img class="navButtonIcon" :src="item.icon" alt="" aria-hidden="true" />
+            <span>{{ item.label }}</span>
+          </button>
+        </template>
+      </div>
     </div>
 
   </header>
