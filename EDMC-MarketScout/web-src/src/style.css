@@ -216,6 +216,11 @@ h1 { margin: 0; font-size: 20px; }
 .stationFilterActions button {
   width: 100%;
 }
+.stationFilterPrimaryActions {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(4.5rem, 3fr);
+  gap: 8px;
+}
 .countButton {
   display: flex;
   align-items: center;
@@ -242,6 +247,14 @@ h1 { margin: 0; font-size: 20px; }
 }
 .applyFiltersButton:hover {
   background: #38536f;
+}
+.clearFiltersButton {
+  min-height: 3rem;
+  font-weight: 800;
+  background: #1b2430;
+}
+.clearFiltersButton:hover {
+  background: #243246;
 }
 .placeholderBox {
   color: var(--muted);
@@ -335,7 +348,13 @@ h1 { margin: 0; font-size: 20px; }
   .stationFilterActions {
     flex-direction: row;
   }
+  .stationFilterPrimaryActions {
+    flex: 1 1 16rem;
+  }
   .applyFiltersButton {
+    min-height: auto;
+  }
+  .clearFiltersButton {
     min-height: auto;
   }
 }

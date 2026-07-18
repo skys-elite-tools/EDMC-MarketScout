@@ -59,7 +59,7 @@ const economyPresets = ref([])
 const economyPresetStatus = ref('')
 const stationFilterOptions = ref({ systems: [], stations: [] })
 
-const filters = ref({
+const DEFAULT_STATION_FILTERS = {
   system: '',
   station: '',
   economy: '',
@@ -69,7 +69,9 @@ const filters = ref({
   priceThreshold: 6000,
   supplyThreshold: 10000,
   limit: 1000,
-})
+}
+
+const filters = ref({ ...DEFAULT_STATION_FILTERS })
 
 const ledgerFilters = ref({
   commodity: '',
@@ -110,6 +112,11 @@ function closeDetails() {
 function openHelp(article = '') {
   helpArticle.value = article
   helpRequestId.value += 1
+}
+
+async function clearStationFilters() {
+  filters.value = { ...DEFAULT_STATION_FILTERS }
+  await loadStations()
 }
 
 async function loadStations() {
@@ -403,6 +410,7 @@ onUnmounted(() => {
       @open-best-buy-ignore-list="openBestBuyIgnoreSettings"
       @save-economy-preset="saveEconomyPreset"
       @open-help="openHelp"
+      @clear-station-filters="clearStationFilters"
     />
 
     <CommoditySettings

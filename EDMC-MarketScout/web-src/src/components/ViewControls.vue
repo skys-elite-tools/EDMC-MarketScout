@@ -15,7 +15,7 @@ const props = defineProps({
   systemSuggestions: { type: Array, default: () => [] },
   stationSuggestions: { type: Array, default: () => [] },
 })
-const emit = defineEmits(['apply', 'open-commodities', 'open-best-buy-ignore-list', 'save-economy-preset', 'open-help'])
+const emit = defineEmits(['apply', 'clear-station-filters', 'open-commodities', 'open-best-buy-ignore-list', 'save-economy-preset', 'open-help'])
 
 const pageMetaByView = {
   stations: {
@@ -102,7 +102,10 @@ const hasControls = computed(() => !['analyze', 'carrier', 'config'].includes(pr
           <label class="check includeFleetCarriers"><input v-model="filters.includeFc" type="checkbox" /> Include fleet carriers</label>
         </div>
         <div class="stationFilterActions">
-          <button type="button" class="applyFiltersButton" @click="emit('apply')">Apply Filters</button>
+          <div class="stationFilterPrimaryActions">
+            <button type="button" class="applyFiltersButton" @click="emit('apply')">Apply Filters</button>
+            <button type="button" class="clearFiltersButton" @click="emit('clear-station-filters')">Clear</button>
+          </div>
           <button type="button" class="countButton" @click="emit('open-commodities')">
             <span>Watched Commodities</span>
             <span class="buttonCount">{{ watchedCount }} selected</span>
