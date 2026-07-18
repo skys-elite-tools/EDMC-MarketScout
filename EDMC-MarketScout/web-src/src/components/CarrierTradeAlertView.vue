@@ -37,12 +37,15 @@ const defaultForm = {
   type: 'Loading',
   carrierName: 'Fleet Carrier',
   carrierId: 'ABC-123',
+  carrierSystem: 'Sol',
   station: 'Galileo',
   system: 'Sol',
+  stationType: 'Orbis Starport',
   pads: 'Large',
 }
 
 const form = ref({ ...defaultForm, ...(savedDraft.form || {}) })
+const defaultCustomAnnouncementTemplate = '**[carrier_name] ([[carrier_id]])** is trading at **[trade_station_name]** [trade_station_type_if_planetary_in_parentheses] in **[trade_system]**. **[profit_k]**/unit profit, **[quantity_k]** units.'
 
 const textColor = ref(savedDraft.textColor || '#f6fbff')
 const textStyle = ref(savedDraft.textStyle || 'classic')
@@ -53,6 +56,9 @@ const stageWidth = ref(0)
 const defaultImageUrl = ref(placeholderImage)
 const uploadedImageUrl = ref(savedDraft.uploadedImageUrl || '')
 const copied = ref(false)
+const customCopied = ref(false)
+const customTemplateModalOpen = ref(false)
+const customAnnouncementTemplate = ref(savedDraft.customAnnouncementTemplate || defaultCustomAnnouncementTemplate)
 const layoutName = ref('')
 const layoutSaveStatus = ref('')
 const layoutMenuOpen = ref(false)
@@ -113,10 +119,61 @@ const padLetter = computed(() => (form.value.pads || 'Large').slice(0, 1).toUppe
 const tradeTypeLower = computed(() => String(form.value.type || '').toLowerCase())
 const imageUrl = computed(() => uploadedImageUrl.value || defaultImageUrl.value)
 const imageProfitText = computed(() => `${adValue(form.value.profit)} Cr/t${form.value.includeProfitLabelInImage === false ? '' : ' profit'}`)
+const isPlanetaryStation = computed(() => String(form.value.stationType || '').toLowerCase() === 'planetary')
 
 function adValue(value) {
   return String(value || '').trim()
 }
+
+function tokenK(value) {
+  return adValue(value).replace(/[.,]?0{3}\b/g, 'k')
+}
+
+function tokenThousand(value) {
+  return adValue(value).replace(/k/gi, '.000')
+}
+
+const customAnnouncementTokens = computed(() => ({
+  carrier_name: form.value.carrierName || 'Carrier Name',
+  carrier_id: form.value.carrierId || 'Carrier ID',
+  carrier_system: form.value.carrierSystem || 'Carrier System',
+  buying_selling: tradeTypeLower.value === 'unloading' ? 'selling' : 'buying',
+  loading_unloading: tradeTypeLower.value === 'unloading' ? 'unloading' : 'loading',
+  carrier_trade_operation_from_to: tradeTypeLower.value === 'unloading' ? 'Buy from' : 'Sell to',
+  station_trade_operation_from_to: tradeTypeLower.value === 'unloading' ? 'Sell to' : 'Buy from',
+  trade_system: form.value.system || 'System',
+  trade_station_name: form.value.station || 'Station',
+  trade_station_type: form.value.stationType || 'Station Type',
+  trade_station_type_if_planetary: isPlanetaryStation.value ? form.value.stationType : '',
+  trade_station_type_if_planetary_in_parentheses: isPlanetaryStation.value ? `(${form.value.stationType})` : '',
+  profit: adValue(form.value.profit),
+  profit_thousand: tokenThousand(form.value.profit),
+  profit_k: tokenK(form.value.profit),
+  quantity: adValue(form.value.quantity),
+  quantity_thousand: tokenThousand(form.value.quantity),
+  quantity_k: tokenK(form.value.quantity),
+}))
+
+const customTokenList = [
+  ['carrier_name', 'Fleet Carrier display name.'],
+  ['carrier_id', 'Fleet Carrier callsign/id. Double brackets render one visible bracket pair, such as [[carrier_id]] -> [ABC-123].'],
+  ['carrier_system', 'Carrier system entered in the Carrier section.'],
+  ['buying_selling', 'Shows selling for Unloading trades and buying for Loading trades.'],
+  ['loading_unloading', 'Shows loading or unloading based on the selected trade type.'],
+  ['carrier_trade_operation_from_to', 'Carrier-side trade action: Sell to for Loading, Buy from for Unloading.'],
+  ['station_trade_operation_from_to', 'Station-side trade action: Buy from for Loading, Sell to for Unloading.'],
+  ['trade_system', 'Trade station system.'],
+  ['trade_station_name', 'Trade station name.'],
+  ['trade_station_type', 'Selected trade station type.'],
+  ['trade_station_type_if_planetary', 'Selected station type, but only when it is Planetary. Otherwise blank.'],
+  ['trade_station_type_if_planetary_in_parentheses', 'Selected station type in parentheses, but only when it is Planetary. Otherwise blank.'],
+  ['profit', 'Profit exactly as typed.'],
+  ['profit_thousand', 'Profit exactly as typed, with k replaced by .000.'],
+  ['profit_k', 'Profit exactly as typed, with optional separator plus three zeroes replaced by k.'],
+  ['quantity', 'Quantity exactly as typed.'],
+  ['quantity_thousand', 'Quantity exactly as typed, with k replaced by .000.'],
+  ['quantity_k', 'Quantity exactly as typed, with optional separator plus three zeroes replaced by k.'],
+]
 
 const layerText = computed(() => ({
   type: `Carrier ${tradeTypeLower.value}`,
@@ -140,6 +197,13 @@ const announcement = computed(() => {
   const quantityUnit = tradeTypeLower.value === 'unloading' ? 'units' : 'tons'
   return `**${form.value.carrierName || 'Carrier Name'} (${form.value.carrierId || 'Carrier ID'})** is ${tradeTypeLower.value} **${form.value.commodity || 'Commodity'}** ${direction} **${form.value.station || 'Station'}** (${padText}) in **${form.value.system || 'System'}**. **${adValue(form.value.profit)}**/${profitUnit} profit, **${adValue(form.value.quantity)}** ${quantityUnit}.`
 })
+
+const customAnnouncement = computed(() => customAnnouncementTemplate.value.replace(/\[([a-z_]+)\]/g, (match, token) => {
+  if (Object.prototype.hasOwnProperty.call(customAnnouncementTokens.value, token)) {
+    return customAnnouncementTokens.value[token]
+  }
+  return match
+}))
 
 const classicLayers = [
   { key: 'type', sizeKey: 'classicType', weight: 800, align: 'center' },
@@ -195,6 +259,7 @@ function applyTextLayout(value) {
   textStyle.value = layout.mode === 'floating' ? 'floating' : 'classic'
   if (layout.positions) layerPositions.value[textStyle.value] = clone(layout.positions)
   if (layout.fontSizes) fontSizes.value = { ...fontSizes.value, ...clone(layout.fontSizes) }
+  if (layout.customAnnouncementTemplate) customAnnouncementTemplate.value = layout.customAnnouncementTemplate
 }
 
 function selectTextLayout(value) {
@@ -237,6 +302,7 @@ function saveCurrentLayout() {
     mode: textStyle.value,
     positions: clone(layerPositions.value[textStyle.value]),
     fontSizes: clone(fontSizes.value),
+    customAnnouncementTemplate: customAnnouncementTemplate.value,
   }
   savedLayouts.value = existing
     ? savedLayouts.value.map(item => item.id === id ? layout : item)
@@ -256,6 +322,7 @@ function persistDraft() {
     layerPositions: layerPositions.value,
     fontSizes: fontSizes.value,
     uploadedImageUrl: uploadedImageUrl.value,
+    customAnnouncementTemplate: customAnnouncementTemplate.value,
   }
   try {
     window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft))
@@ -460,6 +527,12 @@ async function copyAnnouncement() {
   setTimeout(() => { copied.value = false }, 1800)
 }
 
+async function copyCustomAnnouncement() {
+  await navigator.clipboard.writeText(customAnnouncement.value)
+  customCopied.value = true
+  setTimeout(() => { customCopied.value = false }, 1800)
+}
+
 onMounted(async () => {
   document.addEventListener('pointerdown', closeLayoutMenuOnOutsideClick)
   await nextTick()
@@ -475,7 +548,7 @@ onUnmounted(() => {
 
 watch(imageUrl, () => nextTick(updateStageSize))
 watch(textLayout, value => applyTextLayout(value))
-watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, uploadedImageUrl], persistDraft, { deep: true })
+watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, uploadedImageUrl, customAnnouncementTemplate], persistDraft, { deep: true })
 </script>
 
 <template>
@@ -511,6 +584,15 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
           <textarea :value="announcement" readonly rows="4"></textarea>
           <button type="button" class="copySymbolButton" :title="copied ? 'Copied' : 'Copy announcement'" @click="copyAnnouncement">{{ copied ? '✓' : '⧉' }}</button>
         </div>
+      </section>
+
+      <section class="carrierSection">
+        <h2>Custom announcement (for forums, reddit and more)</h2>
+        <div class="announcementBox">
+          <textarea :value="customAnnouncement" readonly rows="5"></textarea>
+          <button type="button" class="copySymbolButton" :title="customCopied ? 'Copied' : 'Copy custom announcement'" @click="copyCustomAnnouncement">{{ customCopied ? '✓' : '⧉' }}</button>
+        </div>
+        <button type="button" class="editTemplateButton" @click="customTemplateModalOpen = true">Edit template</button>
       </section>
     </div>
 
@@ -578,6 +660,9 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
             <label>Carrier ID <input v-model="form.carrierId" type="text" /></label>
             <label>Font size <input :value="fontSizeFor('carrierId')" type="number" min="8" max="180" step="1" @input="setFontSize('carrierId', $event.target.value)" /></label>
           </div>
+          <div class="fieldWithFont singleFieldRow">
+            <label>Carrier System <input v-model="form.carrierSystem" type="text" /></label>
+          </div>
         </fieldset>
         <fieldset class="marketFieldset">
           <legend>Market</legend>
@@ -588,6 +673,17 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
           <div class="fieldWithFont">
             <label>System <input v-model="form.system" type="text" /></label>
             <label>Font size <input :value="fontSizeFor('system')" type="number" min="8" max="180" step="1" @input="setFontSize('system', $event.target.value)" /></label>
+          </div>
+          <div class="fieldWithFont singleFieldRow">
+            <label>Station Type
+              <select v-model="form.stationType">
+                <option>Dodec Starport</option>
+                <option>Orbis Starport</option>
+                <option>Asteroid Base</option>
+                <option>Outpost</option>
+                <option>Planetary</option>
+              </select>
+            </label>
           </div>
           <div class="fieldWithFont">
             <label>Pads
@@ -602,5 +698,28 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
         </fieldset>
       </div>
     </section>
+
+    <div v-if="customTemplateModalOpen" class="modalBackdrop" @click.self="customTemplateModalOpen = false">
+      <section class="templateModal" role="dialog" aria-modal="true" aria-labelledby="customTemplateTitle">
+        <div class="modalHeader">
+          <h2 id="customTemplateTitle">Custom Announcement Template</h2>
+          <button type="button" class="iconButton" title="Close" @click="customTemplateModalOpen = false">×</button>
+        </div>
+        <div class="templateEditorGrid">
+          <div>
+            <h3>Tokens</h3>
+            <div class="tokenList">
+              <code v-for="[token, help] in customTokenList" :key="token" :title="help">[{{ token }}]</code>
+            </div>
+          </div>
+          <label class="templateTextArea">Template
+            <textarea v-model="customAnnouncementTemplate" rows="14" spellcheck="false"></textarea>
+          </label>
+        </div>
+        <div class="modalActions">
+          <button type="button" @click="customTemplateModalOpen = false">Done</button>
+        </div>
+      </section>
+    </div>
   </div>
 </template>

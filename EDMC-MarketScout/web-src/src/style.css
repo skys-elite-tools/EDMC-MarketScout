@@ -475,10 +475,13 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 .profitFieldWithOptions {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 5.5rem;
 }
+.singleFieldRow {
+  grid-template-columns: minmax(0, 1fr);
+}
 .fieldWithFont label {
   min-width: 0;
 }
-.fieldWithFont label:last-child {
+.fieldWithFont label:last-child:not(:only-child) {
   color: var(--accent);
 }
 .fieldWithFont .inlineCheckboxLabel {
@@ -679,6 +682,9 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   padding: 8px 10px;
   font: inherit;
 }
+.editTemplateButton {
+  margin-top: 8px;
+}
 .copySymbolButton {
   min-width: 2.25rem;
   height: 2.25rem;
@@ -735,6 +741,16 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   background: #111820;
   box-shadow: 0 24px 80px rgba(0,0,0,.55);
 }
+.templateModal {
+  width: min(56rem, 100%);
+  max-height: min(84vh, 52rem);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  background: #111820;
+  box-shadow: 0 24px 80px rgba(0,0,0,.55);
+}
 .modalHeader {
   display: flex;
   justify-content: space-between;
@@ -769,6 +785,52 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   margin: 20px 0 8px;
   color: var(--accent2);
 }
+.templateEditorGrid {
+  display: grid;
+  grid-template-columns: minmax(13rem, .75fr) minmax(20rem, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.templateEditorGrid h3 {
+  margin: 0 0 8px;
+  color: var(--accent2);
+}
+.tokenList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tokenList code {
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #0b1016;
+  color: var(--accent);
+  font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.templateTextArea {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.templateTextArea textarea {
+  width: 100%;
+  min-height: 18rem;
+  resize: vertical;
+  background: #0e1217;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
 .thanksList {
   margin: 8px 0 0;
   padding-left: 1.2rem;
@@ -789,7 +851,8 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   .carrierTradeAlert,
   .carrierFormGrid,
   .carrierImageTools,
-  .announcementBox { grid-template-columns: 1fr; }
+  .announcementBox,
+  .templateEditorGrid { grid-template-columns: 1fr; }
   .carrierImageStage,
   .announcementBox { width: 100%; max-width: none; }
 }
