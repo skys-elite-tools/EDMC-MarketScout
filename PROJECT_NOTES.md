@@ -52,6 +52,8 @@ app.bind_port=40595
 
 The fixed default port is intentional so browser localStorage state remains available across restarts. Users can edit the config and restart EDMC to use a different address/port.
 
+The Web UI exposes these values in the top-menu `Config` page. Suggested bind addresses include `127.0.0.1`, `localhost`, and locally detected IPv4 addresses. The Config page also generates a local QR code for the currently shown address/port to make opening the UI from another same-network device easier. Changing the listen address or port requires restarting EDMC because the HTTP server socket is already bound. mDNS advertising as `marketscout.local` is not enabled for beta; doing it reliably should use a real Zeroconf/mDNS implementation rather than a hand-rolled shortcut.
+
 ## Repository structure
 
 Important files/directories:

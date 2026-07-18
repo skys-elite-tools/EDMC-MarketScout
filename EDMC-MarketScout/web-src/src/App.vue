@@ -12,6 +12,7 @@ import RareCommoditiesView from './components/RareCommoditiesView.vue'
 import CommoditiesView from './components/CommoditiesView.vue'
 import AnalyzeCommoditiesView from './components/AnalyzeCommoditiesView.vue'
 import CarrierTradeAlertView from './components/CarrierTradeAlertView.vue'
+import ConfigurationView from './components/ConfigurationView.vue'
 import FooterBar from './components/FooterBar.vue'
 import { columnKey, dedupeStationRows, query } from './utils.js'
 
@@ -20,7 +21,7 @@ const selectedIndex = ref(-1)
 const selectedRow = computed(() => selectedIndex.value >= 0 ? rows.value[selectedIndex.value] : null)
 const lastVersion = ref(null)
 const ACTIVE_VIEW_STORAGE_KEY = 'marketscout.activeView'
-const VALID_VIEWS = new Set(['stations', 'jackpots', 'ledger', 'commodities', 'rare', 'analyze', 'carrier'])
+const VALID_VIEWS = new Set(['stations', 'jackpots', 'ledger', 'commodities', 'rare', 'analyze', 'carrier', 'config'])
 
 function loadStoredView() {
   try {
@@ -177,7 +178,15 @@ async function loadCarrierTradeAlert() {
   statusText.value = `Carrier trade announcements · ${new Date().toLocaleTimeString()}`
 }
 
+async function loadConfiguration() {
+  currentView.value = 'config'
+  rows.value = []
+  selectedIndex.value = -1
+  statusText.value = `Configuration · ${new Date().toLocaleTimeString()}`
+}
+
 function applyCurrentView() {
+  if (currentView.value === 'config') return loadConfiguration()
   if (currentView.value === 'carrier') return loadCarrierTradeAlert()
   if (currentView.value === 'analyze') return loadAnalyzeCommodities()
   if (currentView.value === 'commodities') return loadCommodityStats()
@@ -449,6 +458,9 @@ onUnmounted(() => {
         />
         <CarrierTradeAlertView
           v-else-if="currentView === 'carrier'"
+        />
+        <ConfigurationView
+          v-else-if="currentView === 'config'"
         />
       </section>
 

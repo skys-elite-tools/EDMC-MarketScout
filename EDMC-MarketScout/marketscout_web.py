@@ -10,6 +10,7 @@ import json
 import math
 import mimetypes
 import os
+import socket
 import sqlite3
 import threading
 import traceback
@@ -73,6 +74,33 @@ def load_web_config(plugin_dir: str) -> Dict[str, Any]:
     except (TypeError, ValueError):
         bind_port = DEFAULT_BIND_PORT
     return {"bind_address": bind_address, "bind_port": bind_port}
+
+
+def save_web_config(plugin_dir: str, bind_address: str, bind_port: int) -> Dict[str, Any]:
+    path = os.path.join(plugin_dir, CONFIG_FILE)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(f"app.bind_address={bind_address}\n")
+        f.write(f"app.bind_port={bind_port}\n")
+    return {"bind_address": bind_address, "bind_port": bind_port}
+
+
+def detected_bind_addresses() -> List[str]:
+    addresses = ["127.0.0.1", "localhost"]
+    seen = set(addresses)
+    try:
+        host = socket.gethostname()
+        for value in socket.gethostbyname_ex(host)[2]:
+            if value and value not in seen:
+                addresses.append(value)
+                seen.add(value)
+        for info in socket.getaddrinfo(host, None, socket.AF_INET, socket.SOCK_STREAM):
+            value = info[4][0]
+            if value and value not in seen:
+                addresses.append(value)
+                seen.add(value)
+    except Exception:
+        pass
+    return addresses
 
 
 def start_server(plugin_dir: str, db_path: str, target_commodities: List[str], primary_metals: List[str]) -> int:
@@ -163,6 +191,8 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
                 return self.send_json(api_commodities())
             if path == "/api/settings":
                 return self.send_json(api_settings())
+            if path == "/api/config":
+                return self.send_json(api_config())
             return self.serve_static(path)
         except Exception as exc:
             log_web_exception(exc)
@@ -183,6 +213,8 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
                 return self.send_json(api_save_economy_preset(payload))
             if parsed.path == "/api/analyze-commodities":
                 return self.send_json(api_analyze_commodities(payload))
+            if parsed.path == "/api/config":
+                return self.send_json(api_save_config(payload))
             self.send_error(404)
         except Exception as exc:
             log_web_exception(exc)
@@ -342,6 +374,57 @@ def api_settings() -> Dict[str, Any]:
             "watched_columns": watched_columns(conn),
             "best_buy_ignore_commodities": best_buy_ignore_commodities(conn),
         }
+
+
+def api_config() -> Dict[str, Any]:
+    plugin_dir = _CONTEXT.get("plugin_dir") or os.getcwd()
+    config = load_web_config(plugin_dir)
+    suggestions = detected_bind_addresses()
+    if config["bind_address"] not in suggestions:
+        suggestions.append(config["bind_address"])
+    return {
+        "ok": True,
+        "config": config,
+        "active": {
+            "bind_address": _BIND_ADDRESS,
+            "bind_port": _PORT,
+            "url": server_url(),
+        },
+        "defaults": {
+            "bind_address": DEFAULT_BIND_ADDRESS,
+            "bind_port": DEFAULT_BIND_PORT,
+        },
+        "suggested_bind_addresses": suggestions,
+        "config_file": CONFIG_FILE,
+        "mdns": {
+            "available": False,
+            "name": "marketscout.local",
+            "message": "mDNS advertising is not enabled in this beta. It needs a reliable Zeroconf/mDNS implementation.",
+        },
+    }
+
+
+def api_save_config(payload: Dict[str, Any]) -> Dict[str, Any]:
+    bind_address = str(payload.get("bind_address") or "").strip()
+    if not bind_address or any(ch.isspace() for ch in bind_address) or "/" in bind_address:
+        return {"ok": False, "error": "Invalid bind address"}
+    try:
+        bind_port = int(payload.get("bind_port"))
+        if bind_port < 1 or bind_port > 65535:
+            raise ValueError
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "Port must be a number from 1 to 65535"}
+
+    plugin_dir = _CONTEXT.get("plugin_dir") or os.getcwd()
+    config = save_web_config(plugin_dir, bind_address, bind_port)
+    restart_required = bind_address != _BIND_ADDRESS or bind_port != _PORT
+    return {
+        "ok": True,
+        "config": config,
+        "restart_required": restart_required,
+        "message": "Saved. Restart EDMC to apply the listening address or port." if restart_required else "Saved.",
+    }
+
 
 def api_save_settings(payload: Dict[str, Any]) -> Dict[str, Any]:
     with connect() as conn:

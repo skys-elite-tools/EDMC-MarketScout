@@ -40,6 +40,10 @@ app.bind_port=40595
 
 The fixed default port keeps browser localStorage state, such as Carrier Trade Announcements layouts, available across EDMC/browser restarts. Users may edit this file if they need a different local address or port. Restart EDMC after changing it.
 
+The Web UI also has a `Config` page at the end of the top navigation. It can edit the same listen address and port, with quick-fill options for `127.0.0.1`, `localhost`, and detected local IPv4 addresses. It also shows a QR code for the currently selected address/port so another same-network device can open the UI more easily. Restart EDMC after saving address/port changes.
+
+Keep `127.0.0.1` if you want MarketScout reachable only from this computer. Binding to a LAN IP can make the Web UI reachable from other devices on your local network.
+
 ## Install
 
 1. In EDMC, open `File` > `Settings` > `Plugins` > `Open`.

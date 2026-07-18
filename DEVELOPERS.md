@@ -69,6 +69,7 @@ Current top-level Web UI views are:
 - Rare Commodities
 - Analyze Commodities
 - Carrier Trade Announcements
+- Config
 
 Browser-only personal state uses localStorage for convenience, including the active view, Analyze Commodities pasted input, and Carrier Trade Announcements drafts/custom text layouts.
 
@@ -94,6 +95,7 @@ After backend or Web UI changes:
    - Rare Commodities
    - Analyze Commodities
    - Carrier Trade Announcements
+   - Config
    - Commodities settings
    - Best Buy ignore list
 6. If market data is involved, dock/open a market or use a known `Market.json` test case.

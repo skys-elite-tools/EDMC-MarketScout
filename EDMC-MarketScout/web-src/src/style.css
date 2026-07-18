@@ -49,6 +49,15 @@ h1 { margin: 0; font-size: 20px; }
 .subtitle { margin: 2px 0 0; color: var(--muted); }
 .mainNav { display: flex; gap: 6px; flex-wrap: wrap; }
 .mainNav button.active { border-color: var(--accent); background: #304761; color: white; }
+.mainNav .navLinkButton {
+  border-color: transparent;
+  background: transparent;
+  color: var(--accent);
+}
+.mainNav .navLinkButton.active {
+  border-color: rgba(140,200,255,.55);
+  background: rgba(140,200,255,.1);
+}
 .topLinks, .footerLinks { display: flex; gap: 12px; align-items: center; color: var(--muted); }
 .hiddenFutureLink { display: none; }
 .viewControls {
@@ -410,6 +419,118 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 }
 .analysisRareTable th:nth-child(1) { min-width: 10rem; }
 .analysisRareTable th:nth-child(3) { min-width: 10rem; }
+.configurationView {
+  padding: 12px 16px 18px;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  max-width: 58rem;
+}
+.configurationPanel {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px;
+  margin: 0;
+  background: rgba(255,255,255,.025);
+}
+.configurationPanel legend {
+  color: var(--accent2);
+  font-weight: 900;
+  padding: 0 4px;
+}
+.configurationIntro {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+.configurationIntro p,
+.configurationPanel p {
+  margin: 0;
+  color: var(--muted);
+}
+.configurationIntro strong,
+.configurationPanel strong {
+  color: var(--text);
+}
+.configurationGrid {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) minmax(8rem, 12rem);
+  gap: 10px;
+  align-items: end;
+}
+.configurationGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.suggestedAddresses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 10px;
+}
+.suggestedAddresses span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+.suggestedAddresses button {
+  padding: 4px 8px;
+}
+.configurationActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+}
+.configStatus {
+  color: #9ff0d4;
+}
+.configError {
+  color: #ff9f9f;
+}
+.qrSharePanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+.qrSharePanel h3 {
+  margin: 0 0 6px;
+  color: var(--accent);
+  font-size: 14px;
+}
+.qrSharePanel p {
+  margin: 0 0 8px;
+}
+.shareUrl {
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-weight: 800;
+}
+.qrCode {
+  display: grid;
+  grid-template-columns: repeat(var(--qr-size), 1fr);
+  width: 11rem;
+  aspect-ratio: 1;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: white;
+}
+.qrCode span {
+  background: white;
+}
+.qrCode span.on {
+  background: #05080d;
+}
 .carrierTradeAlert {
   --carrier-preview-width: 36rem;
   padding: 12px 16px 18px;
@@ -935,6 +1056,8 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   .carrierTradeAlert,
   .carrierFormGrid,
   .carrierImageTools,
+  .configurationGrid,
+  .qrSharePanel,
   .announcementBox,
   .templateEditorGrid { grid-template-columns: 1fr; }
   .carrierImageStage,
