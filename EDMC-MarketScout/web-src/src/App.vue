@@ -174,7 +174,7 @@ async function loadCarrierTradeAlert() {
   currentView.value = 'carrier'
   rows.value = []
   selectedIndex.value = -1
-  statusText.value = `Carrier trade alert · ${new Date().toLocaleTimeString()}`
+  statusText.value = `Carrier trade announcements · ${new Date().toLocaleTimeString()}`
 }
 
 function applyCurrentView() {

@@ -119,7 +119,7 @@ Current views:
 - `Commodities`: commodity global stats from `commodity_global_stats`, sortable by commodity/category/max profit.
 - `Rare Commodities`: rare commodity reference table with engineering-only filtering, usual supply sorting, current-position distance, engineer unlock labels, and carrier-sale profit estimates based on 100x galactic average.
 - `Analyze Commodities`: paste a comma-separated commodity list and split matches into regular and rare commodity tables. The last pasted list is stored in browser localStorage.
-- `Carrier Trade Alert`: Fleet Carrier trade advertisement builder with editable form data, image upload, draggable text layers, downloadable PNG/JPG output, and copyable Discord/Reddit announcement text.
+- `Carrier Trade Announcements`: Fleet Carrier trade advertisement builder with editable form data, image upload, draggable text layers, downloadable PNG/JPG output, and copyable Discord/Reddit announcement text.
 
 The Python local web server provides JSON endpoints; Vue should not know about SQLite directly.
 
@@ -129,14 +129,14 @@ Several purely personal UI preferences are stored in browser localStorage, not S
 
 - `marketscout.activeView`: currently selected top-level Web UI view, restored after browser refresh.
 - `marketscout.analyzeCommodities.text`: last Analyze Commodities pasted list.
-- `marketscout.carrierTradeAlert.draft`: Carrier Trade Alert form values, text color, active layout, text positions/font sizes, and uploaded image data URL.
-- `marketscout.carrierTradeAlert.layouts`: user-saved Carrier Trade Alert text layouts.
+- `marketscout.carrierTradeAlert.draft`: Carrier Trade Announcements form values, text color, active layout, text positions/font sizes, and uploaded image data URL.
+- `marketscout.carrierTradeAlert.layouts`: user-saved Carrier Trade Announcements text layouts.
 
 These values are local browser convenience state only. They should not be uploaded or treated as shared project data.
 
-### Carrier Trade Alert details
+### Carrier Trade Announcements details
 
-Carrier Trade Alert intentionally has no backend persistence and no network integration. It is a local image/text generator:
+Carrier Trade Announcements intentionally has no backend persistence and no network integration. It is a local image/text generator:
 
 - The preview uses a 4:3 / 1200x900 target ratio for Reddit-friendly image output.
 - Users can upload a custom image; the uploaded image is stored in localStorage as a data URL as part of the draft when browser quota allows.
@@ -147,7 +147,7 @@ Carrier Trade Alert intentionally has no backend persistence and no network inte
 - The standard announcement text changes wording by trade type: Loading uses `from`, `/ton profit`, and `tons`; Unloading uses `to`, `/unit profit`, and `units`.
 - Announcement outputs are shown as natural-height output panels with a distinct output accent, not read-only textareas.
 - The custom announcement output has a generated title and body with separate copy buttons. Both title and body are generated from user-editable token templates sharing the same token list. Tokens include `commodity`, carrier/trade station fields, `buying_selling`, `loading_unloading`, `from_to`, `carrier_trade_operation_from_to`, `station_trade_operation_from_to`, station type, planetary-only station type variants, profit, profit-thousand/profit-k, quantity, and quantity-thousand/quantity-k. `[profit]` and `[quantity]` preserve exactly what the user typed. `_k` variants replace optional separator plus three zeroes with `k`; `_thousand` variants replace `k` with `.000` without adding `.000` when no `k` exists. Double-bracketed tokens intentionally leave one visible bracket pair, e.g. `[[carrier_id]]` -> `[ABC-123]`.
-- Custom announcement title/body templates are persisted in the Carrier Trade Alert draft and are also saved/restored with custom text layouts.
+- Custom announcement title/body templates are persisted in the Carrier Trade Announcements draft and are also saved/restored with custom text layouts.
 - Downloads render the current image and text layer positions into PNG or JPG client-side.
 
 ### Economy filter presets
@@ -391,7 +391,7 @@ Including `.git/` is useful if the archive stays reasonably small.
 
 ## Current baseline note
 
-As of the Carrier Trade Alert profit-label option, the current relevant committed baseline is:
+As of the Carrier Trade Announcements profit-label option, the current relevant committed baseline is:
 
 ```text
 51f042f feat: ability to exclude the word profit from the image

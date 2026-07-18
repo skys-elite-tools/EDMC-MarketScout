@@ -10,13 +10,13 @@ Local-only EDMarketConnector plugin for scouting station market/BGS conditions, 
 - Stores commodity market prices from EDMC CAPI data when available, with a local `Market.json` fallback.
 - Stores everything locally in `marketscout.sqlite3` inside the plugin folder.
 - Opens a local browser Web UI served from `127.0.0.1`.
-- Shows Stations, Jackpots, Ledger, Commodities, Rare Commodities, Analyze Commodities, and Carrier Trade Alert views.
+- Shows Stations, Jackpots, Ledger, Commodities, Rare Commodities, Analyze Commodities, and Carrier Trade Announcements views.
 - Supports watched commodity columns and a Best Buy ignore list.
 - Imports candidate stations from supported CSV exports, currently Spansh station-search CSVs.
 - Imports maintained rawdata CSV files for commodity stats, rare commodities, engineer unlock requirements, and relevant system coordinates.
 - Tracks row/source metadata such as `local_visit` or `spansh`.
 - Can hide Fleet Carrier rows by default with an `Include fleet carriers` checkbox.
-- Provides a local Fleet Carrier trade alert image/text generator with downloadable PNG/JPG output.
+- Provides a local Fleet Carrier trade announcement image/text generator with downloadable PNG/JPG output.
 
 ## Privacy
 
@@ -38,7 +38,7 @@ app.bind_address=127.0.0.1
 app.bind_port=40595
 ```
 
-The fixed default port keeps browser localStorage state, such as Carrier Trade Alert layouts, available across EDMC/browser restarts. Users may edit this file if they need a different local address or port. Restart EDMC after changing it.
+The fixed default port keeps browser localStorage state, such as Carrier Trade Announcements layouts, available across EDMC/browser restarts. Users may edit this file if they need a different local address or port. Restart EDMC after changing it.
 
 ## Install
 
@@ -83,7 +83,7 @@ The helper scripts for regenerating these files live under `local-tools/` in the
 - `Commodities`: global commodity stats.
 - `Rare Commodities`: rare commodity source table with engineering unlock labels, usual supply, distance, and 100x galactic-average carrier-sale estimates.
 - `Analyze Commodities`: paste a comma-separated commodity list and split matches into regular and rare commodity tables.
-- `Carrier Trade Alert`: create local Fleet Carrier trade announcements with draggable on-image text and copyable Discord/Reddit text.
+- `Carrier Trade Announcements`: create local Fleet Carrier trade announcements with draggable on-image text and copyable Discord/Reddit text.
 
 ## Version
 
@@ -187,9 +187,9 @@ The Web UI includes a `Jackpot History` button that displays the stored samples.
 - MarketScout imports `rawdata/systems_data.csv` into `systems_data` on startup when the file SHA-256 changes.
 - Journal events with `StarPos` also upsert coordinates into `systems_data`; the existing `systems` table remains for visited/candidate system records.
 
-## Carrier Trade Alert
+## Carrier Trade Announcements
 
-- The Carrier Trade Alert Web UI state is stored in browser localStorage, including form values, active page, uploaded image data URL when storage quota allows, and saved text layouts.
+- The Carrier Trade Announcements Web UI state is stored in browser localStorage, including form values, active page, uploaded image data URL when storage quota allows, and saved text layouts.
 - Built-in text layouts are protected from overwrite; custom layouts can be saved, updated, selected, and deleted locally.
 - The image generator is client-side only and does not upload images or announcements.
 

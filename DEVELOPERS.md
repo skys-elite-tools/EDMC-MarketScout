@@ -68,9 +68,9 @@ Current top-level Web UI views are:
 - Commodities
 - Rare Commodities
 - Analyze Commodities
-- Carrier Trade Alert
+- Carrier Trade Announcements
 
-Browser-only personal state uses localStorage for convenience, including the active view, Analyze Commodities pasted input, and Carrier Trade Alert drafts/custom text layouts.
+Browser-only personal state uses localStorage for convenience, including the active view, Analyze Commodities pasted input, and Carrier Trade Announcements drafts/custom text layouts.
 
 ## Python backend development
 
@@ -93,12 +93,12 @@ After backend or Web UI changes:
    - Commodities
    - Rare Commodities
    - Analyze Commodities
-   - Carrier Trade Alert
+   - Carrier Trade Announcements
    - Commodities settings
    - Best Buy ignore list
 6. If market data is involved, dock/open a market or use a known `Market.json` test case.
 
-For Carrier Trade Alert changes, verify:
+For Carrier Trade Announcements changes, verify:
 
 - form edits update the image text and announcement text
 - uploaded image preview persists after refresh when localStorage quota allows
