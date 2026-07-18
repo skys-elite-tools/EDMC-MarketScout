@@ -134,7 +134,11 @@ const layerText = computed(() => ({
 }))
 
 const announcement = computed(() => {
-  return `**${form.value.carrierName || 'Carrier Name'} (${form.value.carrierId || 'Carrier ID'})** is ${tradeTypeLower.value} **${form.value.commodity || 'Commodity'}** from **${form.value.station || 'Station'}** (${padLetter.value}-pads) in **${form.value.system || 'System'}**. **${adValue(form.value.profit)}**/ton profit, **${adValue(form.value.quantity)}** tons.`
+  const direction = tradeTypeLower.value === 'unloading' ? 'to' : 'from'
+  const padText = tradeTypeLower.value === 'unloading' ? `${padLetter.value} pads` : `${padLetter.value}-pads`
+  const profitUnit = tradeTypeLower.value === 'unloading' ? 'unit' : 'ton'
+  const quantityUnit = tradeTypeLower.value === 'unloading' ? 'units' : 'tons'
+  return `**${form.value.carrierName || 'Carrier Name'} (${form.value.carrierId || 'Carrier ID'})** is ${tradeTypeLower.value} **${form.value.commodity || 'Commodity'}** ${direction} **${form.value.station || 'Station'}** (${padText}) in **${form.value.system || 'System'}**. **${adValue(form.value.profit)}**/${profitUnit} profit, **${adValue(form.value.quantity)}** ${quantityUnit}.`
 })
 
 const classicLayers = [
