@@ -170,7 +170,8 @@ def plugin_app(parent: Any) -> Any:
     from tkinter import ttk
 
     frame = ttk.Frame(parent)
-    ttk.Button(frame, text="MarketScout", command=open_modern_ui).pack(side="left")
+    frame.pack_propagate(True)
+    ttk.Button(frame, text="MarketScout", command=open_modern_ui).pack(fill="x", expand=True)
     return frame
 
 
@@ -1635,4 +1636,3 @@ def log_exception(where: str) -> None:
             f.write("\n")
     except Exception:
         pass
-
