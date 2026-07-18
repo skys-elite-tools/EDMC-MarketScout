@@ -36,13 +36,15 @@ On startup, MarketScout creates `marketscout.config` in the plugin folder if it 
 ```ini
 app.bind_address=127.0.0.1
 app.bind_port=40595
+app.lan_enabled=0
+app.lan_bind_address=
 ```
 
-The fixed default port keeps browser localStorage state, such as Carrier Trade Announcements layouts, available across EDMC/browser restarts. Users may edit this file if they need a different local address or port. Restart EDMC after changing it.
+MarketScout always listens on `127.0.0.1` for same-computer access. The fixed default port keeps browser localStorage state, such as Carrier Trade Announcements layouts, available across EDMC/browser restarts. Users may edit this file if they need a different port or want to enable an additional LAN listener. Restart EDMC after changing it.
 
-The Web UI also has a `Config` page at the end of the top navigation. It can edit the same listen address and port, with quick-fill options for `127.0.0.1`, `localhost`, and detected local IPv4 addresses. It also shows a QR code for the currently selected address/port so another same-network device can open the UI more easily. Restart EDMC after saving address/port changes.
+The Web UI also has a `Config` page at the end of the top navigation. It can edit the same port and optional LAN listener, with quick-fill options for `127.0.0.1`, `localhost`, and detected local IPv4 addresses. It shows a QR code only when LAN access is enabled with a shareable IPv4 address, so another same-network device can open the UI more easily. Restart EDMC after saving listening changes.
 
-Keep `127.0.0.1` if you want MarketScout reachable only from this computer. Binding to a LAN IP can make the Web UI reachable from other devices on your local network.
+Keep `app.lan_enabled=0` if you want MarketScout reachable only from this computer. Enabling LAN access can make the Web UI reachable from other devices on your local network.
 
 ## Install
 

@@ -48,11 +48,13 @@ MarketScout creates `marketscout.config` in the plugin folder on startup if it d
 ```ini
 app.bind_address=127.0.0.1
 app.bind_port=40595
+app.lan_enabled=0
+app.lan_bind_address=
 ```
 
-The fixed default port is intentional so browser localStorage state remains available across restarts. Users can edit the config and restart EDMC to use a different address/port.
+MarketScout always starts a local listener on `127.0.0.1`. The fixed default port is intentional so browser localStorage state remains available across restarts. Users can edit the config and restart EDMC to use a different port or to enable an additional LAN listener.
 
-The Web UI exposes these values in the top-menu `Config` page. Suggested bind addresses include `127.0.0.1`, `localhost`, and locally detected IPv4 addresses. The Config page also generates a local QR code for the currently shown address/port to make opening the UI from another same-network device easier. Changing the listen address or port requires restarting EDMC because the HTTP server socket is already bound. mDNS advertising as `marketscout.local` is not enabled for beta; doing it reliably should use a real Zeroconf/mDNS implementation rather than a hand-rolled shortcut.
+The Web UI exposes these values in the top-menu `Config` page. Suggested LAN addresses include `127.0.0.1`, `localhost`, and locally detected IPv4 addresses, but QR sharing is shown only for enabled non-loopback IPv4 LAN addresses. Changing the listen port or LAN settings requires restarting EDMC because the HTTP server socket is already bound. mDNS advertising as `marketscout.local` is not enabled for beta; doing it reliably should use a real Zeroconf/mDNS implementation rather than a hand-rolled shortcut.
 
 ## Repository structure
 

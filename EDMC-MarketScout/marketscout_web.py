@@ -10,6 +10,7 @@ import json
 import math
 import mimetypes
 import os
+import ipaddress
 import socket
 import sqlite3
 import threading
@@ -19,10 +20,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
-_SERVER: Optional[ThreadingHTTPServer] = None
-_THREAD: Optional[threading.Thread] = None
+_SERVERS: List[ThreadingHTTPServer] = []
+_THREADS: List[threading.Thread] = []
 _PORT: Optional[int] = None
 _BIND_ADDRESS = "127.0.0.1"
+_LAN_BIND_ADDRESS = ""
+_LAN_PORT: Optional[int] = None
+_LAN_ENABLED = False
 _CONTEXT: Dict[str, Any] = {}
 _LATEST_JOURNAL_EVENT: Optional[Dict[str, Any]] = None
 ECONOMY_PRESETS_FILE = "marketscout-economy-presets.json"
@@ -50,6 +54,8 @@ def load_web_config(plugin_dir: str) -> Dict[str, Any]:
     defaults = {
         "app.bind_address": DEFAULT_BIND_ADDRESS,
         "app.bind_port": str(DEFAULT_BIND_PORT),
+        "app.lan_enabled": "0",
+        "app.lan_bind_address": "",
     }
     if not os.path.exists(path):
         with open(path, "w", encoding="utf-8") as f:
@@ -66,22 +72,54 @@ def load_web_config(plugin_dir: str) -> Dict[str, Any]:
                 key, value = line.split("=", 1)
                 raw[key.strip()] = value.strip()
 
-    bind_address = raw.get("app.bind_address") or DEFAULT_BIND_ADDRESS
+    bind_address = DEFAULT_BIND_ADDRESS
+    legacy_bind_address = raw.get("app.bind_address") or DEFAULT_BIND_ADDRESS
+    lan_bind_address = raw.get("app.lan_bind_address") or ""
+    lan_enabled = str(raw.get("app.lan_enabled") or "0").strip().lower() in {"1", "true", "yes", "on"}
+    if legacy_bind_address not in {DEFAULT_BIND_ADDRESS, "localhost"} and not lan_bind_address:
+        lan_bind_address = legacy_bind_address
+        lan_enabled = True
     try:
         bind_port = int(raw.get("app.bind_port") or DEFAULT_BIND_PORT)
         if bind_port < 1 or bind_port > 65535:
             raise ValueError
     except (TypeError, ValueError):
         bind_port = DEFAULT_BIND_PORT
-    return {"bind_address": bind_address, "bind_port": bind_port}
+    return {
+        "bind_address": bind_address,
+        "bind_port": bind_port,
+        "lan_enabled": lan_enabled,
+        "lan_bind_address": lan_bind_address,
+    }
 
 
-def save_web_config(plugin_dir: str, bind_address: str, bind_port: int) -> Dict[str, Any]:
+def save_web_config(plugin_dir: str, bind_port: int, lan_enabled: bool = False, lan_bind_address: str = "") -> Dict[str, Any]:
     path = os.path.join(plugin_dir, CONFIG_FILE)
     with open(path, "w", encoding="utf-8") as f:
-        f.write(f"app.bind_address={bind_address}\n")
+        f.write(f"app.bind_address={DEFAULT_BIND_ADDRESS}\n")
         f.write(f"app.bind_port={bind_port}\n")
-    return {"bind_address": bind_address, "bind_port": bind_port}
+        f.write(f"app.lan_enabled={1 if lan_enabled else 0}\n")
+        f.write(f"app.lan_bind_address={lan_bind_address}\n")
+    return {
+        "bind_address": DEFAULT_BIND_ADDRESS,
+        "bind_port": bind_port,
+        "lan_enabled": lan_enabled,
+        "lan_bind_address": lan_bind_address,
+    }
+
+
+def is_shareable_ipv4(value: str) -> bool:
+    try:
+        address = ipaddress.ip_address(str(value or "").strip())
+    except ValueError:
+        return False
+    return (
+        address.version == 4
+        and not address.is_loopback
+        and not address.is_link_local
+        and not address.is_multicast
+        and not address.is_unspecified
+    )
 
 
 def detected_bind_addresses() -> List[str]:
@@ -126,12 +164,14 @@ def detected_bind_addresses() -> List[str]:
 
 def start_server(plugin_dir: str, db_path: str, target_commodities: List[str], primary_metals: List[str]) -> int:
     """Start the local web server if needed and return its port."""
-    global _SERVER, _THREAD, _PORT, _BIND_ADDRESS, _CONTEXT
-    if _SERVER is not None and _PORT is not None:
+    global _SERVERS, _THREADS, _PORT, _BIND_ADDRESS, _LAN_BIND_ADDRESS, _LAN_PORT, _LAN_ENABLED, _CONTEXT
+    if _SERVERS and _PORT is not None:
         return _PORT
 
     web_config = load_web_config(plugin_dir)
-    _BIND_ADDRESS = str(web_config["bind_address"])
+    _BIND_ADDRESS = DEFAULT_BIND_ADDRESS
+    _LAN_BIND_ADDRESS = str(web_config.get("lan_bind_address") or "").strip()
+    _LAN_ENABLED = bool(web_config.get("lan_enabled")) and is_shareable_ipv4(_LAN_BIND_ADDRESS)
     _CONTEXT = {
         "plugin_dir": plugin_dir,
         "web_dir": os.path.join(plugin_dir, "web"),
@@ -139,34 +179,59 @@ def start_server(plugin_dir: str, db_path: str, target_commodities: List[str], p
         "target_commodities": list(target_commodities),
         "primary_metals": list(primary_metals),
         "web_config": dict(web_config),
+        "lan_error": "",
     }
 
-    server = ThreadingHTTPServer((_BIND_ADDRESS, int(web_config["bind_port"])), MarketScoutRequestHandler)
+    bind_port = int(web_config["bind_port"])
+    server = ThreadingHTTPServer((_BIND_ADDRESS, bind_port), MarketScoutRequestHandler)
     server.daemon_threads = True
     _PORT = int(server.server_address[1])
-    _SERVER = server
-    _THREAD = threading.Thread(target=server.serve_forever, name="MarketScoutWeb", daemon=True)
-    _THREAD.start()
+    _SERVERS.append(server)
+    thread = threading.Thread(target=server.serve_forever, name="MarketScoutWebLocal", daemon=True)
+    _THREADS.append(thread)
+    thread.start()
+
+    if _LAN_ENABLED:
+        try:
+            lan_server = ThreadingHTTPServer((_LAN_BIND_ADDRESS, bind_port), MarketScoutRequestHandler)
+            lan_server.daemon_threads = True
+            _LAN_PORT = int(lan_server.server_address[1])
+            _SERVERS.append(lan_server)
+            lan_thread = threading.Thread(target=lan_server.serve_forever, name="MarketScoutWebLan", daemon=True)
+            _THREADS.append(lan_thread)
+            lan_thread.start()
+        except Exception as exc:
+            _LAN_ENABLED = False
+            _LAN_PORT = None
+            _CONTEXT["lan_error"] = str(exc)
     return _PORT
 
 
 def stop_server() -> None:
-    global _SERVER, _THREAD, _PORT
-    if _SERVER is not None:
+    global _SERVERS, _THREADS, _PORT, _LAN_PORT, _LAN_ENABLED
+    for server in _SERVERS:
         try:
-            _SERVER.shutdown()
-            _SERVER.server_close()
+            server.shutdown()
+            server.server_close()
         except Exception:
             pass
-    _SERVER = None
-    _THREAD = None
+    _SERVERS = []
+    _THREADS = []
     _PORT = None
+    _LAN_PORT = None
+    _LAN_ENABLED = False
 
 
 def server_url() -> Optional[str]:
     if _PORT is None:
         return None
     return f"http://{_BIND_ADDRESS}:{_PORT}/"
+
+
+def lan_server_url() -> Optional[str]:
+    if not _LAN_ENABLED or not _LAN_BIND_ADDRESS or _LAN_PORT is None:
+        return None
+    return f"http://{_LAN_BIND_ADDRESS}:{_LAN_PORT}/"
 
 
 def update_latest_journal_event(event: Dict[str, Any]) -> None:
@@ -401,8 +466,8 @@ def api_config() -> Dict[str, Any]:
     plugin_dir = _CONTEXT.get("plugin_dir") or os.getcwd()
     config = load_web_config(plugin_dir)
     suggestions = detected_bind_addresses()
-    if config["bind_address"] not in suggestions:
-        suggestions.append(config["bind_address"])
+    if config.get("lan_bind_address") and config["lan_bind_address"] not in suggestions:
+        suggestions.append(config["lan_bind_address"])
     return {
         "ok": True,
         "config": config,
@@ -410,10 +475,16 @@ def api_config() -> Dict[str, Any]:
             "bind_address": _BIND_ADDRESS,
             "bind_port": _PORT,
             "url": server_url(),
+            "lan_enabled": _LAN_ENABLED,
+            "lan_bind_address": _LAN_BIND_ADDRESS,
+            "lan_url": lan_server_url(),
+            "lan_error": _CONTEXT.get("lan_error") or "",
         },
         "defaults": {
             "bind_address": DEFAULT_BIND_ADDRESS,
             "bind_port": DEFAULT_BIND_PORT,
+            "lan_enabled": False,
+            "lan_bind_address": "",
         },
         "suggested_bind_addresses": suggestions,
         "config_file": CONFIG_FILE,
@@ -426,9 +497,12 @@ def api_config() -> Dict[str, Any]:
 
 
 def api_save_config(payload: Dict[str, Any]) -> Dict[str, Any]:
-    bind_address = str(payload.get("bind_address") or "").strip()
-    if not bind_address or any(ch.isspace() for ch in bind_address) or "/" in bind_address:
-        return {"ok": False, "error": "Invalid bind address"}
+    lan_enabled = bool(payload.get("lan_enabled"))
+    lan_bind_address = str(payload.get("lan_bind_address") or "").strip()
+    if lan_bind_address and (any(ch.isspace() for ch in lan_bind_address) or "/" in lan_bind_address):
+        return {"ok": False, "error": "Invalid LAN address"}
+    if lan_enabled and not is_shareable_ipv4(lan_bind_address):
+        return {"ok": False, "error": "LAN sharing needs a non-loopback IPv4 address"}
     try:
         bind_port = int(payload.get("bind_port"))
         if bind_port < 1 or bind_port > 65535:
@@ -437,13 +511,17 @@ def api_save_config(payload: Dict[str, Any]) -> Dict[str, Any]:
         return {"ok": False, "error": "Port must be a number from 1 to 65535"}
 
     plugin_dir = _CONTEXT.get("plugin_dir") or os.getcwd()
-    config = save_web_config(plugin_dir, bind_address, bind_port)
-    restart_required = bind_address != _BIND_ADDRESS or bind_port != _PORT
+    config = save_web_config(plugin_dir, bind_port, lan_enabled, lan_bind_address)
+    restart_required = (
+        bind_port != _PORT
+        or lan_enabled != _LAN_ENABLED
+        or (lan_bind_address if lan_enabled else "") != (_LAN_BIND_ADDRESS if _LAN_ENABLED else "")
+    )
     return {
         "ok": True,
         "config": config,
         "restart_required": restart_required,
-        "message": "Saved. Restart EDMC to apply the listening address or port." if restart_required else "Saved.",
+        "message": "Saved. Restart EDMC to apply the listening configuration." if restart_required else "Saved.",
     }
 
 

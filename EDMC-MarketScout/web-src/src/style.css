@@ -465,6 +465,16 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   color: var(--muted);
   font-size: 12px;
 }
+.configurationGrid label.configCheckbox {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 2rem;
+}
+.configurationGrid label.configCheckbox input {
+  width: auto;
+}
 .suggestedAddresses {
   display: flex;
   flex-wrap: wrap;
