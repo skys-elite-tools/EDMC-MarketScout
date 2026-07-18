@@ -33,10 +33,10 @@ a:hover { text-decoration: underline; }
 }
 .brandBlock { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .appLogo {
-  width: 38px;
-  height: 38px;
+  width: 52px;
+  height: 52px;
   object-fit: cover;
-  border-radius: 10px;
+  border-radius: 12px;
   display: block;
   box-shadow: 0 0 20px rgba(140, 200, 255, .18);
   flex: 0 0 auto;
@@ -44,31 +44,64 @@ a:hover { text-decoration: underline; }
 h1 { margin: 0; font-size: 20px; }
 .subtitle { margin: 2px 0 0; color: var(--muted); }
 .mainNav { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-.mainNav .navButton {
+.mainNav .navButton,
+.navMenuItem {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
-  padding: 7px 10px;
+  height: 46px;
+  padding: 0 10px 0 0;
   border-color: rgba(140,200,255,.28);
   background: rgba(38,49,66,.86);
   font-weight: 800;
+  overflow: hidden;
 }
-.mainNav .navButton:hover {
+.mainNav .navButton:hover,
+.navMenuItem:hover {
   border-color: rgba(140,200,255,.68);
   background: #304052;
 }
-.mainNav .navButton.active {
+.mainNav .navButton.active,
+.navMenuItem.active {
   border-color: var(--accent);
   background: #304761;
   color: white;
 }
 .navButtonIcon {
-  width: 26px;
-  height: 26px;
+  width: 46px;
+  height: 46px;
   object-fit: cover;
-  border-radius: 5px;
+  border-radius: 3px 0 0 3px;
   flex: 0 0 auto;
+}
+.navMenu {
+  position: relative;
+}
+.navMenuButton {
+  min-width: 12rem;
+}
+.navMenuArrow {
+  color: var(--accent);
+  margin-left: auto;
+  font-size: 13px;
+}
+.navMenuList {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 5px);
+  right: 0;
+  display: grid;
+  gap: 4px;
+  min-width: 14rem;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0b1016;
+  box-shadow: 0 12px 30px rgba(0,0,0,.35);
+}
+.navMenuItem {
+  width: 100%;
+  text-align: left;
 }
 .topLinks, .footerLinks { display: flex; gap: 12px; align-items: center; color: var(--muted); }
 .hiddenFutureLink { display: none; }
