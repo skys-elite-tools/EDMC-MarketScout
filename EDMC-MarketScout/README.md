@@ -217,3 +217,7 @@ Highlights:
 - Added fixed local web configuration with optional LAN access and QR-code sharing.
 - Added Stations page quality-of-life improvements, including visited System/Station suggestions, Clear filters, watched commodity settings, and a Best Buy ignore list.
 - Added release packaging support and bundled local rawdata imports for commodity stats, rare commodities, engineer unlocks, and relevant system coordinates.
+
+## 0.2.1 Beta notes
+
+0.2.1 fixes a Web UI view-switching bug where rows from a previously opened table, especially Ledger rows, could briefly leak into another table view such as Commodities. Table loads now clear stale rows immediately and ignore late responses from older view requests.
