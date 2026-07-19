@@ -176,6 +176,19 @@ PLUGIN_BACKUP_ARCHIVES_DIR=
 
 `.env` is intentionally ignored because it contains machine-local paths.
 
+## GitHub releases
+
+GitHub Actions builds and publishes a release automatically when a tag with the canonical release shape is pushed:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The workflow accepts only tags matching `vMAJOR.MINOR.PATCH`, such as `v0.1.0`. Semantic Versioning itself is `MAJOR.MINOR.PATCH`; the leading `v` is the common Git tag convention used by this project.
+
+The release workflow builds the Web UI, runs the Python syntax check, packages only the installable `EDMC-MarketScout/` plugin folder, and attaches `EDMC-MarketScout-vX.Y.Z.zip` to the GitHub Release.
+
 ## Git workflow
 
 Recommended baseline workflow:
