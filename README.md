@@ -83,6 +83,17 @@ Controls the local web address, port, optional LAN access, and QR code sharing f
 
 ![Config page showing local address, LAN access, and QR code sharing settings](presentation-assets/config.png)
 
+## Inspiration and Thanks
+
+The projects below are not affiliated with MarketScout in any way, but they were very helpful and inspirational in the creation of MarketScout:
+
+- [Elite:Dangerous Market Connector (EDMC)](https://github.com/EDCD/EDMarketConnector)
+- [Conshmea's ACO Trade Helper](https://conshmea.com/acoTradeHelper)
+- [Inara](https://inara.cz)
+- [Spansh](https://spansh.co.uk)
+- [EDDiscovery](https://github.com/EDDiscovery/EDDiscovery)
+- [The very helpful people in the P.T.N.](https://pilotstradenetwork.com/)
+
 ## Technicalities
 
 For a more technical README, see [EDMC-MarketScout/README.md](EDMC-MarketScout/README.md).
