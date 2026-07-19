@@ -20,6 +20,7 @@ const rows = ref([])
 const selectedIndex = ref(-1)
 const selectedRow = computed(() => selectedIndex.value >= 0 ? rows.value[selectedIndex.value] : null)
 const lastVersion = ref(null)
+let latestRowsRequestId = 0
 const ACTIVE_VIEW_STORAGE_KEY = 'marketscout.activeView'
 const VALID_VIEWS = new Set(['stations', 'jackpots', 'ledger', 'commodities', 'rare', 'analyze', 'carrier', 'config'])
 
@@ -114,33 +115,45 @@ function openHelp(article = '') {
   helpRequestId.value += 1
 }
 
+function beginRowsLoad(viewName) {
+  currentView.value = viewName
+  selectedIndex.value = -1
+  rows.value = []
+  latestRowsRequestId += 1
+  return latestRowsRequestId
+}
+
+function isActiveRowsLoad(viewName, requestId) {
+  return currentView.value === viewName && requestId === latestRowsRequestId
+}
+
 async function clearStationFilters() {
   filters.value = { ...DEFAULT_STATION_FILTERS }
   await loadStations()
 }
 
 async function loadStations() {
-  currentView.value = 'stations'
+  const requestId = beginRowsLoad('stations')
   const res = await fetch(`/api/stations?${query(stationParams())}`, { cache: 'no-store' })
   const data = await res.json()
+  if (!isActiveRowsLoad('stations', requestId)) return
   rows.value = dedupeStationRows(data.rows || [])
   displayColumns.value = data.display_columns || []
   watchedCommodities.value = data.watched_commodities || watchedCommodities.value
-  selectedIndex.value = -1
   statusText.value = `${rows.value.length} rows · ${new Date().toLocaleTimeString()}`
 }
 
 async function loadJackpots() {
-  currentView.value = 'jackpots'
+  const requestId = beginRowsLoad('jackpots')
   const res = await fetch(`/api/jackpots?limit=${encodeURIComponent(filters.value.limit || '500')}`, { cache: 'no-store' })
   const data = await res.json()
+  if (!isActiveRowsLoad('jackpots', requestId)) return
   rows.value = data.rows || []
-  selectedIndex.value = -1
   statusText.value = `${rows.value.length} jackpot samples · ${new Date().toLocaleTimeString()}`
 }
 
 async function loadLedger() {
-  currentView.value = 'ledger'
+  const requestId = beginRowsLoad('ledger')
   const params = {
     commodity: ledgerFilters.value.commodity || '',
     event_type: ledgerFilters.value.eventType || 'Any',
@@ -148,13 +161,13 @@ async function loadLedger() {
   }
   const res = await fetch(`/api/ledger?${query(params)}`, { cache: 'no-store' })
   const data = await res.json()
+  if (!isActiveRowsLoad('ledger', requestId)) return
   rows.value = data.rows || []
-  selectedIndex.value = -1
   statusText.value = `${rows.value.length} trades · ${new Date().toLocaleTimeString()}`
 }
 
 async function loadRareCommodities() {
-  currentView.value = 'rare'
+  const requestId = beginRowsLoad('rare')
   const params = {
     sort: rareFilters.value.sort || 'profit_desc',
     engineering_only: rareFilters.value.engineeringOnly ? '1' : '0',
@@ -162,41 +175,35 @@ async function loadRareCommodities() {
   }
   const res = await fetch(`/api/rare-commodities?${query(params)}`, { cache: 'no-store' })
   const data = await res.json()
+  if (!isActiveRowsLoad('rare', requestId)) return
   rows.value = data.rows || []
-  selectedIndex.value = -1
   statusText.value = `${rows.value.length} rare commodities · ${new Date().toLocaleTimeString()}`
 }
 
 async function loadCommodityStats() {
-  currentView.value = 'commodities'
+  const requestId = beginRowsLoad('commodities')
   const params = {
     sort: commodityFilters.value.sort || 'commodity_asc',
   }
   const res = await fetch(`/api/commodity-stats?${query(params)}`, { cache: 'no-store' })
   const data = await res.json()
+  if (!isActiveRowsLoad('commodities', requestId)) return
   rows.value = data.rows || []
-  selectedIndex.value = -1
   statusText.value = `${rows.value.length} commodities · ${new Date().toLocaleTimeString()}`
 }
 
 async function loadAnalyzeCommodities() {
-  currentView.value = 'analyze'
-  rows.value = []
-  selectedIndex.value = -1
+  beginRowsLoad('analyze')
   statusText.value = `Analyze commodities · ${new Date().toLocaleTimeString()}`
 }
 
 async function loadCarrierTradeAlert() {
-  currentView.value = 'carrier'
-  rows.value = []
-  selectedIndex.value = -1
+  beginRowsLoad('carrier')
   statusText.value = `Carrier trade announcements · ${new Date().toLocaleTimeString()}`
 }
 
 async function loadConfiguration() {
-  currentView.value = 'config'
-  rows.value = []
-  selectedIndex.value = -1
+  beginRowsLoad('config')
   statusText.value = `Configuration · ${new Date().toLocaleTimeString()}`
 }
 

@@ -19,7 +19,7 @@ defineProps({
       </tr>
     </thead>
     <tbody>
-      <tr v-for="row in rows" :key="row.commodity">
+      <tr v-for="(row, idx) in rows" :key="`${row.commodity || 'commodity'}-${idx}`">
         <td><div class="cellMain">{{ fmt(row.commodity) }}</div></td>
         <td>{{ fmt(row.category) }}</td>
         <td class="num">{{ money(row.min_buy) }}</td>
