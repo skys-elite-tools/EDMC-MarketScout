@@ -37,49 +37,51 @@ Watched Commodities control which commodity-specific columns are shown in the St
 
 The Best Buy ignore list excludes selected commodities from Best Buy calculations. This is useful for commodities that may look good mathematically but are not practical for your trading style, such as commodities that are difficult to sell near their galactic maximum.
 
-Screenshot placeholder: `presentation-assets/stations.png`
+![Stations page showing station filters, watched commodities, and best buy scouting data](presentation-assets/stations.png)
 
 ### Jackpots
 
 Tracks high-value jackpot opportunities over time, including samples that help show whether a deal is still healthy or fading.
 
-Screenshot placeholder: `presentation-assets/jackpots.png`
+![Jackpots page showing high-value market opportunities over time](presentation-assets/jackpots.png)
 
 ### Ledger
 
 Shows recorded buy and sell activity from the Journal, including profit context and optional LIFO details.
 
-Screenshot placeholder: `presentation-assets/ledger.png`
+![Ledger page showing recorded trade activity and profit context](presentation-assets/ledger.png)
 
 ### Commodities
 
 Lists imported commodity reference data, including category, min buy, average buy, max sell, and max profit.
 
-Screenshot placeholder: `presentation-assets/commodities.png`
+![Commodities page showing imported global commodity reference data](presentation-assets/commodities.png)
 
 ### Rare Commodities
 
 Lists rare commodity sources, usual supply, buy prices, engineering unlock relevance, and distance information when coordinates are available.
 
-Screenshot placeholder: `presentation-assets/rare-commodities.png`
+![Rare Commodities page showing rare commodity source data and route distances](presentation-assets/rare-commodities.png)
+
+![Rare Commodities page filtered to engineering unlock commodities](presentation-assets/rare-commodities-engineering.png)
 
 ### Analyze Commodities
 
 Paste a comma-separated commodity list and MarketScout splits detected entries into regular commodities and rare commodities.
 
-Screenshot placeholder: `presentation-assets/analyze-commodities.png`
+![Analyze Commodities page matching pasted commodity names against regular and rare commodity data](presentation-assets/analyze-commodities.png)
 
 ### Carrier Trade Announcements
 
 Creates Fleet Carrier trade announcements with generated share text, custom announcement templates, draggable on-image text, and PNG/JPG poster downloads.
 
-Screenshot placeholder: `presentation-assets/carrier-trade-announcements.png`
+![Carrier Trade Announcements page with poster image controls and generated announcement text](presentation-assets/carrier-trade-announcements.png)
 
 ### Config
 
 Controls the local web address, port, optional LAN access, and QR code sharing for opening MarketScout from another device on the same network.
 
-Screenshot placeholder: `presentation-assets/config.png`
+![Config page showing local address, LAN access, and QR code sharing settings](presentation-assets/config.png)
 
 ## Technicalities
 
