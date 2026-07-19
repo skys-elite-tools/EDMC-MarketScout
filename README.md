@@ -16,10 +16,12 @@ MarketScout is not affiliated with Elite Dangerous Market Connector, EDCD, or Fr
 
 1. Download the [latest release](../../releases/latest).
 2. Extract the downloaded zip.
-3. Copy the `EDMC-MarketScout` folder into your EDMC plugins folder.
+3. Copy the single `EDMC-MarketScout` folder from the zip into your EDMC plugins folder.
 4. To find the EDMC plugins folder, open EDMC, then go to `File` -> `Settings` -> `Plugins` and click `Open Plugins Directory`.
 5. Restart EDMC.
 6. Click the newly added `MarketScout` button in EDMC. Your browser will open MarketScout, and it can now assist with your Elite Dangerous trades.
+
+If you are cloning the repository for development instead of installing a release zip, the installable plugin is the inner `EDMC-MarketScout/` directory. The repository also contains maintainer tools, project notes, and other development files that should not be copied into EDMC's plugins directory.
 
 ## Usage
 
