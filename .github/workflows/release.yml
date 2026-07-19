@@ -19,8 +19,13 @@ jobs:
         shell: bash
         run: |
           if [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            release_title="EDMC-MarketScout ${GITHUB_REF_NAME}"
+            if [[ "${GITHUB_REF_NAME}" =~ ^v0\. ]]; then
+              release_title="${release_title} Beta"
+            fi
             echo "valid=true" >> "${GITHUB_OUTPUT}"
             echo "version=${GITHUB_REF_NAME}" >> "${GITHUB_OUTPUT}"
+            echo "release_title=${release_title}" >> "${GITHUB_OUTPUT}"
           else
             echo "valid=false" >> "${GITHUB_OUTPUT}"
             echo "Tag '${GITHUB_REF_NAME}' is not a canonical v0.0.0 release tag; skipping release."
@@ -80,5 +85,5 @@ jobs:
         run: |
           gh release create "${{ steps.tag.outputs.version }}" \
             "${zip_path}" \
-            --title "EDMC-MarketScout ${{ steps.tag.outputs.version }}" \
+            --title "${{ steps.tag.outputs.release_title }}" \
             --notes "Release ${{ steps.tag.outputs.version }}"

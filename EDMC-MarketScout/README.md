@@ -203,3 +203,17 @@ The Web UI includes a `Jackpot History` button that displays the stored samples.
 ## 0.1.22 notes
 
 0.1.22 improves the Web UI station identity display: system name is smaller/muted and station name is larger and accented, making multiple stations in the same system easier to distinguish.
+
+## 0.2.0 Beta notes
+
+0.2.0 is the first public beta release of MarketScout.
+
+Highlights:
+
+- The classic Tk UI has been removed; MarketScout is now focused on the local browser Web UI.
+- Added Commodities, Rare Commodities, and Analyze Commodities views.
+- Added rare commodity and engineer unlock imports, including engineering-only filtering and distance context where coordinate data is available.
+- Added Carrier Trade Announcements with draggable image text, custom announcement templates, saved local layouts, and PNG/JPG downloads.
+- Added fixed local web configuration with optional LAN access and QR-code sharing.
+- Added Stations page quality-of-life improvements, including visited System/Station suggestions, Clear filters, watched commodity settings, and a Best Buy ignore list.
+- Added release packaging support and bundled local rawdata imports for commodity stats, rare commodities, engineer unlocks, and relevant system coordinates.
