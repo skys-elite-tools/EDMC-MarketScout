@@ -159,6 +159,23 @@ The repo's `.gitignore` should keep those files out of commits.
 
 Rawdata CSV files under `EDMC-MarketScout/rawdata/` are release inputs and should be included. Maintainer-only source data under `local-*` directories is local scratch/input material and should not be required by end users.
 
+## Local release helper
+
+The repo includes a maintainer convenience script:
+
+```bash
+tools/local-release
+```
+
+It reads local paths from `.env`, builds `EDMC-MarketScout/web-src`, backs up the currently installed plugin if present, and rsyncs `EDMC-MarketScout/` into the configured EDMC plugins directory. Copy `.env.example` to `.env` and fill in:
+
+```ini
+EDMC_PLUGINS_DIR=
+PLUGIN_BACKUP_ARCHIVES_DIR=
+```
+
+`.env` is intentionally ignored because it contains machine-local paths.
+
 ## Git workflow
 
 Recommended baseline workflow:

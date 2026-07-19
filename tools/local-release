@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+ENV_FILE="${REPO_ROOT}/.env"
+
+if [[ ! -f "${ENV_FILE}" ]]; then
+  echo "Missing ${ENV_FILE}. Copy .env.example to .env and fill in the paths." >&2
+  exit 1
+fi
+
+set -a
+# shellcheck source=/dev/null
+source "${ENV_FILE}"
+set +a
+
+: "${EDMC_PLUGINS_DIR:?Set EDMC_PLUGINS_DIR in .env}"
+: "${PLUGIN_BACKUP_ARCHIVES_DIR:?Set PLUGIN_BACKUP_ARCHIVES_DIR in .env}"
+
+PLUGIN_SOURCE_DIR="${REPO_ROOT}/EDMC-MarketScout"
+LIVE_PLUGIN_DIR="${EDMC_PLUGINS_DIR%/}/EDMC-MarketScout"
+BACKUP_DIR="${PLUGIN_BACKUP_ARCHIVES_DIR%/}/$(date '+%Y-%m-%d-%H-%M-%S')"
+RELEASE_EXCLUDES="${SCRIPT_DIR}/exclusions-release.txt"
+BACKUP_EXCLUDES="${SCRIPT_DIR}/exclusions-backup.txt"
+
+if [[ ! -d "${PLUGIN_SOURCE_DIR}" ]]; then
+  echo "Missing plugin source directory: ${PLUGIN_SOURCE_DIR}" >&2
+  exit 1
+fi
+
+if [[ ! -d "${EDMC_PLUGINS_DIR}" ]]; then
+  echo "EDMC_PLUGINS_DIR does not exist: ${EDMC_PLUGINS_DIR}" >&2
+  exit 1
+fi
+
+mkdir -p "${PLUGIN_BACKUP_ARCHIVES_DIR}"
+
+if [[ -d "${LIVE_PLUGIN_DIR}" ]]; then
+  echo "Backing up current live plugin to ${BACKUP_DIR}"
+  mkdir -p "${BACKUP_DIR}"
+  rsync -av --exclude-from="${BACKUP_EXCLUDES}" "${LIVE_PLUGIN_DIR}" "${BACKUP_DIR}/"
+else
+  echo "No current live plugin found at ${LIVE_PLUGIN_DIR}; skipping backup."
+fi
+
+echo "Building Web UI"
+cd "${PLUGIN_SOURCE_DIR}/web-src"
+npm install
+npm run build
+
+echo "Releasing MarketScout to ${EDMC_PLUGINS_DIR}"
+cd "${REPO_ROOT}"
+rsync -av --delete --exclude-from="${RELEASE_EXCLUDES}" "${PLUGIN_SOURCE_DIR}" "${EDMC_PLUGINS_DIR%/}/"
+
+echo "Release complete. Restart EDMC to load the updated plugin."
