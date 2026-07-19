@@ -221,3 +221,7 @@ Highlights:
 ## 0.2.1 Beta notes
 
 0.2.1 fixes a Web UI view-switching bug where rows from a previously opened table, especially Ledger rows, could briefly leak into another table view such as Commodities. Table loads now clear stale rows immediately and ignore late responses from older view requests.
+
+## 0.2.2 Beta notes
+
+0.2.2 improves the Carrier Trade Announcements text color control by replacing the browser-native color picker with a bundled Coloris picker. This gives commanders a full color selector with swatches and hex entry while avoiding viewport clipping near the right edge of the page.
