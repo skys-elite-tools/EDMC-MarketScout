@@ -11,7 +11,7 @@ EDMC-MarketScout/
   load.py                    # EDMC plugin entry point and core recorder logic
   marketscout_importer.py    # CSV/import logic
   marketscout_ledger.py      # trade ledger logic
-  marketscout_web.py         # local 127.0.0.1 web server + JSON API
+  marketscout_web.py         # local web server + JSON API
   rawdata/commodities.csv    # commodity stats catalog used at startup
   rawdata/commodities_rare.csv
   rawdata/engineers-unlock.csv
@@ -73,11 +73,33 @@ Current top-level Web UI views are:
 
 Browser-only personal state uses localStorage for convenience, including the active view, Analyze Commodities pasted input, and Carrier Trade Announcements drafts/custom text layouts.
 
+The Web UI has a responsive top navigation. Commodities, Rare Commodities, and Analyze Commodities are grouped under the Commodities menu on wider layouts; the navigation collapses to a hamburger menu on narrower windows. The footer provides About and Help modals.
+
 ## Python backend development
 
-The local Web UI API is implemented in `marketscout_web.py`. It binds to `127.0.0.1` only and should remain local-only.
+The local Web UI API is implemented in `marketscout_web.py`. It starts with a loopback listener and can optionally start a separate LAN listener when enabled in runtime configuration.
+
+The runtime config file is `marketscout.config` in the plugin folder. It is created on startup if missing, ignored by git, and defaults to:
+
+```ini
+app.bind_address=127.0.0.1
+app.bind_port=40595
+app.lan_enabled=0
+app.lan_bind_address=
+```
+
+The Web UI Config page edits the loopback address, shared port, and optional LAN address. Address/port changes require restarting EDMC. QR-code sharing appears only for enabled non-loopback LAN IPv4 addresses.
 
 Important privacy rule: MarketScout itself must not upload data to EDDN, Inara, EDSM, Discord, or any other remote service unless an explicit opt-in feature is added later. Current Web UI assets must be bundled locally; no CDN scripts/styles.
+
+Useful Web API areas:
+
+- `/api/status`: status strip data, latest Journal metadata, and database version.
+- `/api/stations`: Stations table data, watched columns, Best Buy calculations, and filters.
+- `/api/station-filter-options`: visited system/station suggestions for Stations filters.
+- `/api/jackpots`, `/api/ledger`, `/api/rare-commodities`, `/api/commodity-stats`: view data.
+- `/api/analyze-commodities`: splits pasted commodity lists into regular and rare matches.
+- `/api/commodities`, `/api/settings`, `/api/economy-presets`, `/api/config`: catalogs/settings/config helpers.
 
 ## Local testing checklist
 
@@ -89,6 +111,7 @@ After backend or Web UI changes:
 4. Verify the browser UI loads from `http://127.0.0.1:<port>/`.
 5. Check these views:
    - Stations
+   - Stations System/Station typeahead suggestions and Clear filters
    - Jackpots
    - Ledger
    - Commodities
@@ -129,9 +152,12 @@ __pycache__/
 marketscout.sqlite3
 marketscout.config
 marketscout-ui.json
+marketscout-economy-presets.json
 ```
 
 The repo's `.gitignore` should keep those files out of commits.
+
+Rawdata CSV files under `EDMC-MarketScout/rawdata/` are release inputs and should be included. Maintainer-only source data under `local-*` directories is local scratch/input material and should not be required by end users.
 
 ## Git workflow
 

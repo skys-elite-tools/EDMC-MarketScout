@@ -110,20 +110,23 @@ The Web UI is Vue 3 + Vite, built into static files in `web/`.
 
 Layout structure:
 
-1. Top bar: logo/title placeholder, navigation, status, future donation/link placeholders.
+1. Top bar: logo/title, responsive navigation, and refresh action.
 2. View controls: controls/filters/settings for the active view.
 3. Main view: active content.
-4. Footer: about/link/donation placeholders.
+4. Footer: About and Help modal links.
+
+The top navigation groups regular commodity tools under a Commodities menu and collapses to a hamburger menu on narrower windows. Hidden donation/link placeholders may remain in markup for future use, but they should not be visible in beta builds.
 
 Current views:
 
-- `Stations`: filters + current station table + details pane.
-- `Jackpots`: placeholder/future controls + jackpot history.
-- `Ledger`: placeholder/future controls + ledger table/filters.
+- `Stations`: filters, watched commodity settings, Best Buy ignore list, current station table, and details pane.
+- `Jackpots`: jackpot history table.
+- `Ledger`: ledger table/filters.
 - `Commodities`: commodity global stats from `commodity_global_stats`, sortable by commodity/category/max profit.
 - `Rare Commodities`: rare commodity reference table with engineering-only filtering, usual supply sorting, current-position distance, engineer unlock labels, and carrier-sale profit estimates based on 100x galactic average.
 - `Analyze Commodities`: paste a comma-separated commodity list and split matches into regular and rare commodity tables. The last pasted list is stored in browser localStorage.
 - `Carrier Trade Announcements`: Fleet Carrier trade advertisement builder with editable form data, image upload, draggable text layers, downloadable PNG/JPG output, and copyable Discord/Reddit announcement text.
+- `Config`: runtime-local address/port/LAN configuration, LAN quick-fill, and QR-code sharing when LAN access is enabled.
 
 The Python local web server provides JSON endpoints; Vue should not know about SQLite directly.
 
@@ -157,6 +160,18 @@ Carrier Trade Announcements intentionally has no backend persistence and no netw
 ### Economy filter presets
 
 The Stations view Economy filter is intentionally empty by default so general users are not forced into the original `Extraction, Refinery` scouting workflow. The field supports saved presets through the local Web API. Presets are stored in `marketscout-economy-presets.json` in the plugin folder, not browser storage, so they survive browser changes. The default preset list is supplied by `marketscout_web.py` and includes single-value economy names plus `Extraction, Refinery`. User-saved presets are merged with the default list and shown alphabetically.
+
+### Stations filters and settings
+
+The Stations controls are intentionally direct and reversible:
+
+- System and Station are text inputs with typeahead suggestions.
+- System suggestions come from visited systems in the `systems` table.
+- Station suggestions come from visited stations in the `stations` table.
+- Economic State and Economy are text inputs with dropdown menus. Clicking the dropdown should show the full option catalog even if the input already contains text.
+- Clear restores the default station filter values and reloads the Stations table.
+- Watched Commodities controls table columns/highlighting and is persisted in SQLite `settings`.
+- Best Buy Ignore List excludes selected commodities from Best Buy calculations and is persisted in SQLite `settings`.
 
 ### Stations default ordering
 
@@ -336,10 +351,12 @@ This is based on latest known market data at the time of the trade, usually befo
 
 - Web UI is the primary modern UI.
 - The old classic Tk MarketScout window has been removed; new UI work belongs in the Web UI.
+- The EDMC host UI should expose one wide `MarketScout` button that opens the browser UI.
 - Source column is hidden by default but available in details/optional contexts.
 - Station name should stand out visually from system name, because multiple stations in the same system are common.
 - The Web UI should favor compact tables plus details panes rather than extremely wide tables.
 - Watched commodity columns are user-configurable. Users may choose Buy and Sell columns separately.
+- About and Help content lives in footer modals. The first Help article explains that MarketScout records data only while EDMC and the plugin are running; EDMC does not normally replay full historical data to plugins.
 
 ## Possible future features
 
@@ -387,18 +404,13 @@ __pycache__/
 *.pyc
 *.log
 marketscout.sqlite3
+marketscout.config
 marketscout-ui.json
+marketscout-economy-presets.json
 web-src/dist/
+local-assets/
+local-wip-screenshots/
+wip-screenshots/
 ```
 
 Including `.git/` is useful if the archive stays reasonably small.
-
-## Current baseline note
-
-As of the Carrier Trade Announcements profit-label option, the current relevant committed baseline is:
-
-```text
-51f042f feat: ability to exclude the word profit from the image
-```
-
-If a newer baseline is established, update this section.
