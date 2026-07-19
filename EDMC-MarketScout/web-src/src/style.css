@@ -806,9 +806,35 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 }
 .carrierImageTools {
   display: grid;
-  grid-template-columns: minmax(12rem, 1fr) minmax(10rem, .7fr) 5rem;
+  grid-template-columns: minmax(12rem, 1fr) minmax(10rem, .7fr) minmax(6.5rem, auto);
   gap: 12px;
   align-items: end;
+}
+.textColorControl {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+  justify-self: end;
+  min-width: 9rem;
+  width: 100%;
+}
+.textColorControl .clr-field {
+  width: 100%;
+}
+.textColorControl .clr-field input {
+  width: 100%;
+  padding-right: 2.4rem;
+}
+.clr-picker {
+  z-index: 100;
+}
+.clr-picker.clr-polaroid.clr-dark {
+  border: 1px solid var(--line);
+  background: #0b1016;
+  box-shadow: 0 14px 36px rgba(0,0,0,.48);
 }
 .textLayoutMenuField {
   display: flex;

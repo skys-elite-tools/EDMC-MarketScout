@@ -9,6 +9,7 @@
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@melloware/coloris": "^0.25.0",
     "@vitejs/plugin-vue": "latest",
     "qrcode": "^1.5.4",
     "vite": "latest",

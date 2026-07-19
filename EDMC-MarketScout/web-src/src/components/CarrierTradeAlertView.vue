@@ -1,5 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import Coloris from '@melloware/coloris'
+import '@melloware/coloris/dist/coloris.css'
 import placeholderImage from '../assets/trade-placeholder.png'
 
 const LAYOUT_STORAGE_KEY = 'marketscout.carrierTradeAlert.layouts'
@@ -69,6 +71,7 @@ let resizeObserver = null
 let activeDrag = null
 
 const savedLayouts = ref(loadSavedLayouts())
+const textColorPresets = ['#f6fbff', '#ffffff', '#78c8ff', '#9ff0d4', '#ffe27a', '#ff9f43', '#ff6bcb', '#b890ff']
 
 const defaultLayerPositions = {
   classic: {
@@ -291,10 +294,31 @@ function deleteSavedLayout(id) {
   setTimeout(() => { layoutSaveStatus.value = '' }, 1800)
 }
 
-function closeLayoutMenuOnOutsideClick(event) {
-  if (!layoutMenuOpen.value) return
-  if (layoutMenuRef.value?.contains(event.target)) return
-  layoutMenuOpen.value = false
+function normalizeHexColor(value) {
+  const raw = String(value || '').trim()
+  if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toLowerCase()
+  if (/^[0-9a-f]{6}$/i.test(raw)) return `#${raw.toLowerCase()}`
+  if (/^#[0-9a-f]{3}$/i.test(raw)) {
+    const chars = raw.slice(1).toLowerCase().split('')
+    return `#${chars.map(char => `${char}${char}`).join('')}`
+  }
+  if (/^[0-9a-f]{3}$/i.test(raw)) {
+    const chars = raw.toLowerCase().split('')
+    return `#${chars.map(char => `${char}${char}`).join('')}`
+  }
+  return ''
+}
+
+function setTextColor(value) {
+  const normalized = normalizeHexColor(value)
+  if (!normalized) return
+  textColor.value = normalized
+}
+
+function closeMenusOnOutsideClick(event) {
+  if (layoutMenuOpen.value && !layoutMenuRef.value?.contains(event.target)) {
+    layoutMenuOpen.value = false
+  }
 }
 
 function saveCurrentLayout() {
@@ -555,7 +579,20 @@ async function copyCustomAnnouncementBody() {
 }
 
 onMounted(async () => {
-  document.addEventListener('pointerdown', closeLayoutMenuOnOutsideClick)
+  document.addEventListener('pointerdown', closeMenusOnOutsideClick)
+  Coloris.init()
+  Coloris({
+    el: '.marketScoutTextColorInput',
+    theme: 'polaroid',
+    themeMode: 'dark',
+    format: 'hex',
+    formatToggle: false,
+    alpha: false,
+    closeButton: true,
+    closeLabel: 'Done',
+    swatches: textColorPresets,
+    onChange: color => setTextColor(color),
+  })
   await nextTick()
   updateStageSize()
   resizeObserver = new ResizeObserver(updateStageSize)
@@ -563,7 +600,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  document.removeEventListener('pointerdown', closeLayoutMenuOnOutsideClick)
+  document.removeEventListener('pointerdown', closeMenusOnOutsideClick)
   if (resizeObserver) resizeObserver.disconnect()
 })
 
@@ -658,7 +695,17 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
             </div>
           </div>
         </div>
-        <label>Text Color <input v-model="textColor" type="color" /></label>
+        <label class="textColorControl">Text Color
+          <input
+            v-model="textColor"
+            class="marketScoutTextColorInput"
+            type="text"
+            data-coloris
+            spellcheck="false"
+            @change="setTextColor($event.target.value)"
+            @blur="setTextColor($event.target.value)"
+          />
+        </label>
       </div>
       <h2>Trade</h2>
       <div class="carrierFormGrid">
