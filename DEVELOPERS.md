@@ -8,7 +8,8 @@ End users do **not** need Node.js, npm, Vite, or Vue. Releases include a ready-t
 
 ```text
 EDMC-MarketScout/
-  load.py                    # EDMC plugin entry point and core recorder logic
+  load.py                    # Thin EDMC plugin adapter
+  marketscout_app.py         # Core plugin lifecycle and journal/CAPI orchestration
   marketscout_importer.py    # CSV/import logic
   marketscout_ledger.py      # trade ledger logic
   marketscout_web.py         # local web server + JSON API

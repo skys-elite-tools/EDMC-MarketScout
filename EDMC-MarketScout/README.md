@@ -136,7 +136,7 @@ If market prices are still not stored, open the commodity market once, then insp
 
 ## 0.1.8 notes
 
-0.1.8 adds event-driven jackpot history tracking. When fresh market data is recorded, MarketScout checks Palladium, Gold, and Silver against the current highlight thresholds. If any metal has buy price at or below the price threshold and supply at or above the supply threshold, a static jackpot event is created with the system/station/BGS/economy context, and a time-series sample is stored. Additional samples are added only when fresh market data arrives and at least `JACKPOT_SAMPLE_INTERVAL_MINUTES` has elapsed since the previous sample. The default interval is 30 minutes and is easy to change near the top of `load.py`.
+0.1.8 adds event-driven jackpot history tracking. When fresh market data is recorded, MarketScout checks Palladium, Gold, and Silver against the current highlight thresholds. If any metal has buy price at or below the price threshold and supply at or above the supply threshold, a static jackpot event is created with the system/station/BGS/economy context, and a time-series sample is stored. Additional samples are added only when fresh market data arrives and at least `JACKPOT_SAMPLE_INTERVAL_MINUTES` has elapsed since the previous sample. The default interval is 30 minutes and is easy to change near the top of `marketscout_app.py`.
 
 No background timer is used. No data is uploaded.
 

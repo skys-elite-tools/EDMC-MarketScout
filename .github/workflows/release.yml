@@ -55,6 +55,7 @@ jobs:
         run: |
           python3 -m py_compile \
             EDMC-MarketScout/load.py \
+            EDMC-MarketScout/marketscout_app.py \
             EDMC-MarketScout/marketscout_web.py \
             EDMC-MarketScout/marketscout_ledger.py \
             EDMC-MarketScout/marketscout_importer.py

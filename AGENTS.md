@@ -10,7 +10,8 @@ EDMC-MarketScout is a local-only EDMarketConnector plugin for scouting Elite Dan
 - Optional future integrations such as Discord webhooks must be opt-in and clearly isolated.
 
 ## Repo layout
-- `EDMC-MarketScout/load.py`: EDMC plugin entry point and core journal/CAPI handling.
+- `EDMC-MarketScout/load.py`: thin EDMC plugin adapter.
+- `EDMC-MarketScout/marketscout_app.py`: core plugin lifecycle and journal/CAPI handling.
 - `EDMC-MarketScout/marketscout_web.py`: local HTTP API and static web server.
 - `EDMC-MarketScout/marketscout_ledger.py`: trade ledger.
 - `EDMC-MarketScout/marketscout_importer.py`: SHA-256-gated rawdata CSV imports.
@@ -31,7 +32,7 @@ EDMC-MarketScout is a local-only EDMarketConnector plugin for scouting Elite Dan
 
 ## Verification
 After Python changes:
-`python3 -m py_compile EDMC-MarketScout/load.py EDMC-MarketScout/marketscout_web.py EDMC-MarketScout/marketscout_ledger.py EDMC-MarketScout/marketscout_importer.py`
+`python3 -m py_compile EDMC-MarketScout/load.py EDMC-MarketScout/marketscout_app.py EDMC-MarketScout/marketscout_web.py EDMC-MarketScout/marketscout_ledger.py EDMC-MarketScout/marketscout_importer.py`
 
 After frontend changes:
 `cd EDMC-MarketScout/web-src && npm run build`

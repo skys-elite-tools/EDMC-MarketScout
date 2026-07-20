@@ -34,7 +34,7 @@ If future Discord/webhook/overlay/network features are added, they should be opt
 
 ### Update checker
 
-`load.py` starts a background update check via `marketscout_web.start_update_check()` during plugin startup. The Web UI receives update state through `/api/status`; when a newer GitHub release is available, the status strip displays a prominent update/download button.
+`marketscout_app.py` starts a background update check via `marketscout_web.start_update_check()` during plugin startup. The Web UI receives update state through `/api/status`; when a newer GitHub release is available, the status strip displays a prominent update/download button.
 
 One-click updates are handled by `POST /api/update`. The updater downloads the GitHub release zip, creates a sibling backup under `EDMC-MarketScout-backups.disabled/`, safely extracts the archive to a temporary directory, finds the inner `EDMC-MarketScout/` payload, and copies those files over the current plugin folder. The `.disabled` suffix prevents EDMC from treating the backup container as another plugin. EDMC still needs a restart because Python modules and static assets may already be loaded in the running process.
 
@@ -69,7 +69,8 @@ Important files/directories:
 
 ```text
 EDMC-MarketScout/
-  load.py                    # EDMC plugin entry point and core journal/CAPI handling
+  load.py                    # Thin EDMC plugin adapter
+  marketscout_app.py         # Core plugin lifecycle and journal/CAPI handling
   marketscout_importer.py    # CSV import logic, currently including Spansh templates
   marketscout_ledger.py      # Trade ledger logic and LIFO/statistics calculations
   marketscout_web.py         # Local HTTP server and JSON API endpoints
