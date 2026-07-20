@@ -90,7 +90,7 @@ app.lan_bind_address=
 
 The Web UI Config page edits the loopback address, shared port, and optional LAN address. Address/port changes require restarting EDMC. QR-code sharing appears only for enabled non-loopback LAN IPv4 addresses.
 
-Important privacy rule: MarketScout itself must not upload data to EDDN, Inara, EDSM, Discord, or any other remote service unless an explicit opt-in feature is added later. Current Web UI assets must be bundled locally; no CDN scripts/styles.
+Important privacy rule: MarketScout itself must not upload data to EDDN, Inara, EDSM, Discord, or any other remote service unless an explicit opt-in feature is added later. The update checker may read GitHub release metadata and download a release zip after the user clicks update, but it must not include commander, journal, route, station, or market data in those requests. Current Web UI assets must be bundled locally; no CDN scripts/styles.
 
 Useful Web API areas:
 

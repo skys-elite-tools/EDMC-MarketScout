@@ -25,11 +25,18 @@ Current privacy assumptions:
 - MarketScout writes to local SQLite only.
 - MarketScout’s Web UI server binds to a loopback address by default, with optional maintainer/user-enabled LAN access.
 - MarketScout must not send data to EDDN, Inara, EDSM, Spansh, Discord, or any other remote service unless a future feature explicitly opts in.
+- The built-in update checker is the one default external request: it checks GitHub release metadata for `skys-elite-tools/EDMC-MarketScout` and only downloads a release zip after the user clicks the update button. It must not include commander, journal, route, station, or market data in those requests.
 - Candidate import should use CSV/manual import, not scraping.
 - Scraping public websites should not be added.
 - Users can control EDMC’s own upload settings separately. For private scouting windows, disable EDMC EDDN station data and system/scan data, plus other uploader plugins if desired.
 
 If future Discord/webhook/overlay/network features are added, they should be optional, clearly labeled, rate-limited where appropriate, and should never log secrets such as webhook URLs.
+
+### Update checker
+
+`load.py` starts a background update check via `marketscout_web.start_update_check()` during plugin startup. The Web UI receives update state through `/api/status`; when a newer GitHub release is available, the status strip displays a prominent update/download button.
+
+One-click updates are handled by `POST /api/update`. The updater downloads the GitHub release zip, creates a sibling backup under `EDMC-MarketScout-backups.disabled/`, safely extracts the archive to a temporary directory, finds the inner `EDMC-MarketScout/` payload, and copies those files over the current plugin folder. The `.disabled` suffix prevents EDMC from treating the backup container as another plugin. EDMC still needs a restart because Python modules and static assets may already be loaded in the running process.
 
 ## Runtime and packaging rules
 

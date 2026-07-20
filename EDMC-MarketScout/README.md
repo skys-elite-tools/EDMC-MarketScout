@@ -17,10 +17,13 @@ Local-only EDMarketConnector plugin for scouting station market/BGS conditions, 
 - Tracks row/source metadata such as `local_visit` or `spansh`.
 - Can hide Fleet Carrier rows by default with an `Include fleet carriers` checkbox.
 - Provides a local Fleet Carrier trade announcement image/text generator with downloadable PNG/JPG output.
+- Checks GitHub releases for MarketScout updates and can download/apply a release zip after the user clicks the update button.
 
 ## Privacy
 
-MarketScout itself has no network/upload code. It writes to a local SQLite database and serves local bundled Web UI assets on `127.0.0.1`.
+MarketScout does not upload commander, journal, route, station, or market data. It writes gameplay data to a local SQLite database and serves bundled Web UI assets on `127.0.0.1` by default.
+
+The only built-in external network feature is the update checker. On startup it checks the public GitHub release metadata for `skys-elite-tools/EDMC-MarketScout`; if the user clicks the update button, it downloads the release zip from GitHub. This sends a normal HTTPS request to GitHub, but no MarketScout database or game data is included.
 
 For a private scouting window, disable EDMC's own EDDN upload settings while scouting:
 
@@ -45,6 +48,12 @@ MarketScout always uses a loopback address for same-computer access. The fixed d
 The Web UI also has a `Config` page at the end of the top navigation. It can edit the local loopback address, the shared port, and the optional LAN listener. Local quick-fill options only include loopback addresses such as `127.0.0.1`, `localhost`, and `127.0.1.1` when detected. It shows a QR code only when LAN access is enabled with a shareable IPv4 address, so another same-network device can open the UI more easily. Restart EDMC after saving listening changes.
 
 Keep `app.lan_enabled=0` if you want MarketScout reachable only from this computer. Enabling LAN access can make the Web UI reachable from other devices on your local network.
+
+## Updates
+
+MarketScout checks the latest GitHub release tag on startup. When a newer release is available, the Web UI status bar shows an update button.
+
+If the release includes the standard installable zip, clicking the button downloads it, backs up the current plugin folder to a sibling `EDMC-MarketScout-backups.disabled/` directory, copies the new `EDMC-MarketScout/` files over the current plugin files, and then asks you to restart EDMC. If automatic updating fails, MarketScout shows the backup path so you can manually restore the previous working plugin folder.
 
 ## Install
 

@@ -1,20 +1,27 @@
-"""Local-only browser UI for EDMC-MarketScout.
+"""Local browser UI for EDMC-MarketScout.
 
-This module starts a tiny HTTP server bound to 127.0.0.1. It serves the
-bundled static web UI and read-only JSON API responses from the local SQLite
-DB. It performs no external network requests and exposes no upload endpoints.
+This module starts a tiny HTTP server bound to 127.0.0.1 by default. It serves
+the bundled static web UI and JSON API responses from the local SQLite DB. The
+only external network feature is the GitHub release/update check; no commander,
+journal, route, station, or market data is uploaded.
 """
 from __future__ import annotations
 
+import datetime
 import json
 import math
 import mimetypes
 import os
 import ipaddress
+import re
+import shutil
 import socket
 import sqlite3
+import tempfile
 import threading
 import traceback
+import urllib.request
+import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -33,6 +40,24 @@ ECONOMY_PRESETS_FILE = "marketscout-economy-presets.json"
 CONFIG_FILE = "marketscout.config"
 DEFAULT_BIND_ADDRESS = "127.0.0.1"
 DEFAULT_BIND_PORT = 40595
+GITHUB_REPO = "skys-elite-tools/EDMC-MarketScout"
+GITHUB_RELEASES_LATEST_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+PLUGIN_FOLDER_NAME = "EDMC-MarketScout"
+_PLUGIN_VERSION = "0.0.0"
+_UPDATE_LOCK = threading.Lock()
+_UPDATE_STATUS: Dict[str, Any] = {
+    "checked": False,
+    "checking": False,
+    "available": False,
+    "can_update": False,
+    "current_version": _PLUGIN_VERSION,
+    "latest_version": "",
+    "latest_tag": "",
+    "html_url": "",
+    "download_url": "",
+    "error": "",
+    "last_checked": "",
+}
 DEFAULT_ECONOMY_PRESETS = [
     "Agriculture",
     "Colony",
@@ -275,6 +300,202 @@ def update_latest_journal_event(event: Dict[str, Any]) -> None:
     _LATEST_JOURNAL_EVENT = dict(event)
 
 
+def now_utc() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+
+
+def set_update_status(**changes: Any) -> Dict[str, Any]:
+    with _UPDATE_LOCK:
+        _UPDATE_STATUS.update(changes)
+        return dict(_UPDATE_STATUS)
+
+
+def update_status_snapshot() -> Dict[str, Any]:
+    with _UPDATE_LOCK:
+        return dict(_UPDATE_STATUS)
+
+
+def normalize_version_tag(value: Any) -> str:
+    text = str(value or "").strip()
+    return text[1:] if text.lower().startswith("v") else text
+
+
+def version_tuple(value: Any) -> Tuple[int, int, int]:
+    text = normalize_version_tag(value)
+    match = re.match(r"^(\d+)\.(\d+)\.(\d+)$", text)
+    if not match:
+        return (0, 0, 0)
+    return tuple(int(part) for part in match.groups())
+
+
+def github_request(url: str, timeout: int = 12) -> bytes:
+    request = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": f"EDMC-MarketScout/{_PLUGIN_VERSION}",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return response.read()
+
+
+def start_update_check(plugin_dir: str, current_version: str) -> None:
+    """Start a background GitHub release check without blocking EDMC startup."""
+    global _PLUGIN_VERSION
+    _PLUGIN_VERSION = normalize_version_tag(current_version) or "0.0.0"
+    set_update_status(current_version=_PLUGIN_VERSION)
+    snapshot = update_status_snapshot()
+    if snapshot.get("checking"):
+        return
+    thread = threading.Thread(
+        target=check_for_updates,
+        name="MarketScoutUpdateCheck",
+        daemon=True,
+    )
+    set_update_status(checking=True, error="")
+    thread.start()
+
+
+def check_for_updates() -> None:
+    try:
+        payload = json.loads(github_request(GITHUB_RELEASES_LATEST_API).decode("utf-8"))
+        latest_tag = str(payload.get("tag_name") or "").strip()
+        latest_version = normalize_version_tag(latest_tag)
+        assets = payload.get("assets") if isinstance(payload.get("assets"), list) else []
+        download_url = ""
+        for asset in assets:
+            if not isinstance(asset, dict):
+                continue
+            name = str(asset.get("name") or "")
+            url = str(asset.get("browser_download_url") or "")
+            if name.lower().endswith(".zip") and url:
+                download_url = url
+                break
+        available = bool(latest_version) and version_tuple(latest_version) > version_tuple(_PLUGIN_VERSION)
+        set_update_status(
+            checked=True,
+            checking=False,
+            available=available,
+            can_update=available and bool(download_url),
+            current_version=_PLUGIN_VERSION,
+            latest_version=latest_version,
+            latest_tag=latest_tag,
+            html_url=str(payload.get("html_url") or f"https://github.com/{GITHUB_REPO}/releases/latest"),
+            download_url=download_url,
+            error="",
+            last_checked=now_utc(),
+        )
+    except Exception as exc:
+        set_update_status(
+            checked=True,
+            checking=False,
+            available=False,
+            can_update=False,
+            error=str(exc),
+            last_checked=now_utc(),
+        )
+
+
+def download_release_zip(url: str, destination: Path) -> None:
+    request = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "application/octet-stream",
+            "User-Agent": f"EDMC-MarketScout/{_PLUGIN_VERSION}",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=60) as response:
+        with destination.open("wb") as f:
+            shutil.copyfileobj(response, f)
+
+
+def safe_extract_zip(zip_path: Path, destination: Path) -> None:
+    root = destination.resolve()
+    with zipfile.ZipFile(zip_path) as archive:
+        for member in archive.infolist():
+            target = (destination / member.filename).resolve()
+            if root not in target.parents and target != root:
+                raise ValueError(f"Unsafe zip entry: {member.filename}")
+        archive.extractall(destination)
+
+
+def find_plugin_payload(extracted_dir: Path) -> Path:
+    for candidate in extracted_dir.rglob(PLUGIN_FOLDER_NAME):
+        if candidate.is_dir() and (candidate / "load.py").is_file():
+            return candidate
+    if (extracted_dir / "load.py").is_file():
+        return extracted_dir
+    raise FileNotFoundError(f"Could not find {PLUGIN_FOLDER_NAME} in the downloaded release zip")
+
+
+def copy_plugin_payload(source_dir: Path, plugin_dir: Path) -> None:
+    for item in source_dir.iterdir():
+        target = plugin_dir / item.name
+        if item.is_dir():
+            shutil.copytree(item, target, dirs_exist_ok=True)
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(item, target)
+
+
+def perform_update() -> Dict[str, Any]:
+    snapshot = update_status_snapshot()
+    if not snapshot.get("available"):
+        return {"ok": False, "error": "No MarketScout update is currently available.", "update": snapshot}
+    if not snapshot.get("download_url"):
+        return {
+            "ok": False,
+            "error": "The latest GitHub release does not include an installable zip asset.",
+            "update": snapshot,
+        }
+
+    plugin_dir = Path(_CONTEXT.get("plugin_dir") or "").resolve()
+    if not plugin_dir.is_dir() or plugin_dir.name != PLUGIN_FOLDER_NAME:
+        return {"ok": False, "error": "Could not identify the current MarketScout plugin directory.", "update": snapshot}
+
+    backup_root = plugin_dir.parent / "EDMC-MarketScout-backups.disabled"
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    backup_dir = backup_root / f"MarketScout-backup-{timestamp}"
+    try:
+        backup_root.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(plugin_dir, backup_dir)
+        with tempfile.TemporaryDirectory(prefix="marketscout-update-") as tmp:
+            tmp_dir = Path(tmp)
+            zip_path = tmp_dir / "release.zip"
+            extracted_dir = tmp_dir / "extracted"
+            extracted_dir.mkdir()
+            download_release_zip(str(snapshot["download_url"]), zip_path)
+            safe_extract_zip(zip_path, extracted_dir)
+            payload_dir = find_plugin_payload(extracted_dir)
+            copy_plugin_payload(payload_dir, plugin_dir)
+        latest_version = snapshot.get("latest_version") or _PLUGIN_VERSION
+        set_update_status(
+            available=False,
+            can_update=False,
+            current_version=latest_version,
+            error="",
+            update_completed=True,
+            backup_path=str(backup_dir),
+        )
+        return {
+            "ok": True,
+            "message": "Update Complete. Please restart EDMC to start using the latest version of MarketScout.",
+            "backup_path": str(backup_dir),
+            "update": update_status_snapshot(),
+        }
+    except Exception as exc:
+        set_update_status(error=str(exc), backup_path=str(backup_dir))
+        return {
+            "ok": False,
+            "error": str(exc),
+            "message": "The update could not be completed.",
+            "backup_path": str(backup_dir),
+            "plugin_dir": str(plugin_dir),
+            "update": update_status_snapshot(),
+        }
+
+
 class MarketScoutRequestHandler(BaseHTTPRequestHandler):
     server_version = "MarketScoutHTTP/0.1"
 
@@ -334,6 +555,8 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
                 return self.send_json(api_analyze_commodities(payload))
             if parsed.path == "/api/config":
                 return self.send_json(api_save_config(payload))
+            if parsed.path == "/api/update":
+                return self.send_json(perform_update())
             self.send_error(404)
         except Exception as exc:
             log_web_exception(exc)
@@ -391,6 +614,7 @@ def api_status() -> Dict[str, Any]:
         "target_commodities": _CONTEXT.get("target_commodities", []),
         "primary_metals": _CONTEXT.get("primary_metals", []),
         "latest_journal_event": _LATEST_JOURNAL_EVENT,
+        "update": update_status_snapshot(),
     }
 
 

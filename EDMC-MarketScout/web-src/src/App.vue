@@ -57,6 +57,15 @@ const bestBuyIgnoreSearch = ref('')
 const statusText = ref('Loading…')
 const latestJournalEvent = ref(null)
 const autoRefresh = ref(true)
+const updateStatus = ref(null)
+const updateBusy = ref(false)
+const updateModal = ref({
+  visible: false,
+  title: '',
+  message: '',
+  backupPath: '',
+  pluginDir: '',
+})
 const economyPresets = ref([])
 const economyPresetStatus = ref('')
 const stationFilterOptions = ref({ systems: [], stations: [] })
@@ -372,6 +381,7 @@ async function pollStatus() {
   const res = await fetch('/api/status', { cache: 'no-store' })
   const data = await res.json()
   latestJournalEvent.value = data.latest_journal_event || null
+  updateStatus.value = data.update || null
   if (!autoRefresh.value) {
     lastVersion.value = data.data_version
     return
@@ -380,6 +390,45 @@ async function pollStatus() {
     await Promise.all([applyCurrentView(), loadStationFilterOptions()])
   }
   lastVersion.value = data.data_version
+}
+
+async function handleUpdateAction() {
+  const update = updateStatus.value || {}
+  if (!update.can_update) {
+    const url = update.html_url || update.download_url
+    if (url) window.open(url, '_blank', 'noopener')
+    return
+  }
+
+  updateBusy.value = true
+  try {
+    const res = await fetch('/api/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    const data = await res.json()
+    updateStatus.value = data.update || updateStatus.value
+    updateModal.value = {
+      visible: true,
+      title: data.ok ? 'Update Complete' : 'Update Could Not Be Completed',
+      message: data.ok
+        ? (data.message || 'Update Complete. Please restart EDMC to start using the latest version of MarketScout.')
+        : `${data.message || 'The update could not be completed.'} Copy all files from the backup directory to the plugin directory if you need to restore the previous working version.`,
+      backupPath: data.backup_path || '',
+      pluginDir: data.plugin_dir || '',
+    }
+  } catch (err) {
+    updateModal.value = {
+      visible: true,
+      title: 'Update Could Not Be Completed',
+      message: `The update could not be completed. ${err?.message || err}`,
+      backupPath: '',
+      pluginDir: '',
+    }
+  } finally {
+    updateBusy.value = false
+  }
 }
 
 let pollTimer = null
@@ -400,6 +449,9 @@ onUnmounted(() => {
       v-model:auto-refresh="autoRefresh"
       :status-text="statusText"
       :latest-journal-event="latestJournalEvent"
+      :update-status="updateStatus"
+      :update-busy="updateBusy"
+      @run-update="handleUpdateAction"
     />
 
     <TopBar
@@ -523,5 +575,20 @@ onUnmounted(() => {
       :help-article="helpArticle"
       :help-request-id="helpRequestId"
     />
+
+    <div v-if="updateModal.visible" class="modalBackdrop" @click.self="updateModal.visible = false">
+      <section class="aboutModal updateModal" role="dialog" aria-modal="true" aria-labelledby="update-modal-title">
+        <div class="modalHeader">
+          <h2 id="update-modal-title">{{ updateModal.title }}</h2>
+          <button type="button" class="iconButton" aria-label="Close" @click="updateModal.visible = false">×</button>
+        </div>
+        <p>{{ updateModal.message }}</p>
+        <p v-if="updateModal.backupPath" class="modalPath"><strong>Backup:</strong> {{ updateModal.backupPath }}</p>
+        <p v-if="updateModal.pluginDir" class="modalPath"><strong>Plugin:</strong> {{ updateModal.pluginDir }}</p>
+        <div class="modalActions">
+          <button type="button" @click="updateModal.visible = false">Close</button>
+        </div>
+      </section>
+    </div>
   </div>
 </template>

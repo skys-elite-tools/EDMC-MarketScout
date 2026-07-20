@@ -6,8 +6,10 @@ const props = defineProps({
   statusText: { type: String, default: '' },
   latestJournalEvent: { type: Object, default: null },
   autoRefresh: { type: Boolean, default: true },
+  updateStatus: { type: Object, default: null },
+  updateBusy: { type: Boolean, default: false },
 })
-const emit = defineEmits(['update:autoRefresh'])
+const emit = defineEmits(['update:autoRefresh', 'run-update'])
 
 const journalLabel = computed(() => {
   const event = props.latestJournalEvent || null
@@ -17,6 +19,13 @@ const journalLabel = computed(() => {
   if (event.station) parts.push(event.station)
   return parts.filter(Boolean).join(' · ')
 })
+
+const updateLabel = computed(() => {
+  if (props.updateBusy) return 'Updating MarketScout...'
+  return props.updateStatus?.can_update
+    ? 'Update Available: Click Here to Update'
+    : 'Update Available: Click Here to Download'
+})
 </script>
 
 <template>
@@ -24,6 +33,16 @@ const journalLabel = computed(() => {
     <div class="journalStatus" :title="journalLabel">
       <span class="statusLabel">Journal</span>
       <span class="statusValue">{{ journalLabel }}</span>
+    </div>
+    <div v-if="updateStatus?.available" class="updateStatusSlot">
+      <button
+        class="updateAvailableButton"
+        type="button"
+        :disabled="updateBusy"
+        @click="emit('run-update')"
+      >
+        {{ updateLabel }}
+      </button>
     </div>
     <div class="viewStatus">
       <span>{{ statusText }}</span>

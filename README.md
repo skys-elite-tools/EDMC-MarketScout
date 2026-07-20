@@ -23,6 +23,14 @@ MarketScout is not affiliated with Elite Dangerous Market Connector, EDCD, or Fr
 
 If you are cloning the repository for development instead of installing a release zip, the installable plugin is the inner `EDMC-MarketScout/` directory. The repository also contains maintainer tools, project notes, and other development files that should not be copied into EDMC's plugins directory.
 
+## One-Click Updates
+
+MarketScout checks GitHub releases on startup. When a newer release is available, the Web UI shows a prominent update button in the top status bar.
+
+Clicking the button downloads the release zip, creates a backup of the currently installed plugin, applies the new files, and then asks you to restart EDMC. If the automatic update cannot complete, MarketScout shows the backup location so you can restore the previous version manually.
+
+![MarketScout top status bar showing the update available button](presentation-assets/update-available-cropped.png)
+
 ## Usage
 
 ### Stations

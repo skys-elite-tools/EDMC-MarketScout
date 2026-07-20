@@ -25,7 +25,7 @@ except Exception:
     EDMC_CONFIG = None
 
 PLUGIN_NAME = "EDMC-MarketScout"
-PLUGIN_VERSION = "0.1.22"
+PLUGIN_VERSION = "0.2.3"
 
 DEFAULT_HIGHLIGHT_PRICE = 6000
 DEFAULT_HIGHLIGHT_SUPPLY = 10000
@@ -150,6 +150,10 @@ def plugin_start3(plugin_dir: str) -> str:
     refresh_rawdata_imports(CONN, plugin_dir)
     deduplicate_market_price_commodities(CONN)
     deduplicate_station_rows(CONN)
+    try:
+        load_web_module().start_update_check(plugin_dir, PLUGIN_VERSION)
+    except Exception:
+        log_exception("start_update_check")
     return PLUGIN_NAME
 
 
