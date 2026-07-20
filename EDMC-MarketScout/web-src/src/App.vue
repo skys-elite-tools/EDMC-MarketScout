@@ -12,6 +12,7 @@ import RareCommoditiesView from './components/RareCommoditiesView.vue'
 import CommoditiesView from './components/CommoditiesView.vue'
 import AnalyzeCommoditiesView from './components/AnalyzeCommoditiesView.vue'
 import CarrierTradeAlertView from './components/CarrierTradeAlertView.vue'
+import CarrierTradeCalculatorView from './components/CarrierTradeCalculatorView.vue'
 import ConfigurationView from './components/ConfigurationView.vue'
 import FooterBar from './components/FooterBar.vue'
 import { columnKey, dedupeStationRows, query } from './utils.js'
@@ -22,7 +23,7 @@ const selectedRow = computed(() => selectedIndex.value >= 0 ? rows.value[selecte
 const lastVersion = ref(null)
 let latestRowsRequestId = 0
 const ACTIVE_VIEW_STORAGE_KEY = 'marketscout.activeView'
-const VALID_VIEWS = new Set(['stations', 'jackpots', 'ledger', 'commodities', 'rare', 'analyze', 'carrier', 'config'])
+const VALID_VIEWS = new Set(['stations', 'jackpots', 'ledger', 'commodities', 'rare', 'analyze', 'carrier', 'carrierCalc', 'config'])
 
 function loadStoredView() {
   try {
@@ -202,6 +203,11 @@ async function loadCarrierTradeAlert() {
   statusText.value = `Carrier trade announcements · ${new Date().toLocaleTimeString()}`
 }
 
+async function loadCarrierTradeCalculator() {
+  beginRowsLoad('carrierCalc')
+  statusText.value = `Carrier trade calculator · ${new Date().toLocaleTimeString()}`
+}
+
 async function loadConfiguration() {
   beginRowsLoad('config')
   statusText.value = `Configuration · ${new Date().toLocaleTimeString()}`
@@ -209,6 +215,7 @@ async function loadConfiguration() {
 
 function applyCurrentView() {
   if (currentView.value === 'config') return loadConfiguration()
+  if (currentView.value === 'carrierCalc') return loadCarrierTradeCalculator()
   if (currentView.value === 'carrier') return loadCarrierTradeAlert()
   if (currentView.value === 'analyze') return loadAnalyzeCommodities()
   if (currentView.value === 'commodities') return loadCommodityStats()
@@ -493,6 +500,9 @@ onUnmounted(() => {
         />
         <CarrierTradeAlertView
           v-else-if="currentView === 'carrier'"
+        />
+        <CarrierTradeCalculatorView
+          v-else-if="currentView === 'carrierCalc'"
         />
         <ConfigurationView
           v-else-if="currentView === 'config'"

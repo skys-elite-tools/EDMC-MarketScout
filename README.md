@@ -77,6 +77,12 @@ Creates Fleet Carrier trade announcements with generated share text, custom anno
 
 ![Carrier Trade Announcements page with poster image controls and generated announcement text](presentation-assets/carrier-trade-announcements.png)
 
+### Carrier Trade Calculator
+
+Calculates Fleet Carrier buy/sell prices and profit splits for station-to-station trades and rare commodity trading.
+
+![Carrier Trade Calculator page showing carrier and hauler profit split outputs](presentation-assets/carrier-trade-calculator.png)
+
 ### Config
 
 Controls the local web address, port, optional LAN access, and QR code sharing for opening MarketScout from another device on the same network.
