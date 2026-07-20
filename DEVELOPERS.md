@@ -10,6 +10,8 @@ End users do **not** need Node.js, npm, Vite, or Vue. Releases include a ready-t
 EDMC-MarketScout/
   load.py                    # Thin EDMC plugin adapter
   marketscout_app.py         # Core plugin lifecycle and journal/CAPI orchestration
+  marketscout_migrations.py  # SQLite migration runner
+  migrations/                # Python schema migration files
   marketscout_importer.py    # CSV/import logic
   marketscout_ledger.py      # trade ledger logic
   marketscout_web.py         # local web server + JSON API
@@ -92,6 +94,30 @@ app.lan_bind_address=
 The Web UI Config page edits the loopback address, shared port, and optional LAN address. Address/port changes require restarting EDMC. QR-code sharing appears only for enabled non-loopback LAN IPv4 addresses.
 
 Important privacy rule: MarketScout itself must not upload data to EDDN, Inara, EDSM, Discord, or any other remote service unless an explicit opt-in feature is added later. The update checker may read GitHub release metadata and download a release zip after the user clicks update, but it must not include commander, journal, route, station, or market data in those requests. Current Web UI assets must be bundled locally; no CDN scripts/styles.
+
+## Database migrations
+
+Schema migrations live in `EDMC-MarketScout/migrations/` and are run by `marketscout_migrations.py` during plugin startup. Applied migrations are recorded in the local SQLite `schema_migrations` table, so each migration runs once per database.
+
+Migration files are Python files so they can use SQLite safety checks and small data transforms when needed. Use this shape:
+
+```python
+MIGRATION_ID = "0002_short_name"
+DESCRIPTION = "Short human-readable description"
+
+def apply(conn):
+    conn.execute("CREATE INDEX IF NOT EXISTS ...")
+```
+
+Use a zero-padded numeric prefix and keep migration ids stable forever. Migrations should be forward-only and safe for real user databases. Do not put schema DDL in `marketscout_app.py`, `commodities_importer.py`, or feature modules.
+
+To create the next migration stub:
+
+```bash
+tools/create-migration "add carrier bookmarks"
+```
+
+This creates the next numbered file in `EDMC-MarketScout/migrations/` with matching `MIGRATION_ID` and `DESCRIPTION` values.
 
 Useful Web API areas:
 

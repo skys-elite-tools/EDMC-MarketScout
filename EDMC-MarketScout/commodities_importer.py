@@ -12,43 +12,6 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, Optional, Sequence
 
-COMMODITY_GLOBAL_STATS_COLUMNS = {
-    "category": "TEXT",
-    "inara_id": "INTEGER",
-    "avg_sell": "INTEGER",
-    "avg_buy": "INTEGER",
-    "avg_profit": "INTEGER",
-    "max_sell": "INTEGER",
-    "min_buy": "INTEGER",
-    "max_profit": "INTEGER",
-    "updated_datetime": "TEXT",
-}
-
-RARE_COMMODITY_COLUMNS = {
-    "inara_commodity_id": "INTEGER",
-    "station_name": "TEXT",
-    "system_name": "TEXT",
-    "inara_location_id": "INTEGER",
-    "station_distance_ls": "REAL",
-    "distance_from_sol_ly": "REAL",
-    "usual_supply": "INTEGER",
-    "buy_price": "INTEGER",
-    "galactic_average_price": "INTEGER",
-    "updated_datetime": "TEXT",
-}
-
-ENGINEERS_UNLOCK_COLUMNS = {
-    "engineer_system": "TEXT",
-    "is_public_knowledge": "INTEGER",
-    "discovered_via": "TEXT",
-    "required_commodity": "TEXT",
-    "required_commodity_quantity": "INTEGER",
-    "other_requirements": "TEXT",
-    "is_rare_commodity": "INTEGER DEFAULT 0",
-    "updated_datetime": "TEXT",
-}
-
-
 def now_utc_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -106,110 +69,6 @@ def sha256_file(path: str) -> str:
     return digest.hexdigest()
 
 
-def column_exists(conn, table: str, column: str) -> bool:
-    return any(row[1] == column for row in conn.execute(f"PRAGMA table_info({table})"))
-
-
-def add_column_if_missing(conn, table: str, column: str, definition: str) -> None:
-    if not column_exists(conn, table, column):
-        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
-
-
-def table_columns(conn, table: str) -> list[str]:
-    return [str(row[1]) for row in conn.execute(f"PRAGMA table_info({table})")]
-
-
-def create_rare_commodities_table(conn) -> None:
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS rare_commodities (
-            commodity TEXT PRIMARY KEY,
-            inara_commodity_id INTEGER,
-            station_name TEXT,
-            system_name TEXT,
-            inara_location_id INTEGER,
-            station_distance_ls REAL,
-            distance_from_sol_ly REAL,
-            usual_supply INTEGER,
-            buy_price INTEGER,
-            galactic_average_price INTEGER,
-            updated_datetime TEXT
-        )
-        """
-    )
-
-
-def remove_obsolete_rare_commodity_columns(conn) -> None:
-    columns = table_columns(conn, "rare_commodities")
-    obsolete = {"profit", "total_sell_price"}
-    if not obsolete.intersection(columns):
-        return
-
-    desired = ["commodity", *RARE_COMMODITY_COLUMNS.keys()]
-    conn.execute("ALTER TABLE rare_commodities RENAME TO rare_commodities_old")
-    create_rare_commodities_table(conn)
-    old_columns = set(table_columns(conn, "rare_commodities_old"))
-    select_exprs = [col if col in old_columns else "NULL" for col in desired]
-    conn.execute(
-        f"""
-        INSERT INTO rare_commodities({", ".join(desired)})
-        SELECT {", ".join(select_exprs)}
-        FROM rare_commodities_old
-        """
-    )
-    conn.execute("DROP TABLE rare_commodities_old")
-
-
-def migrate_db(conn) -> None:
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS systems_data (
-            system_address INTEGER PRIMARY KEY,
-            system_name TEXT NOT NULL,
-            x REAL NOT NULL,
-            y REAL NOT NULL,
-            z REAL NOT NULL,
-            source TEXT,
-            recorded_datetime TEXT
-        )
-        """
-    )
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_systems_data_name ON systems_data(system_name)")
-
-    for column, definition in COMMODITY_GLOBAL_STATS_COLUMNS.items():
-        add_column_if_missing(conn, "commodity_global_stats", column, definition)
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS imports (
-            data_name TEXT PRIMARY KEY,
-            last_sha256 TEXT NOT NULL,
-            imported_datetime TEXT NOT NULL
-        )
-        """
-    )
-    create_rare_commodities_table(conn)
-    for column, definition in RARE_COMMODITY_COLUMNS.items():
-        add_column_if_missing(conn, "rare_commodities", column, definition)
-    remove_obsolete_rare_commodity_columns(conn)
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS engineers_unlock (
-            engineer TEXT PRIMARY KEY,
-            engineer_system TEXT,
-            is_public_knowledge INTEGER,
-            discovered_via TEXT,
-            required_commodity TEXT,
-            required_commodity_quantity INTEGER,
-            other_requirements TEXT,
-            is_rare_commodity INTEGER DEFAULT 0,
-            updated_datetime TEXT
-        )
-        """
-    )
-    for column, definition in ENGINEERS_UNLOCK_COLUMNS.items():
-        add_column_if_missing(conn, "engineers_unlock", column, definition)
-
-
 def last_import_sha(conn, data_name: str) -> Optional[str]:
     row = conn.execute("SELECT last_sha256 FROM imports WHERE data_name=?", (data_name,)).fetchone()
     return str(row[0]) if row and row[0] else None
@@ -229,7 +88,6 @@ def record_import(conn, data_name: str, digest: str, ts: str) -> None:
 
 
 def ensure_default_commodity_global_stats(conn, defaults: Dict[str, Dict[str, Any]]) -> None:
-    migrate_db(conn)
     ts = now_utc_iso()
     for commodity, vals in defaults.items():
         conn.execute(
@@ -352,7 +210,6 @@ def normalized_match_sql(column: str) -> str:
 
 def refresh_systems_from_csv(conn, plugin_dir: str) -> Dict[str, int]:
     """Refresh authoritative system coordinates from optional rawdata/systems_data.csv."""
-    migrate_db(conn)
     path = os.path.join(plugin_dir, "rawdata", "systems_data.csv")
     if not os.path.exists(path):
         conn.commit()
@@ -411,7 +268,6 @@ def refresh_systems_from_csv(conn, plugin_dir: str) -> Dict[str, int]:
 
 def refresh_rare_commodities_from_csv(conn, plugin_dir: str) -> Dict[str, int]:
     """Refresh rare_commodities from optional rawdata/commodities_rare.csv."""
-    migrate_db(conn)
     path = os.path.join(plugin_dir, "rawdata", "commodities_rare.csv")
     if not os.path.exists(path):
         conn.commit()
@@ -484,7 +340,6 @@ def refresh_rare_commodities_from_csv(conn, plugin_dir: str) -> Dict[str, int]:
 
 
 def update_engineers_rare_flags(conn) -> int:
-    migrate_db(conn)
     conn.execute("UPDATE engineers_unlock SET is_rare_commodity=0")
     cur = conn.execute(
         f"""
@@ -504,7 +359,6 @@ def update_engineers_rare_flags(conn) -> int:
 
 def refresh_engineers_unlock_from_csv(conn, plugin_dir: str) -> Dict[str, int]:
     """Refresh engineers_unlock from optional rawdata/engineers-unlock.csv."""
-    migrate_db(conn)
     path = os.path.join(plugin_dir, "rawdata", "engineers-unlock.csv")
     if not os.path.exists(path):
         update_engineers_rare_flags(conn)

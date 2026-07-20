@@ -56,9 +56,12 @@ jobs:
           python3 -m py_compile \
             EDMC-MarketScout/load.py \
             EDMC-MarketScout/marketscout_app.py \
+            EDMC-MarketScout/marketscout_migrations.py \
+            EDMC-MarketScout/migrations/0001_baseline.py \
             EDMC-MarketScout/marketscout_web.py \
             EDMC-MarketScout/marketscout_ledger.py \
-            EDMC-MarketScout/marketscout_importer.py
+            EDMC-MarketScout/marketscout_importer.py \
+            EDMC-MarketScout/commodities_importer.py
 
       - name: Package plugin
         if: steps.tag.outputs.valid == 'true'

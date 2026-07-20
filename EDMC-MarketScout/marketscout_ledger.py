@@ -17,84 +17,8 @@ SALES_CADENCE_WINDOW_MINUTES = 60
 
 
 def init_db(conn: sqlite3.Connection) -> None:
-    conn.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS trade_events (
-            trade_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            event_datetime TEXT NOT NULL,
-            event_type TEXT NOT NULL,
-            system_address INTEGER,
-            system_name TEXT,
-            market_id INTEGER,
-            station_name TEXT,
-            commodity TEXT NOT NULL,
-            quantity INTEGER NOT NULL,
-            unit_price INTEGER,
-            total_credits INTEGER,
-            avg_buy_price REAL,
-            known_cost INTEGER,
-            profit INTEGER,
-            profit_per_hour REAL,
-            covered_quantity INTEGER,
-            journal_avg_price_paid REAL,
-            journal_profit INTEGER,
-            journal_profit_per_unit REAL,
-            ledger_avg_buy_price REAL,
-            ledger_profit INTEGER,
-            ledger_profit_per_hour REAL,
-            cost_basis_method TEXT,
-            supply_at_trade INTEGER,
-            demand_at_trade INTEGER,
-            lots_json TEXT,
-            journal_json TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS trade_lots (
-            lot_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            commodity TEXT NOT NULL,
-            buy_datetime TEXT NOT NULL,
-            system_address INTEGER,
-            system_name TEXT,
-            market_id INTEGER,
-            station_name TEXT,
-            original_quantity INTEGER NOT NULL,
-            remaining_quantity INTEGER NOT NULL,
-            unit_price INTEGER NOT NULL,
-            total_cost INTEGER NOT NULL,
-            source_trade_id INTEGER,
-            closed_datetime TEXT,
-            FOREIGN KEY(source_trade_id) REFERENCES trade_events(trade_id)
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_trade_events_time ON trade_events(event_datetime);
-        CREATE INDEX IF NOT EXISTS idx_trade_events_commodity_time ON trade_events(commodity, event_datetime);
-        CREATE INDEX IF NOT EXISTS idx_trade_lots_open ON trade_lots(commodity, remaining_quantity, buy_datetime);
-        """
-    )
-
-    ensure_columns(conn, "trade_events", {
-        "journal_avg_price_paid": "REAL",
-        "journal_profit": "INTEGER",
-        "journal_profit_per_unit": "REAL",
-        "ledger_avg_buy_price": "REAL",
-        "ledger_profit": "INTEGER",
-        "ledger_profit_per_hour": "REAL",
-        "cost_basis_method": "TEXT",
-        "supply_at_trade": "INTEGER",
-        "demand_at_trade": "INTEGER",
-    })
-    conn.execute("UPDATE trade_events SET journal_avg_price_paid=avg_buy_price WHERE journal_avg_price_paid IS NULL AND avg_buy_price IS NOT NULL")
-    conn.execute("UPDATE trade_events SET journal_profit=profit WHERE journal_profit IS NULL AND profit IS NOT NULL")
-    conn.execute("UPDATE trade_events SET ledger_avg_buy_price=avg_buy_price WHERE ledger_avg_buy_price IS NULL AND avg_buy_price IS NOT NULL")
-    conn.execute("UPDATE trade_events SET ledger_profit=profit WHERE ledger_profit IS NULL AND profit IS NOT NULL")
-    conn.execute("UPDATE trade_events SET ledger_profit_per_hour=profit_per_hour WHERE ledger_profit_per_hour IS NULL AND profit_per_hour IS NOT NULL")
-
-
-def ensure_columns(conn: sqlite3.Connection, table: str, columns: Dict[str, str]) -> None:
-    existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
-    for name, decl in columns.items():
-        if name not in existing:
-            conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
+    """Compatibility hook; trade ledger schema now lives in migrations."""
+    return None
 
 
 def record_trade_event(conn: sqlite3.Connection, system: str, station: str, entry: Dict[str, Any], state: Dict[str, Any]) -> Optional[int]:

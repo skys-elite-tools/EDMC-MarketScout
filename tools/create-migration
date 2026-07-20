@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+MIGRATIONS_DIR="${REPO_ROOT}/EDMC-MarketScout/migrations"
+
+usage() {
+  echo "Usage: $0 \"short migration name\"" >&2
+  exit 2
+}
+
+[[ $# -eq 1 ]] || usage
+
+raw_name="$1"
+slug="$(
+  printf '%s' "${raw_name}" |
+  tr '[:upper:]' '[:lower:]' |
+  sed -E 's/[^a-z0-9]+/_/g; s/^_+//; s/_+$//'
+)"
+
+[[ -n "${slug}" ]] || usage
+[[ -d "${MIGRATIONS_DIR}" ]] || {
+  echo "Missing migrations directory: ${MIGRATIONS_DIR}" >&2
+  exit 1
+}
+
+latest_number="$(
+  find "${MIGRATIONS_DIR}" -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]_*.py' -printf '%f\n' |
+  sed -E 's/^([0-9]{4})_.*/\1/' |
+  sort -n |
+  tail -n 1
+)"
+
+if [[ -z "${latest_number}" ]]; then
+  next_number="0001"
+else
+  next_number="$(printf '%04d' "$((10#${latest_number} + 1))")"
+fi
+
+migration_id="${next_number}_${slug}"
+path="${MIGRATIONS_DIR}/${migration_id}.py"
+description="$(printf '%s' "${raw_name}" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+description="$(printf '%s%s' "$(printf '%s' "${description:0:1}" | tr '[:lower:]' '[:upper:]')" "${description:1}")"
+
+if [[ -e "${path}" ]]; then
+  echo "Migration already exists: ${path}" >&2
+  exit 1
+fi
+
+cat > "${path}" <<EOF
+"""${description}."""
+from __future__ import annotations
+
+MIGRATION_ID = "${migration_id}"
+DESCRIPTION = "${description}"
+
+
+def apply(conn) -> None:
+    raise NotImplementedError("Write migration SQL here")
+EOF
+
+echo "Created ${path}"

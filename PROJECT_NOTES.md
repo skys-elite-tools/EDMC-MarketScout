@@ -71,6 +71,8 @@ Important files/directories:
 EDMC-MarketScout/
   load.py                    # Thin EDMC plugin adapter
   marketscout_app.py         # Core plugin lifecycle and journal/CAPI handling
+  marketscout_migrations.py  # SQLite migration runner
+  migrations/                # Python schema migration files
   marketscout_importer.py    # CSV import logic, currently including Spansh templates
   marketscout_ledger.py      # Trade ledger logic and LIFO/statistics calculations
   marketscout_web.py         # Local HTTP server and JSON API endpoints
@@ -111,6 +113,14 @@ local-tools/
 DEVELOPERS.md                # Build/development instructions
 PROJECT_NOTES.md             # This file
 ```
+
+## Database migrations
+
+Schema changes are managed by `marketscout_migrations.py`. Migration files live in `EDMC-MarketScout/migrations/` and are applied in filename order. Each file defines a stable `MIGRATION_ID`, a `DESCRIPTION`, and `apply(conn)`. Successful migrations are recorded in the local SQLite `schema_migrations` table.
+
+`0001_baseline.py` is the historical checkpoint for the schema through v0.2.4. It is intentionally idempotent so clean installs and older local databases converge to the same baseline state. Future schema changes should be added as new migration files such as `0002_add_example_column.py`; do not put new schema DDL in `marketscout_app.py`, importer modules, or feature modules.
+
+Reference-data imports are separate from schema migrations. Rawdata CSV imports remain SHA-256 gated through the `imports` table and should stay deterministic/local.
 
 ## Web UI architecture
 

@@ -51,6 +51,7 @@ PLUGIN_DIR: Optional[str] = None
 WEB_MODULE: Any = None
 LEDGER_MODULE: Any = None
 COMMODITIES_IMPORTER_MODULE: Any = None
+MIGRATIONS_MODULE: Any = None
 LAST_CURRENT_POS: Optional[Tuple[float, float, float]] = None
 LAST_CURRENT_SYSTEM: Optional[str] = None
 
@@ -99,6 +100,20 @@ def load_commodities_importer_module():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     COMMODITIES_IMPORTER_MODULE = module
+    return module
+
+def load_migrations_module():
+    """Load the migration runner without relying on sys.path."""
+    global MIGRATIONS_MODULE
+    if MIGRATIONS_MODULE is not None:
+        return MIGRATIONS_MODULE
+    path = os.path.join(os.path.dirname(__file__), "marketscout_migrations.py")
+    spec = importlib.util.spec_from_file_location("marketscout_migrations_local", path)
+    if spec is None or spec.loader is None:
+        raise ImportError("Could not load marketscout_migrations.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    MIGRATIONS_MODULE = module
     return module
 
 def load_importer_module():
@@ -255,188 +270,14 @@ def cmdr_data_legacy(data: Any, is_beta: bool) -> Optional[str]:
 
 
 def init_db(conn: sqlite3.Connection) -> None:
-    conn.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS systems (
-            system_address INTEGER PRIMARY KEY,
-            system_name TEXT NOT NULL,
-            x REAL,
-            y REAL,
-            z REAL,
-            population INTEGER,
-            security TEXT,
-            system_faction_state TEXT,
-            system_economy TEXT,
-            system_economies_json TEXT,
-            last_visit_datetime TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS stations (
-            market_id INTEGER PRIMARY KEY,
-            system_address INTEGER,
-            station_name TEXT NOT NULL,
-            station_type TEXT,
-            largest_pad TEXT,
-            station_faction_name TEXT,
-            station_faction_state TEXT,
-            station_economy TEXT,
-            station_economies_json TEXT,
-            last_station_visit_datetime TEXT,
-            FOREIGN KEY(system_address) REFERENCES systems(system_address)
-        );
-
-        CREATE TABLE IF NOT EXISTS market_prices (
-            market_id INTEGER NOT NULL,
-            commodity TEXT NOT NULL,
-            buy_price INTEGER,
-            sell_price INTEGER,
-            supply INTEGER,
-            demand INTEGER,
-            market_price_update_datetime TEXT NOT NULL,
-            PRIMARY KEY (market_id, commodity),
-            FOREIGN KEY(market_id) REFERENCES stations(market_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value_json TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS systems_data (
-            system_address INTEGER PRIMARY KEY,
-            system_name TEXT NOT NULL,
-            x REAL NOT NULL,
-            y REAL NOT NULL,
-            z REAL NOT NULL,
-            source TEXT,
-            recorded_datetime TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS commodity_global_stats (
-            commodity TEXT PRIMARY KEY,
-            category TEXT,
-            inara_id INTEGER,
-            avg_sell INTEGER,
-            avg_buy INTEGER,
-            avg_profit INTEGER,
-            max_sell INTEGER,
-            min_buy INTEGER,
-            max_profit INTEGER,
-            updated_datetime TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS jackpot_events (
-            jackpot_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            market_id INTEGER NOT NULL,
-            detected_datetime TEXT NOT NULL,
-            ended_datetime TEXT,
-            last_sample_datetime TEXT,
-            active INTEGER DEFAULT 1,
-            trigger_commodities TEXT,
-            price_threshold INTEGER,
-            supply_threshold INTEGER,
-            system_name TEXT,
-            system_address INTEGER,
-            system_economy TEXT,
-            system_economies_json TEXT,
-            system_faction_state TEXT,
-            population INTEGER,
-            security TEXT,
-            station_name TEXT,
-            station_type TEXT,
-            largest_pad TEXT,
-            station_economy TEXT,
-            station_economies_json TEXT,
-            station_faction_name TEXT,
-            station_faction_state TEXT,
-            source TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS jackpot_samples (
-            sample_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            jackpot_id INTEGER NOT NULL,
-            market_id INTEGER NOT NULL,
-            sample_datetime TEXT NOT NULL,
-            is_jackpot INTEGER NOT NULL,
-            trigger_commodities TEXT,
-            palladium_buy INTEGER,
-            palladium_supply INTEGER,
-            gold_buy INTEGER,
-            gold_supply INTEGER,
-            silver_buy INTEGER,
-            silver_supply INTEGER,
-            FOREIGN KEY(jackpot_id) REFERENCES jackpot_events(jackpot_id)
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_stations_state ON stations(station_faction_state);
-        CREATE INDEX IF NOT EXISTS idx_stations_economy ON stations(station_economy);
-        CREATE INDEX IF NOT EXISTS idx_prices_commodity_buy ON market_prices(commodity, buy_price);
-        CREATE INDEX IF NOT EXISTS idx_systems_name ON systems(system_name);
-        """
-    )
+    load_migrations_module().run_migrations(conn)
     try:
         load_ledger_module().init_db(conn)
     except Exception:
         log_exception("ledger init_db")
-    migrate_db(conn)
-    conn.commit()
-
-
-def column_exists(conn: sqlite3.Connection, table: str, column: str) -> bool:
-    return any(row[1] == column for row in conn.execute(f"PRAGMA table_info({table})"))
-
-
-def add_column_if_missing(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
-    if not column_exists(conn, table, column):
-        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
-
-
-def migrate_db(conn: sqlite3.Connection) -> None:
-    # 0.1.8 jackpot history/system state metadata.
-    add_column_if_missing(conn, "systems", "system_faction_state", "TEXT")
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS systems_data (
-            system_address INTEGER PRIMARY KEY,
-            system_name TEXT NOT NULL,
-            x REAL NOT NULL,
-            y REAL NOT NULL,
-            z REAL NOT NULL,
-            source TEXT,
-            recorded_datetime TEXT
-        )
-        """
-    )
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_systems_data_name ON systems_data(system_name)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_jackpot_events_market_active ON jackpot_events(market_id, active)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_jackpot_samples_jackpot_time ON jackpot_samples(jackpot_id, sample_datetime)")
-    # 0.1.3 candidate import/source/fleet-carrier metadata.
-    add_column_if_missing(conn, "systems", "source", "TEXT")
-    add_column_if_missing(conn, "systems", "source_pulled_datetime", "TEXT")
-    add_column_if_missing(conn, "stations", "source", "TEXT")
-    add_column_if_missing(conn, "stations", "source_pulled_datetime", "TEXT")
-    add_column_if_missing(conn, "stations", "distance_to_arrival_ls", "REAL")
-    add_column_if_missing(conn, "stations", "body_name", "TEXT")
-    add_column_if_missing(conn, "stations", "has_market", "INTEGER")
-    add_column_if_missing(conn, "stations", "export_commodities_json", "TEXT")
-    add_column_if_missing(conn, "stations", "is_fleet_carrier", "INTEGER DEFAULT 0")
-    # 0.1.4 richer Spansh CSV candidate metadata.
-    add_column_if_missing(conn, "systems", "source_data_updated_datetime", "TEXT")
-    add_column_if_missing(conn, "stations", "source_data_updated_datetime", "TEXT")
-    add_column_if_missing(conn, "stations", "market_source_updated_datetime", "TEXT")
-    add_column_if_missing(conn, "stations", "carrier_docking_access", "TEXT")
-    add_column_if_missing(conn, "stations", "carrier_name", "TEXT")
-    add_column_if_missing(conn, "stations", "planetary", "INTEGER")
-    add_column_if_missing(conn, "stations", "marketplace", "TEXT")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_stations_source ON stations(source)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_stations_fleet ON stations(is_fleet_carrier)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_market_prices_commodity ON market_prices(commodity)")
-    try:
-        load_commodities_importer_module().migrate_db(conn)
-    except Exception:
-        log_exception("commodities importer migrate_db")
     ensure_default_settings(conn)
     ensure_default_commodity_global_stats(conn)
+    conn.commit()
 
 
 def record_system_from_event(entry: Dict[str, Any], state: Dict[str, Any]) -> None:
