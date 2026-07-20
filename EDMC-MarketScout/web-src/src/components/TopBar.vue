@@ -18,7 +18,6 @@ const navItems = [
   { view: 'stations', label: 'Stations', icon: stationIcon },
   { view: 'jackpots', label: 'Jackpots', icon: jackpotsIcon },
   { view: 'ledger', label: 'Ledger', icon: ledgerIcon },
-  { view: 'carrier', label: 'Carrier Trade Announcements', icon: carrierIcon },
   { view: 'config', label: 'Config', icon: configIcon },
 ]
 const commodityItems = [
@@ -26,19 +25,28 @@ const commodityItems = [
   { view: 'rare', label: 'Rare Commodities', icon: rareIcon },
   { view: 'analyze', label: 'Analyze Commodities', icon: analyzeIcon },
 ]
+const carrierItems = [
+  { view: 'carrier', label: 'Trade Announcements', icon: carrierIcon },
+  { view: 'carrierCalc', label: 'Trade Calculator', icon: carrierIcon },
+]
 const commoditiesMenuOpen = ref(false)
+const carrierMenuOpen = ref(false)
 const mobileMenuOpen = ref(false)
 const commoditiesMenuRef = ref(null)
+const carrierMenuRef = ref(null)
 const mobileMenuRef = ref(null)
 const commoditiesActive = computed(() => commodityItems.some((item) => item.view === props.currentView))
+const carrierActive = computed(() => carrierItems.some((item) => item.view === props.currentView))
 const mobileNavGroups = computed(() => [
   navItems.slice(0, 3),
   commodityItems,
+  carrierItems,
   navItems.slice(3),
 ])
 
 function choose(view) {
   commoditiesMenuOpen.value = false
+  carrierMenuOpen.value = false
   mobileMenuOpen.value = false
   if (view === props.currentView) emit('refresh')
   else emit('update:currentView', view)
@@ -46,6 +54,12 @@ function choose(view) {
 
 function toggleCommoditiesMenu() {
   commoditiesMenuOpen.value = !commoditiesMenuOpen.value
+  carrierMenuOpen.value = false
+}
+
+function toggleCarrierMenu() {
+  carrierMenuOpen.value = !carrierMenuOpen.value
+  commoditiesMenuOpen.value = false
 }
 
 function toggleMobileMenu() {
@@ -55,6 +69,9 @@ function toggleMobileMenu() {
 function handleDocumentClick(event) {
   if (commoditiesMenuRef.value && !commoditiesMenuRef.value.contains(event.target)) {
     commoditiesMenuOpen.value = false
+  }
+  if (carrierMenuRef.value && !carrierMenuRef.value.contains(event.target)) {
+    carrierMenuOpen.value = false
   }
   if (mobileMenuRef.value && !mobileMenuRef.value.contains(event.target)) {
     mobileMenuOpen.value = false
@@ -104,6 +121,35 @@ onBeforeUnmount(() => document.removeEventListener('click', handleDocumentClick)
         <div v-if="commoditiesMenuOpen" class="navMenuList" role="menu">
           <button
             v-for="item in commodityItems"
+            :key="item.view"
+            type="button"
+            class="navMenuItem"
+            :class="{ active: currentView === item.view }"
+            role="menuitem"
+            @click="choose(item.view)"
+          >
+            <img class="navButtonIcon" :src="item.icon" alt="" aria-hidden="true" />
+            <span>{{ item.label }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div ref="carrierMenuRef" class="navMenu">
+        <button
+          type="button"
+          class="navButton navMenuButton"
+          :class="{ active: carrierActive }"
+          :aria-expanded="carrierMenuOpen"
+          aria-haspopup="menu"
+          @click.stop="toggleCarrierMenu"
+        >
+          <img class="navButtonIcon" :src="carrierIcon" alt="" aria-hidden="true" />
+          <span>Carrier Tools</span>
+          <span class="navMenuArrow" aria-hidden="true">▾</span>
+        </button>
+        <div v-if="carrierMenuOpen" class="navMenuList" role="menu">
+          <button
+            v-for="item in carrierItems"
             :key="item.view"
             type="button"
             class="navMenuItem"

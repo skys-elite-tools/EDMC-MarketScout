@@ -46,13 +46,17 @@ const pageMetaByView = {
     title: 'Carrier Trade Announcements',
     description: 'Creates Fleet Carrier trade announcement images and shareable text.',
   },
+  carrierCalc: {
+    title: 'Carrier Trade Calculator',
+    description: 'Calculates carrier buy/sell prices and profit splits for station trades and rare commodities.',
+  },
   config: {
     title: 'Configuration',
     description: 'Manages the local web address, shared port, and optional LAN access.',
   },
 }
 const pageMeta = computed(() => pageMetaByView[props.currentView] || { title: 'MarketScout', description: '' })
-const hasControls = computed(() => !['analyze', 'carrier', 'config'].includes(props.currentView))
+const hasControls = computed(() => !['analyze', 'carrier', 'carrierCalc', 'config'].includes(props.currentView))
 </script>
 
 <template>

@@ -554,6 +554,122 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 }
 .analysisRareTable th:nth-child(1) { min-width: 10rem; }
 .analysisRareTable th:nth-child(3) { min-width: 10rem; }
+.carrierTradeCalculator {
+  padding: 12px 16px 18px;
+  display: grid;
+  gap: 12px;
+}
+.calculatorTabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+.calculatorTabs button {
+  min-width: 10rem;
+}
+.calculatorTabs button.active {
+  border-color: var(--accent);
+  background: #263142;
+  color: white;
+}
+.calculatorPanel {
+  display: grid;
+  grid-template-columns: minmax(24rem, .95fr) minmax(22rem, 1.05fr);
+  gap: 14px;
+  align-items: start;
+}
+.calculatorInputs {
+  display: grid;
+  gap: 12px;
+}
+.calculatorInputs fieldset {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px;
+  margin: 0;
+  background: rgba(255,255,255,.025);
+}
+.calculatorInputs legend {
+  color: var(--accent2);
+  font-weight: 900;
+  padding: 0 4px;
+}
+.calculatorGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+.calculatorGrid label,
+.calculatorSlider {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.calculatorGrid input,
+.calculatorGrid select {
+  width: 100%;
+}
+.calculatorSlider {
+  margin-top: 10px;
+}
+.calculatorSlider input[type="range"] {
+  width: 100%;
+}
+.sliderScale {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.calculatorHint {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.calculatorOutputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.metricCard {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-height: 5.2rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+  background: rgba(255,255,255,.025);
+}
+.metricCard span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.metricCard strong {
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1.1;
+}
+.metricCard small {
+  color: var(--accent);
+  font-size: 12px;
+}
+.metricCard.wide {
+  grid-column: span 2;
+}
+.metricCard.carrierMetric {
+  border-color: rgba(159, 240, 212, .35);
+  background: rgba(159, 240, 212, .055);
+}
+.metricCard.carrierMetric strong {
+  color: #9ff0d4;
+}
 .configurationView {
   padding: 12px 16px 18px;
   display: grid;
@@ -1279,6 +1395,10 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   main.detailsOpen { grid-template-columns: 1fr; }
   .details { border-left: none; border-top: 1px solid var(--line); max-height: 45vh; }
   .analysisTables { grid-template-columns: 1fr; }
+  .calculatorPanel,
+  .calculatorGrid,
+  .calculatorOutputs { grid-template-columns: 1fr; }
+  .metricCard.wide { grid-column: auto; }
   .carrierTradeAlert,
   .carrierFormGrid,
   .carrierImageTools,

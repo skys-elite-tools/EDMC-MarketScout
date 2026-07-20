@@ -10,7 +10,7 @@ Local-only EDMarketConnector plugin for scouting station market/BGS conditions, 
 - Stores commodity market prices from EDMC CAPI data when available, with a local `Market.json` fallback.
 - Stores everything locally in `marketscout.sqlite3` inside the plugin folder.
 - Opens a local browser Web UI served from `127.0.0.1`.
-- Shows Stations, Jackpots, Ledger, Commodities, Rare Commodities, Analyze Commodities, and Carrier Trade Announcements views.
+- Shows Stations, Jackpots, Ledger, Commodities, Rare Commodities, Analyze Commodities, Carrier Trade Announcements, and Carrier Trade Calculator views.
 - Supports watched commodity columns and a Best Buy ignore list.
 - Imports candidate stations from supported CSV exports, currently Spansh station-search CSVs.
 - Imports maintained rawdata CSV files for commodity stats, rare commodities, engineer unlock requirements, and relevant system coordinates.
@@ -90,6 +90,7 @@ The helper scripts for regenerating these files live under `local-tools/` in the
 - `Rare Commodities`: rare commodity source table with engineering unlock labels, usual supply, distance, and 100x galactic-average carrier-sale estimates.
 - `Analyze Commodities`: paste a comma-separated commodity list and split matches into regular and rare commodity tables.
 - `Carrier Trade Announcements`: create local Fleet Carrier trade announcements with draggable on-image text and copyable Discord/Reddit text.
+- `Carrier Trade Calculator`: calculate Fleet Carrier buy/sell prices and profit splits for station-to-station trades and rare commodity trading.
 
 ## Version
 
@@ -225,3 +226,7 @@ Highlights:
 ## 0.2.2 Beta notes
 
 0.2.2 improves the Carrier Trade Announcements text color control by replacing the browser-native color picker with a bundled Coloris picker. This gives commanders a full color selector with swatches and hex entry while avoiding viewport clipping near the right edge of the page.
+
+## 0.2.3 Beta notes
+
+0.2.3 adds the Carrier Trade Calculator and groups carrier-focused tools under a new `Carrier Tools` top navigation menu. The calculator includes station-to-station trade splitting and rare commodity carrier sale calculations with live carrier/hauler profit outputs.
