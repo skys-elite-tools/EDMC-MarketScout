@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.5 Beta
+
+- Refactored database migrations into dedicated migration files with a `schema_migrations` table, plus a developer helper for creating new migrations.
+- Extracted the changelog into this standalone `CHANGELOG.md` file.
+- Improved Carrier Trade Announcements custom templates so Loading and Unloading trades can have separate saved title/body templates.
+- The Custom Announcement output and editor now show an accented `Carrier Loading Template` or `Carrier Unloading Template` label.
+
 ## 0.2.4 Beta
 
 - Added the GitHub release update checker and one-click updater.
