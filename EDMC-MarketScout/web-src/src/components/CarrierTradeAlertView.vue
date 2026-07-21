@@ -50,6 +50,50 @@ const form = ref({ ...defaultForm, ...(savedDraft.form || {}) })
 const defaultCustomAnnouncementTitleTemplate = '[carrier_name] ([[carrier_id]])'
 const defaultCustomAnnouncementTemplate = '**[carrier_name] ([[carrier_id]])** is trading at **[trade_station_name]** [trade_station_type_if_planetary_in_parentheses] in **[trade_system]**. **[profit_k]**/unit profit, **[quantity_k]** units.'
 
+function tradeTypeKey(value) {
+  return String(value || '').toLowerCase() === 'unloading' ? 'unloading' : 'loading'
+}
+
+function tradeTypeLabel(value) {
+  return tradeTypeKey(value) === 'unloading' ? 'Carrier Unloading' : 'Carrier Loading'
+}
+
+function defaultCustomTemplateSet() {
+  return {
+    loading: {
+      title: defaultCustomAnnouncementTitleTemplate,
+      body: defaultCustomAnnouncementTemplate,
+    },
+    unloading: {
+      title: defaultCustomAnnouncementTitleTemplate,
+      body: defaultCustomAnnouncementTemplate,
+    },
+  }
+}
+
+function normalizeCustomTemplateSet(draft) {
+  const templates = {
+    ...defaultCustomTemplateSet(),
+    ...(draft.customAnnouncementTemplates || {}),
+  }
+  const legacyTitle = draft.customAnnouncementTitleTemplate
+  const legacyBody = draft.customAnnouncementTemplate
+  if (legacyTitle || legacyBody) {
+    const key = tradeTypeKey(draft.form?.type || defaultForm.type)
+    templates[key] = {
+      title: legacyTitle || templates[key]?.title || defaultCustomAnnouncementTitleTemplate,
+      body: legacyBody || templates[key]?.body || defaultCustomAnnouncementTemplate,
+    }
+  }
+  for (const key of ['loading', 'unloading']) {
+    templates[key] = {
+      title: templates[key]?.title || defaultCustomAnnouncementTitleTemplate,
+      body: templates[key]?.body || defaultCustomAnnouncementTemplate,
+    }
+  }
+  return templates
+}
+
 const textColor = ref(savedDraft.textColor || '#f6fbff')
 const textStyle = ref(savedDraft.textStyle || 'classic')
 const textLayout = ref(savedDraft.textLayout || savedDraft.textStyle || 'classic')
@@ -62,8 +106,7 @@ const copied = ref(false)
 const customTitleCopied = ref(false)
 const customBodyCopied = ref(false)
 const customTemplateModalOpen = ref(false)
-const customAnnouncementTitleTemplate = ref(savedDraft.customAnnouncementTitleTemplate || defaultCustomAnnouncementTitleTemplate)
-const customAnnouncementTemplate = ref(savedDraft.customAnnouncementTemplate || defaultCustomAnnouncementTemplate)
+const customAnnouncementTemplates = ref(normalizeCustomTemplateSet(savedDraft))
 const layoutName = ref('')
 const layoutSaveStatus = ref('')
 const layoutMenuOpen = ref(false)
@@ -123,9 +166,37 @@ const fontSizes = ref({
 
 const padLetter = computed(() => (form.value.pads || 'Large').slice(0, 1).toUpperCase())
 const tradeTypeLower = computed(() => String(form.value.type || '').toLowerCase())
+const activeCustomTemplateType = computed(() => tradeTypeKey(form.value.type))
+const activeCustomTemplateTypeLabel = computed(() => tradeTypeLabel(form.value.type))
 const imageUrl = computed(() => uploadedImageUrl.value || defaultImageUrl.value)
 const imageProfitText = computed(() => `${adValue(form.value.profit)} Cr/t${form.value.includeProfitLabelInImage === false ? '' : ' profit'}`)
 const isPlanetaryStation = computed(() => String(form.value.stationType || '').toLowerCase() === 'planetary')
+
+const customAnnouncementTitleTemplate = computed({
+  get() {
+    return customAnnouncementTemplates.value[activeCustomTemplateType.value]?.title || defaultCustomAnnouncementTitleTemplate
+  },
+  set(value) {
+    const key = activeCustomTemplateType.value
+    customAnnouncementTemplates.value[key] = {
+      ...(customAnnouncementTemplates.value[key] || {}),
+      title: value,
+    }
+  },
+})
+
+const customAnnouncementTemplate = computed({
+  get() {
+    return customAnnouncementTemplates.value[activeCustomTemplateType.value]?.body || defaultCustomAnnouncementTemplate
+  },
+  set(value) {
+    const key = activeCustomTemplateType.value
+    customAnnouncementTemplates.value[key] = {
+      ...(customAnnouncementTemplates.value[key] || {}),
+      body: value,
+    }
+  },
+})
 
 function adValue(value) {
   return String(value || '').trim()
@@ -274,8 +345,19 @@ function applyTextLayout(value) {
   textStyle.value = layout.mode === 'floating' ? 'floating' : 'classic'
   if (layout.positions) layerPositions.value[textStyle.value] = clone(layout.positions)
   if (layout.fontSizes) fontSizes.value = { ...fontSizes.value, ...clone(layout.fontSizes) }
-  if (Object.prototype.hasOwnProperty.call(layout, 'customAnnouncementTitleTemplate')) customAnnouncementTitleTemplate.value = layout.customAnnouncementTitleTemplate
-  if (Object.prototype.hasOwnProperty.call(layout, 'customAnnouncementTemplate')) customAnnouncementTemplate.value = layout.customAnnouncementTemplate
+  if (layout.customAnnouncementTemplates) {
+    customAnnouncementTemplates.value = {
+      ...defaultCustomTemplateSet(),
+      ...clone(customAnnouncementTemplates.value),
+      ...clone(layout.customAnnouncementTemplates),
+    }
+  } else if (Object.prototype.hasOwnProperty.call(layout, 'customAnnouncementTitleTemplate') || Object.prototype.hasOwnProperty.call(layout, 'customAnnouncementTemplate')) {
+    const key = tradeTypeKey(layout.customAnnouncementTradeType || form.value.type)
+    customAnnouncementTemplates.value[key] = {
+      title: layout.customAnnouncementTitleTemplate || customAnnouncementTemplates.value[key]?.title || defaultCustomAnnouncementTitleTemplate,
+      body: layout.customAnnouncementTemplate || customAnnouncementTemplates.value[key]?.body || defaultCustomAnnouncementTemplate,
+    }
+  }
 }
 
 function selectTextLayout(value) {
@@ -339,6 +421,8 @@ function saveCurrentLayout() {
     mode: textStyle.value,
     positions: clone(layerPositions.value[textStyle.value]),
     fontSizes: clone(fontSizes.value),
+    customAnnouncementTradeType: activeCustomTemplateType.value,
+    customAnnouncementTemplates: clone(customAnnouncementTemplates.value),
     customAnnouncementTitleTemplate: customAnnouncementTitleTemplate.value,
     customAnnouncementTemplate: customAnnouncementTemplate.value,
   }
@@ -360,6 +444,7 @@ function persistDraft() {
     layerPositions: layerPositions.value,
     fontSizes: fontSizes.value,
     uploadedImageUrl: uploadedImageUrl.value,
+    customAnnouncementTemplates: customAnnouncementTemplates.value,
     customAnnouncementTitleTemplate: customAnnouncementTitleTemplate.value,
     customAnnouncementTemplate: customAnnouncementTemplate.value,
   }
@@ -606,7 +691,7 @@ onUnmounted(() => {
 
 watch(imageUrl, () => nextTick(updateStageSize))
 watch(textLayout, value => applyTextLayout(value))
-watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, uploadedImageUrl, customAnnouncementTitleTemplate, customAnnouncementTemplate], persistDraft, { deep: true })
+watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, uploadedImageUrl, customAnnouncementTemplates], persistDraft, { deep: true })
 </script>
 
 <template>
@@ -649,6 +734,7 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
         <legend>Custom Announcement</legend>
         <div class="outputPanelHeader">
           <h2>For forums, reddit and more</h2>
+          <span class="customTemplateTypeBadge">{{ activeCustomTemplateTypeLabel }} template</span>
         </div>
         <div class="customAnnouncementOutput">
           <div class="customOutputSection">
@@ -787,6 +873,7 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
       <section class="templateModal" role="dialog" aria-modal="true" aria-labelledby="customTemplateTitle">
         <div class="modalHeader">
           <h2 id="customTemplateTitle">Custom Announcement Template</h2>
+          <span class="customTemplateTypeBadge">{{ activeCustomTemplateTypeLabel }} template</span>
           <button type="button" class="iconButton" title="Close" @click="customTemplateModalOpen = false">×</button>
         </div>
         <div class="templateEditorGrid">

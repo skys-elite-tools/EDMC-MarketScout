@@ -1151,6 +1151,21 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   color: #9ff0d4;
   font-size: 13px;
 }
+.customTemplateTypeBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.55rem;
+  border: 1px solid rgba(245,194,75,.55);
+  border-radius: 999px;
+  background: rgba(245,194,75,.14);
+  color: #ffe1a0;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 0 9px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 .outputText,
 .outputTitle {
   margin: 0;
