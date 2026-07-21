@@ -72,9 +72,10 @@ Current top-level Web UI views are:
 - Rare Commodities
 - Analyze Commodities
 - Carrier Trade Announcements
+- Carrier Trade Calculator
 - Config
 
-Browser-only personal state uses localStorage for convenience, including the active view, Analyze Commodities pasted input, and Carrier Trade Announcements drafts/custom text layouts.
+Browser-only personal state uses localStorage for convenience, including the active view, Analyze Commodities pasted input, Carrier Trade Announcements drafts/custom text layouts, and Carrier Trade Calculator inputs.
 
 The Web UI has a responsive top navigation. Commodities, Rare Commodities, and Analyze Commodities are grouped under the Commodities menu on wider layouts; the navigation collapses to a hamburger menu on narrower windows. The footer provides About and Help modals.
 

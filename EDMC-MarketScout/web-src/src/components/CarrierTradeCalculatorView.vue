@@ -2,25 +2,64 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { fmt, money, num, query } from '../utils.js'
 
-const stationInputs = ref({
+const STORAGE_KEY = 'marketscout.carrierTradeCalculator.draft'
+
+const DEFAULT_STATION_INPUTS = {
   buyStationPrice: 6000,
   sellStationPrice: 26000,
   carrierProfitPercentage: 20,
   haulerSplit: 50,
   numTonnes: 20000,
-})
+}
 
-const rareInputs = ref({
+const DEFAULT_RARE_INPUTS = {
   commodity: '',
   buyStationPrice: 0,
   carrierSalePrice: 0,
   carrierProfitPercentage: 20,
   numTonnes: 20000,
-})
+}
 
+const stationInputs = ref({ ...DEFAULT_STATION_INPUTS })
+const rareInputs = ref({ ...DEFAULT_RARE_INPUTS })
 const activeTab = ref('station')
 const rareRows = ref([])
 const rareStatus = ref('Loading rare commodities...')
+let skipNextRareApply = false
+
+function loadDraft() {
+  try {
+    const draft = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '{}')
+    if (draft && typeof draft === 'object') {
+      if (draft.stationInputs && typeof draft.stationInputs === 'object') {
+        stationInputs.value = { ...DEFAULT_STATION_INPUTS, ...draft.stationInputs }
+      }
+      if (draft.rareInputs && typeof draft.rareInputs === 'object') {
+        rareInputs.value = { ...DEFAULT_RARE_INPUTS, ...draft.rareInputs }
+        if (rareInputs.value.commodity) skipNextRareApply = true
+      }
+      if (draft.activeTab === 'station' || draft.activeTab === 'rare') {
+        activeTab.value = draft.activeTab
+      }
+    }
+  } catch (err) {
+    // Ignore broken localStorage drafts.
+  }
+}
+
+function saveDraft() {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      activeTab: activeTab.value,
+      stationInputs: stationInputs.value,
+      rareInputs: rareInputs.value,
+    }))
+  } catch (err) {
+    // Ignore private browsing or storage quota failures.
+  }
+}
+
+loadDraft()
 
 function asNumber(value) {
   const n = Number(value)
@@ -130,6 +169,10 @@ async function loadRareCommodities() {
 }
 
 watch(selectedRare, row => {
+  if (skipNextRareApply) {
+    skipNextRareApply = false
+    return
+  }
   if (row) applySelectedRare(row)
 })
 
@@ -137,6 +180,7 @@ watch(() => rareInputs.value.carrierSalePrice, clampRareSalePrice)
 watch(rareMaxCarrierSalePrice, max => {
   if (max > 0 && rareInputs.value.carrierSalePrice > max) rareInputs.value.carrierSalePrice = max
 })
+watch([activeTab, stationInputs, rareInputs], saveDraft, { deep: true })
 
 onMounted(loadRareCommodities)
 </script>

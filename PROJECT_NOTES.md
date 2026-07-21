@@ -144,6 +144,7 @@ Current views:
 - `Rare Commodities`: rare commodity reference table with engineering-only filtering, usual supply sorting, current-position distance, engineer unlock labels, and carrier-sale profit estimates based on 100x galactic average.
 - `Analyze Commodities`: paste a comma-separated commodity list and split matches into regular and rare commodity tables. The last pasted list is stored in browser localStorage.
 - `Carrier Trade Announcements`: Fleet Carrier trade advertisement builder with editable form data, image upload, draggable text layers, downloadable PNG/JPG output, and copyable Discord/Reddit announcement text.
+- `Carrier Trade Calculator`: Fleet Carrier trade profit splitter for station-to-station and rare commodity trades. Inputs are stored in browser localStorage.
 - `Config`: runtime-local address/port/LAN configuration, LAN quick-fill, and QR-code sharing when LAN access is enabled.
 
 The Python local web server provides JSON endpoints; Vue should not know about SQLite directly.
@@ -156,6 +157,7 @@ Several purely personal UI preferences are stored in browser localStorage, not S
 - `marketscout.analyzeCommodities.text`: last Analyze Commodities pasted list.
 - `marketscout.carrierTradeAlert.draft`: Carrier Trade Announcements form values, text color, active layout, text positions/font sizes, and uploaded image data URL.
 - `marketscout.carrierTradeAlert.layouts`: user-saved Carrier Trade Announcements text layouts.
+- `marketscout.carrierTradeCalculator.draft`: Carrier Trade Calculator active tab and input values.
 
 These values are local browser convenience state only. They should not be uploaded or treated as shared project data.
 
