@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import Coloris from '@melloware/coloris'
 import '@melloware/coloris/dist/coloris.css'
 import placeholderImage from '../assets/trade-placeholder.png'
+import ModalShell from './ModalShell.vue'
 
 const LAYOUT_STORAGE_KEY = 'marketscout.carrierTradeAlert.layouts'
 const DRAFT_STORAGE_KEY = 'marketscout.carrierTradeAlert.draft'
@@ -869,33 +870,37 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
       </div>
     </section>
 
-    <div v-if="customTemplateModalOpen" class="modalBackdrop" @click.self="customTemplateModalOpen = false">
-      <section class="templateModal" role="dialog" aria-modal="true" aria-labelledby="customTemplateTitle">
-        <div class="modalHeader">
-          <h2 id="customTemplateTitle">Custom Announcement Template</h2>
-          <span class="customTemplateTypeBadge">{{ activeCustomTemplateTypeLabel }} template</span>
-          <button type="button" class="iconButton" title="Close" @click="customTemplateModalOpen = false">×</button>
-        </div>
-        <div class="templateEditorGrid">
-          <div>
-            <h3>Tokens</h3>
-            <div class="tokenList">
-              <code v-for="[token, help] in customTokenList" :key="token" :title="help">[{{ token }}]</code>
-            </div>
-          </div>
-          <div class="templateFields">
-            <label>Announcement Title
-              <input v-model="customAnnouncementTitleTemplate" type="text" spellcheck="false" />
-            </label>
-            <label class="templateTextArea">Announcement Body
-              <textarea v-model="customAnnouncementTemplate" rows="14" spellcheck="false"></textarea>
-            </label>
+    <ModalShell
+      v-if="customTemplateModalOpen"
+      title="Custom Announcement Template"
+      title-id="customTemplateTitle"
+      panel-class="templateModal"
+      @close="customTemplateModalOpen = false"
+    >
+      <template #header-extra>
+        <span class="customTemplateTypeBadge">{{ activeCustomTemplateTypeLabel }} template</span>
+      </template>
+
+      <div class="templateEditorGrid">
+        <div>
+          <h3>Tokens</h3>
+          <div class="tokenList">
+            <code v-for="[token, help] in customTokenList" :key="token" :title="help">[{{ token }}]</code>
           </div>
         </div>
-        <div class="modalActions">
-          <button type="button" @click="customTemplateModalOpen = false">Done</button>
+        <div class="templateFields">
+          <label>Announcement Title
+            <input v-model="customAnnouncementTitleTemplate" type="text" spellcheck="false" />
+          </label>
+          <label class="templateTextArea">Announcement Body
+            <textarea v-model="customAnnouncementTemplate" rows="14" spellcheck="false"></textarea>
+          </label>
         </div>
-      </section>
-    </div>
+      </div>
+
+      <template #actions>
+        <button type="button" @click="customTemplateModalOpen = false">Done</button>
+      </template>
+    </ModalShell>
   </div>
 </template>
