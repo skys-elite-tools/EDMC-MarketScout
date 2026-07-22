@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.8 Beta
 
 - Fixed Stations auto-refresh after live station/market updates by using an explicit Web UI data-version signal instead of relying only on SQLite database file modification time.
 - Fixed Stations watched Buy and Best Buy displays so commodities with zero supply are not treated as available buy opportunities; watched Buy cells now show zero supply as low/empty stock instead of green.
