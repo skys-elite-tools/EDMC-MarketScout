@@ -5,7 +5,7 @@
 - Refactored Carrier Trade Announcements into focused components for the form, poster editor, announcement outputs, and template editor.
 - Renamed the view source file from `CarrierTradeAlertView.vue` to `CarrierTradeAnnouncementsView.vue`.
 - Moved page-level Web UI screens into `web-src/src/views/`, keeping reusable and child UI pieces in `web-src/src/components/`.
-- Extracted shared `MetricCard.vue` and `ModalShell.vue` UI components.
+- Extracted shared `MetricCard.vue`, `ModalShell.vue`, and `CopyablePanel.vue` UI components.
 
 ## 0.2.6 Beta
 

@@ -100,7 +100,7 @@ The localStorage keys still use `marketscout.carrierTradeAlert.*` for backwards 
 
 Use `AutocompleteDropdown.vue` for future text-input controls that also need an explicit dropdown menu. It is currently used by the Rare Station-to-Station Target Station control.
 
-Use `MetricCard.vue` for repeated calculator-style output cards, and `ModalShell.vue` for shared modal backdrop/header/close behavior.
+Use `MetricCard.vue` for repeated calculator-style output cards, `ModalShell.vue` for shared modal backdrop/header/close behavior, and `CopyablePanel.vue` for generated output text blocks with built-in copy actions.
 
 ## Python backend development
 

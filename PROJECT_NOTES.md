@@ -115,6 +115,7 @@ EDMC-MarketScout/
         CarrierTradeRareCalculator.vue
         CarrierTradeRareStationCalculator.vue
         AutocompleteDropdown.vue
+        CopyablePanel.vue
         MetricCard.vue
         ModalShell.vue
         FooterBar.vue
