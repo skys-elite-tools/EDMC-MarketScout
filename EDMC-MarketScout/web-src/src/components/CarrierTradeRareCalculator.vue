@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { fmt, money, num, query } from '../utils.js'
+import MetricCard from './MetricCard.vue'
 
 const props = defineProps({
   inputs: { type: Object, required: true },
@@ -146,12 +147,12 @@ onMounted(loadRareCommodities)
     </div>
 
     <div class="calculatorOutputs">
-      <div class="metricCard"><span>Loading Haulers Profit</span><strong>{{ money(loadingHaulerProfit) }}</strong><small>Cr/unit</small></div>
-      <div class="metricCard carrierMetric"><span>Carrier Profit</span><strong>{{ money(carrierProfit) }}</strong><small>Cr/unit</small></div>
-      <div class="metricCard"><span>Carrier Buy Price</span><strong>{{ money(carrierBuyPrice) }}</strong><small>Cr/unit</small></div>
-      <div class="metricCard"><span>Carrier Sale Price</span><strong>{{ money(inputs.carrierSalePrice) }}</strong><small>Cr/unit</small></div>
-      <div class="metricCard wide"><span>Total Carrier Profit at {{ money(tonnes) }} units sold</span><strong>{{ money(totalCarrierProfit) }}</strong><small>Cr</small></div>
-      <div class="metricCard wide"><span>Total Haulers Profit at {{ money(tonnes) }} units sold</span><strong>{{ money(totalHaulersProfit) }}</strong><small>Cr</small></div>
+      <MetricCard label="Loading Haulers Profit" :value="money(loadingHaulerProfit)" unit="Cr/unit" />
+      <MetricCard label="Carrier Profit" :value="money(carrierProfit)" unit="Cr/unit" carrier />
+      <MetricCard label="Carrier Buy Price" :value="money(carrierBuyPrice)" unit="Cr/unit" />
+      <MetricCard label="Carrier Sale Price" :value="money(inputs.carrierSalePrice)" unit="Cr/unit" />
+      <MetricCard :label="`Total Carrier Profit at ${money(tonnes)} units sold`" :value="money(totalCarrierProfit)" unit="Cr" wide />
+      <MetricCard :label="`Total Haulers Profit at ${money(tonnes)} units sold`" :value="money(totalHaulersProfit)" unit="Cr" wide />
     </div>
   </section>
 </template>

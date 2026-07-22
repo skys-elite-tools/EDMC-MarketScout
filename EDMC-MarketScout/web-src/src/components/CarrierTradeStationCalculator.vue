@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { money } from '../utils.js'
+import MetricCard from './MetricCard.vue'
 
 const props = defineProps({
   inputs: { type: Object, required: true },
@@ -75,13 +76,13 @@ function setHaulerSplit(value) {
     </div>
 
     <div class="calculatorOutputs">
-      <div class="metricCard"><span>Loading Haulers Profit</span><strong>{{ money(loadingHaulerProfit) }}</strong><small>Cr/t</small></div>
-      <div class="metricCard"><span>Unloading Haulers Profit</span><strong>{{ money(unloadingHaulerProfit) }}</strong><small>Cr/t</small></div>
-      <div class="metricCard carrierMetric"><span>Carrier Profit</span><strong>{{ money(carrierProfit) }}</strong><small>Cr/t</small></div>
-      <div class="metricCard"><span>Carrier Buy Price</span><strong>{{ money(carrierBuyPrice) }}</strong><small>Cr/t</small></div>
-      <div class="metricCard"><span>Carrier Sell Price</span><strong>{{ money(carrierSellPrice) }}</strong><small>Cr/t</small></div>
-      <div class="metricCard wide"><span>Total Carrier Profit at {{ money(tonnes) }} tonnes sold</span><strong>{{ money(totalCarrierProfit) }}</strong><small>Cr</small></div>
-      <div class="metricCard wide"><span>Total Haulers Profit at {{ money(tonnes) }} tonnes sold</span><strong>{{ money(totalHaulersProfit) }}</strong><small>Cr</small></div>
+      <MetricCard label="Loading Haulers Profit" :value="money(loadingHaulerProfit)" unit="Cr/t" />
+      <MetricCard label="Unloading Haulers Profit" :value="money(unloadingHaulerProfit)" unit="Cr/t" />
+      <MetricCard label="Carrier Profit" :value="money(carrierProfit)" unit="Cr/t" carrier />
+      <MetricCard label="Carrier Buy Price" :value="money(carrierBuyPrice)" unit="Cr/t" />
+      <MetricCard label="Carrier Sell Price" :value="money(carrierSellPrice)" unit="Cr/t" />
+      <MetricCard :label="`Total Carrier Profit at ${money(tonnes)} tonnes sold`" :value="money(totalCarrierProfit)" unit="Cr" wide />
+      <MetricCard :label="`Total Haulers Profit at ${money(tonnes)} tonnes sold`" :value="money(totalHaulersProfit)" unit="Cr" wide />
     </div>
   </section>
 </template>
