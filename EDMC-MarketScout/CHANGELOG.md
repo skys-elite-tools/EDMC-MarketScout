@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.7 Beta
 
 - Refactored Carrier Trade Announcements into focused components for the form, poster editor, announcement outputs, and template editor.
 - Renamed the view source file from `CarrierTradeAlertView.vue` to `CarrierTradeAnnouncementsView.vue`.
