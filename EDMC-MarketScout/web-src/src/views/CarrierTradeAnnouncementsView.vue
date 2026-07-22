@@ -109,6 +109,8 @@ const layoutMenuOpen = ref(false)
 
 const savedLayouts = ref(loadSavedLayouts())
 const textColorPresets = ['#f6fbff', '#ffffff', '#78c8ff', '#9ff0d4', '#ffe27a', '#ff9f43', '#ff6bcb', '#b890ff']
+const UPPERCASE_LAYER_KEYS = new Set(['commodity', 'carrier'])
+const TEXT_LETTER_SPACING_EM = 0.02
 
 const defaultLayerPositions = {
   classic: {
@@ -196,6 +198,11 @@ function adValue(value) {
   return String(value || '').trim()
 }
 
+function displayLayerText(key, value) {
+  const text = String(value || '')
+  return UPPERCASE_LAYER_KEYS.has(key) ? text.toUpperCase() : text
+}
+
 function tokenK(value) {
   return adValue(value).replace(/[.,]?0{3}\b/g, 'k')
 }
@@ -264,6 +271,14 @@ const layerText = computed(() => ({
   carrierName: form.value.carrierName || 'Carrier Name',
   carrierId: form.value.carrierId || 'Carrier ID',
 }))
+
+const previewLayerText = computed(() => {
+  const next = {}
+  for (const [key, value] of Object.entries(layerText.value)) {
+    next[key] = displayLayerText(key, value)
+  }
+  return next
+})
 
 const announcement = computed(() => {
   const direction = tradeTypeLower.value === 'unloading' ? 'to' : 'from'
@@ -502,11 +517,12 @@ function loadImage(src) {
 }
 
 function drawTextLayer(ctx, layer, width, height) {
-  const text = layerText.value[layer.key] || ''
+  const text = displayLayerText(layer.key, layerText.value[layer.key])
   const fontSize = Math.max(10, Number(fontSizes.value[layer.sizeKey] || 32))
   ctx.font = `${layer.weight} ${fontSize}px system-ui, -apple-system, Segoe UI, sans-serif`
   ctx.textAlign = layer.align
   ctx.textBaseline = 'middle'
+  if ('letterSpacing' in ctx) ctx.letterSpacing = `${fontSize * TEXT_LETTER_SPACING_EM}px`
   ctx.fillStyle = textColor.value
   ctx.shadowColor = 'rgba(0,0,0,.82)'
   ctx.shadowBlur = Math.max(5, fontSize * 0.22)
@@ -514,6 +530,7 @@ function drawTextLayer(ctx, layer, width, height) {
   ctx.strokeStyle = 'rgba(0,0,0,.68)'
   ctx.strokeText(text, (layer.x / 100) * width, (layer.y / 100) * height)
   ctx.fillText(text, (layer.x / 100) * width, (layer.y / 100) * height)
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px'
 }
 
 async function downloadImage(format = 'png') {
@@ -544,7 +561,7 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
       <TradePosterEditor
         :image-url="imageUrl"
         :active-layers="activeLayers"
-        :layer-text="layerText"
+        :layer-text="previewLayerText"
         :font-sizes="fontSizes"
         :text-color="textColor"
         @download-image="downloadImage"

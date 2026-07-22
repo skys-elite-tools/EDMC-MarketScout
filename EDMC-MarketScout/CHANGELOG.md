@@ -6,6 +6,7 @@
 - Renamed the view source file from `CarrierTradeAlertView.vue` to `CarrierTradeAnnouncementsView.vue`.
 - Moved page-level Web UI screens into `web-src/src/views/`, keeping reusable and child UI pieces in `web-src/src/components/`.
 - Extracted shared `MetricCard.vue`, `ModalShell.vue`, and `CopyablePanel.vue` UI components.
+- Fixed Carrier Trade Announcements image export so poster text capitalization and spacing better match the Web preview.
 
 ## 0.2.6 Beta
 
