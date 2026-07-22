@@ -1547,6 +1547,17 @@ fieldset.rareStationControls legend {
   justify-content: flex-end;
   white-space: nowrap;
 }
+.edmcSettingStatus {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.35rem;
+  padding: 1px 7px;
+  border: 1px solid rgba(202, 132, 255, .50);
+  border-radius: 999px;
+  color: #d9b2ff;
+  background: rgba(175, 92, 230, .10);
+  font-weight: 800;
+}
 .updateStatusSlot {
   justify-self: center;
 }

@@ -181,6 +181,46 @@ def configure_sqlite_connection(conn: sqlite3.Connection) -> None:
         pass
 
 
+def edmc_eddn_status() -> Dict[str, Any]:
+    """Return the EDMC EDDN station-data setting as a read-only status object."""
+    if EDMC_CONFIG is None:
+        return {
+            "available": False,
+            "station_data_enabled": None,
+            "label": "EDDN Station: Unknown",
+            "detail": "EDMC config is not available to MarketScout.",
+        }
+
+    try:
+        default_output = int(
+            getattr(EDMC_CONFIG, "OUT_EDDN_SEND_STATION_DATA", 1)
+            | getattr(EDMC_CONFIG, "OUT_EDDN_SEND_NON_STATION", 2048)
+        )
+        settings = getattr(EDMC_CONFIG, "settings", {}) or {}
+        output = EDMC_CONFIG.get_int("output", default_output)
+        if "output" not in settings:
+            output = default_output
+        station_flag = int(getattr(EDMC_CONFIG, "OUT_EDDN_SEND_STATION_DATA", 1))
+        enabled = bool(output & station_flag)
+        return {
+            "available": True,
+            "station_data_enabled": enabled,
+            "label": f"EDDN Station: {'On' if enabled else 'Off'}",
+            "detail": (
+                "EDMC is configured to send station data to EDDN."
+                if enabled
+                else "EDMC is configured not to send station data to EDDN."
+            ),
+        }
+    except Exception as exc:
+        return {
+            "available": False,
+            "station_data_enabled": None,
+            "label": "EDDN Station: Unknown",
+            "detail": f"Could not read EDMC EDDN station-data setting: {exc}",
+        }
+
+
 def plugin_stop() -> None:
     global CONN
     try:
@@ -1602,7 +1642,7 @@ def open_modern_ui() -> None:
             log_exception("open_modern_ui_not_initialized")
             return
         web = load_web_module()
-        web.start_server(PLUGIN_DIR, DB_PATH, TARGET_COMMODITIES, PRIMARY_METALS)
+        web.start_server(PLUGIN_DIR, DB_PATH, TARGET_COMMODITIES, PRIMARY_METALS, edmc_eddn_status)
         url = web.server_url() or "http://127.0.0.1:40595/"
         webbrowser.open(url)
     except Exception:

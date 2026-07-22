@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added a read-only top status bar indicator for EDMC's EDDN station-data setting.
+
 ## 0.2.8 Beta
 
 - Fixed Stations auto-refresh after live station/market updates by using an explicit Web UI data-version signal instead of relying only on SQLite database file modification time.

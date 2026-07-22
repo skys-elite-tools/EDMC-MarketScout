@@ -24,7 +24,7 @@ import urllib.request
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 _SERVERS: List[ThreadingHTTPServer] = []
@@ -220,7 +220,13 @@ def detected_lan_addresses(addresses: List[str]) -> List[str]:
     return values
 
 
-def start_server(plugin_dir: str, db_path: str, target_commodities: List[str], primary_metals: List[str]) -> int:
+def start_server(
+    plugin_dir: str,
+    db_path: str,
+    target_commodities: List[str],
+    primary_metals: List[str],
+    edmc_status_provider: Optional[Callable[[], Dict[str, Any]]] = None,
+) -> int:
     """Start the local web server if needed and return its port."""
     global _SERVERS, _THREADS, _PORT, _BIND_ADDRESS, _LAN_BIND_ADDRESS, _LAN_PORT, _LAN_ENABLED, _CONTEXT
     if _SERVERS and _PORT is not None:
@@ -238,6 +244,7 @@ def start_server(plugin_dir: str, db_path: str, target_commodities: List[str], p
         "primary_metals": list(primary_metals),
         "web_config": dict(web_config),
         "lan_error": "",
+        "edmc_status_provider": edmc_status_provider,
     }
 
     bind_port = int(web_config["bind_port"])
@@ -633,12 +640,25 @@ def api_status() -> Dict[str, Any]:
         version = int(os.path.getmtime(db_path) * 1000)
     with _DATA_VERSION_LOCK:
         version = max(version, _DATA_VERSION)
+    edmc_status_provider = _CONTEXT.get("edmc_status_provider")
+    edmc_status = None
+    if callable(edmc_status_provider):
+        try:
+            edmc_status = edmc_status_provider()
+        except Exception as exc:
+            edmc_status = {
+                "available": False,
+                "station_data_enabled": None,
+                "label": "EDDN Station: Unknown",
+                "detail": f"Could not read EDMC status: {exc}",
+            }
     return {
         "ok": True,
         "data_version": version,
         "target_commodities": _CONTEXT.get("target_commodities", []),
         "primary_metals": _CONTEXT.get("primary_metals", []),
         "latest_journal_event": _LATEST_JOURNAL_EVENT,
+        "edmc": edmc_status,
         "update": update_status_snapshot(),
     }
 

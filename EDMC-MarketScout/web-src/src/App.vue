@@ -56,6 +56,7 @@ const commoditySearch = ref('')
 const bestBuyIgnoreSearch = ref('')
 const statusText = ref('Loading…')
 const latestJournalEvent = ref(null)
+const edmcStatus = ref(null)
 const autoRefresh = ref(true)
 const updateStatus = ref(null)
 const updateBusy = ref(false)
@@ -381,6 +382,7 @@ async function pollStatus() {
   const res = await fetch('/api/status', { cache: 'no-store' })
   const data = await res.json()
   latestJournalEvent.value = data.latest_journal_event || null
+  edmcStatus.value = data.edmc || null
   updateStatus.value = data.update || null
   if (!autoRefresh.value) {
     lastVersion.value = data.data_version
@@ -449,6 +451,7 @@ onUnmounted(() => {
       v-model:auto-refresh="autoRefresh"
       :status-text="statusText"
       :latest-journal-event="latestJournalEvent"
+      :edmc-status="edmcStatus"
       :update-status="updateStatus"
       :update-busy="updateBusy"
       @run-update="handleUpdateAction"

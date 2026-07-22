@@ -5,6 +5,7 @@ import { shortTime } from '../utils.js'
 const props = defineProps({
   statusText: { type: String, default: '' },
   latestJournalEvent: { type: Object, default: null },
+  edmcStatus: { type: Object, default: null },
   autoRefresh: { type: Boolean, default: true },
   updateStatus: { type: Object, default: null },
   updateBusy: { type: Boolean, default: false },
@@ -45,6 +46,13 @@ const updateLabel = computed(() => {
       </button>
     </div>
     <div class="viewStatus">
+      <span
+        v-if="edmcStatus"
+        class="edmcSettingStatus"
+        :title="edmcStatus.detail || 'EDMC EDDN station-data setting'"
+      >
+        {{ edmcStatus.label || 'EDDN Station: Unknown' }}
+      </span>
       <span>{{ statusText }}</span>
       <label>
         <input
