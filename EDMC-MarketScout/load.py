@@ -13,7 +13,7 @@ import os
 from typing import Any, Dict, Optional
 
 PLUGIN_NAME = "EDMC-MarketScout"
-PLUGIN_VERSION = "0.2.5"
+PLUGIN_VERSION = "0.2.6"
 
 APP_MODULE: Any = None
 
