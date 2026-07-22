@@ -211,6 +211,7 @@ def journal_entry(cmdr: str, is_beta: bool, system: str, station: str, entry: Di
 
         name = entry.get("event")
         update_web_latest_journal_event(name, system, station, entry, state)
+        data_changed = False
 
         if name in ("Location", "FSDJump", "CarrierJump", "StartUp"):
             record_system_from_event(entry, state)
@@ -219,16 +220,20 @@ def journal_entry(cmdr: str, is_beta: bool, system: str, station: str, entry: Di
             # Location may include Docked:true. Docked has station details.
             if entry.get("Docked") or entry.get("StationName") or state.get("StationName"):
                 record_station_from_event(entry, state)
+                data_changed = True
 
         if name == "Market":
             # Journal Market event is accompanied by Market.json. This gives us
             # a local-only fallback even if EDMC CAPI marketdata is absent.
-            record_market_json_from_event(entry, state)
+            data_changed = record_market_json_from_event(entry, state) > 0 or data_changed
 
         if name in ("MarketBuy", "MarketSell"):
-            load_ledger_module().record_trade_event(CONN, system, station, entry, state)
+            trade_id = load_ledger_module().record_trade_event(CONN, system, station, entry, state)
+            data_changed = trade_id is not None or data_changed
 
         CONN.commit()
+        if data_changed:
+            notify_web_data_changed()
     except Exception:
         log_exception("journal_entry")
     return None
@@ -256,6 +261,15 @@ def update_web_latest_journal_event(name: Any, system: str, station: str, entry:
         pass
 
 
+def notify_web_data_changed() -> None:
+    """Tell the local Web UI that committed database-backed view data changed."""
+    try:
+        load_web_module().notify_data_changed()
+    except Exception:
+        # Auto-refresh signalling should never interfere with data recording.
+        pass
+
+
 def cmdr_data(data: Any, is_beta: bool) -> Optional[str]:
     """Receive fresh Frontier CAPI commander/station/market data from EDMC."""
     try:
@@ -266,6 +280,8 @@ def cmdr_data(data: Any, is_beta: bool) -> Optional[str]:
         if marketdata:
             inserted = record_marketdata(marketdata, data)
             CONN.commit()
+            if inserted:
+                notify_web_data_changed()
             log_market_debug("cmdr_data marketdata processed", {"tracked_rows_written": inserted})
         else:
             log_market_debug("cmdr_data no marketdata found", summarize_capi_data(data))

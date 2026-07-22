@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed Stations auto-refresh after live station/market updates by using an explicit Web UI data-version signal instead of relying only on SQLite database file modification time.
+
 ## 0.2.7 Beta
 
 - Refactored Carrier Trade Announcements into focused components for the form, poster editor, announcement outputs, and template editor.

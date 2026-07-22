@@ -45,6 +45,8 @@ GITHUB_RELEASES_LATEST_API = f"https://api.github.com/repos/{GITHUB_REPO}/releas
 PLUGIN_FOLDER_NAME = "EDMC-MarketScout"
 _PLUGIN_VERSION = "0.0.0"
 _UPDATE_LOCK = threading.Lock()
+_DATA_VERSION_LOCK = threading.Lock()
+_DATA_VERSION = 0
 _UPDATE_STATUS: Dict[str, Any] = {
     "checked": False,
     "checking": False,
@@ -298,6 +300,21 @@ def update_latest_journal_event(event: Dict[str, Any]) -> None:
     """
     global _LATEST_JOURNAL_EVENT
     _LATEST_JOURNAL_EVENT = dict(event)
+
+
+def notify_data_changed() -> int:
+    """Bump the Web UI data version after committed SQLite writes.
+
+    The status API used to rely only on the main SQLite file mtime, but WAL
+    mode can put fresh writes in the WAL file without immediately changing the
+    main database file. An explicit in-memory version makes browser auto-refresh
+    react to live station/market updates reliably.
+    """
+    global _DATA_VERSION
+    version = int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
+    with _DATA_VERSION_LOCK:
+        _DATA_VERSION = max(_DATA_VERSION + 1, version)
+        return _DATA_VERSION
 
 
 def now_utc() -> str:
@@ -614,6 +631,8 @@ def api_status() -> Dict[str, Any]:
     version = 0
     if db_path and os.path.exists(db_path):
         version = int(os.path.getmtime(db_path) * 1000)
+    with _DATA_VERSION_LOCK:
+        version = max(version, _DATA_VERSION)
     return {
         "ok": True,
         "data_version": version,
