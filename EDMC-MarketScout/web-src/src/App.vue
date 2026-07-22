@@ -46,6 +46,8 @@ const currentView = ref(loadStoredView())
 const displayColumns = ref([])
 const watchedCommodities = ref(['Palladium', 'Gold', 'Silver'])
 const bestBuyIgnoreCommodities = ref([])
+const bestBuySupplyCap = ref(1000)
+const minimumPotentialProfit = ref(10000)
 const allCommodities = ref([])
 const commoditiesCatalogLoaded = ref(false)
 const settingsVisible = ref(false)
@@ -294,6 +296,8 @@ async function loadCommoditySettings() {
   watchedCommodities.value = settings.watched_commodities || ['Palladium', 'Gold', 'Silver']
   displayColumns.value = settings.watched_columns || watchedCommodities.value.map(c => ({ commodity: c, side: 'buy' }))
   bestBuyIgnoreCommodities.value = settings.best_buy_ignore_commodities || []
+  bestBuySupplyCap.value = Number(settings.best_buy_supply_cap || 1000)
+  minimumPotentialProfit.value = Number(settings.minimum_potential_profit || 10000)
   if (!commoditiesCatalogLoaded.value) {
     const commoditiesRes = await fetch('/api/commodities', { cache: 'no-store' })
     const data = await commoditiesRes.json()
@@ -360,6 +364,8 @@ async function saveBestBuyIgnoreSettings() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       best_buy_ignore_commodities: bestBuyIgnoreCommodities.value,
+      best_buy_supply_cap: bestBuySupplyCap.value,
+      minimum_potential_profit: minimumPotentialProfit.value,
     }),
   })
   bestBuyIgnoreVisible.value = false
@@ -501,14 +507,17 @@ onUnmounted(() => {
 
     <CommoditySettings
       :visible="bestBuyIgnoreVisible"
-      title="Best Buy ignore list"
-      description="Ignored commodities are excluded when MarketScout chooses a station's Best Buy. This is useful for commodities that rarely sell near the galactic maximum, so they do not crowd out more practical opportunities."
-      save-label="Save ignore list"
+      title="Best Buy settings"
+      description="Tune how MarketScout chooses Best Buy opportunities. Ignored commodities are excluded, the supply cap limits how much large supply affects scoring, and the minimum potential profit controls candidate eligibility and Potential Profit visibility."
+      save-label="Save Best Buy settings"
       :commodities="filteredBestBuyIgnoreCommodities"
       :selected-commodities="bestBuyIgnoreCommodities"
       :display-columns="[]"
       :search="bestBuyIgnoreSearch"
       :show-display-columns="false"
+      :show-best-buy-settings="true"
+      v-model:best-buy-supply-cap="bestBuySupplyCap"
+      v-model:minimum-potential-profit="minimumPotentialProfit"
       @close="bestBuyIgnoreVisible = false"
       @save="saveBestBuyIgnoreSettings"
       @update:search="bestBuyIgnoreSearch = $event"
@@ -525,6 +534,7 @@ onUnmounted(() => {
           :watched-commodities="watchedCommodities"
           :price-threshold="filters.priceThreshold"
           :supply-threshold="filters.supplyThreshold"
+          :minimum-potential-profit="minimumPotentialProfit"
           :current-system="latestJournalEvent?.system || ''"
           @select="setSelected"
         />

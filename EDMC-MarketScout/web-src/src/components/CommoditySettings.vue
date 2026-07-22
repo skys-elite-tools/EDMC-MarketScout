@@ -11,11 +11,16 @@ const props = defineProps({
   displayColumns: { type: Array, default: () => [] },
   search: { type: String, default: '' },
   showDisplayColumns: { type: Boolean, default: true },
+  showBestBuySettings: { type: Boolean, default: false },
+  bestBuySupplyCap: { type: Number, default: 1000 },
+  minimumPotentialProfit: { type: Number, default: 10000 },
 })
 const emit = defineEmits([
   'close',
   'save',
   'update:search',
+  'update:bestBuySupplyCap',
+  'update:minimumPotentialProfit',
   'toggle-selected',
   'toggle-display-column',
 ])
@@ -40,6 +45,28 @@ function isColumnSelected(commodity, side) {
   <section v-if="visible" class="settingsPanel">
     <div class="settingsHeader"><h2>{{ title }}</h2><button type="button" @click="emit('close')">Close</button></div>
     <p class="subtitle">{{ description }}</p>
+    <div v-if="showBestBuySettings" class="bestBuySettingsGrid">
+      <label title="Best Buy score uses min(supply, this value), so very large supply does not dominate every result.">
+        Best Buy supply cap
+        <input
+          :value="bestBuySupplyCap"
+          type="number"
+          min="1"
+          step="1"
+          @input="emit('update:bestBuySupplyCap', Number($event.target.value || 1000))"
+        />
+      </label>
+      <label title="Best Buy candidates and Potential Profit links are shown only when profit per tonne is at least this value.">
+        Minimum potential profit
+        <input
+          :value="minimumPotentialProfit"
+          type="number"
+          min="0"
+          step="100"
+          @input="emit('update:minimumPotentialProfit', Number($event.target.value || 0))"
+        />
+      </label>
+    </div>
     <label>Filter commodities <input :value="search" type="text" placeholder="gold, palladium, osmium..." @input="emit('update:search', $event.target.value)" /></label>
     <div class="commoditySettings">
       <div v-for="commodity in sortedCommodities" :key="commodity" class="commodityRow" :class="{ singleSelect: !showDisplayColumns }">

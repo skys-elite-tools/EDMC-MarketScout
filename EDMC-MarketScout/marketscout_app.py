@@ -29,6 +29,8 @@ PLUGIN_VERSION = "0.2.4"
 
 DEFAULT_HIGHLIGHT_PRICE = 6000
 DEFAULT_HIGHLIGHT_SUPPLY = 10000
+DEFAULT_BEST_BUY_SUPPLY_CAP = 1000
+DEFAULT_MINIMUM_POTENTIAL_PROFIT = 10000
 JACKPOT_SAMPLE_INTERVAL_MINUTES = 30
 
 # Defaults only. From 0.1.14 onward MarketScout stores every commodity it sees.
@@ -540,6 +542,10 @@ def ensure_default_settings(conn: sqlite3.Connection) -> None:
         setting_set(conn, "watched_columns", cols)
     if setting_get(conn, "best_buy_ignore_commodities") is None:
         setting_set(conn, "best_buy_ignore_commodities", [])
+    if setting_get(conn, "best_buy_supply_cap") is None:
+        setting_set(conn, "best_buy_supply_cap", DEFAULT_BEST_BUY_SUPPLY_CAP)
+    if setting_get(conn, "minimum_potential_profit") is None:
+        setting_set(conn, "minimum_potential_profit", DEFAULT_MINIMUM_POTENTIAL_PROFIT)
 
 def ensure_default_commodity_global_stats(conn: sqlite3.Connection) -> None:
     load_commodities_importer_module().ensure_default_commodity_global_stats(conn, DEFAULT_COMMODITY_GLOBAL_STATS)

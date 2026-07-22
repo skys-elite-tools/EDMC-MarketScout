@@ -122,7 +122,7 @@ const hasControls = computed(() => !['analyze', 'carrier', 'carrierCalc', 'confi
             <span class="buttonCount">{{ watchedCount }} selected</span>
           </button>
           <button type="button" class="countButton" @click="emit('open-best-buy-ignore-list')">
-            <span>Best Buy Ignore List</span>
+            <span>Best Buy Settings</span>
             <span class="buttonCount">{{ bestBuyIgnoreCount }} selected</span>
           </button>
         </div>

@@ -40,6 +40,8 @@ ECONOMY_PRESETS_FILE = "marketscout-economy-presets.json"
 CONFIG_FILE = "marketscout.config"
 DEFAULT_BIND_ADDRESS = "127.0.0.1"
 DEFAULT_BIND_PORT = 40595
+DEFAULT_BEST_BUY_SUPPLY_CAP = 1000
+DEFAULT_MINIMUM_POTENTIAL_PROFIT = 10000
 GITHUB_REPO = "skys-elite-tools/EDMC-MarketScout"
 GITHUB_RELEASES_LATEST_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 PLUGIN_FOLDER_NAME = "EDMC-MarketScout"
@@ -690,6 +692,19 @@ def best_buy_ignore_commodities(conn: sqlite3.Connection) -> List[str]:
     val = setting_get(conn, "best_buy_ignore_commodities", [])
     return [str(x) for x in val if str(x).strip()] if isinstance(val, list) else []
 
+def setting_int(conn: sqlite3.Connection, key: str, default: int, min_value: int = 0, max_value: int = 1_000_000_000) -> int:
+    try:
+        value = int(setting_get(conn, key, default))
+    except (TypeError, ValueError):
+        return default
+    return max(min_value, min(value, max_value))
+
+def best_buy_supply_cap(conn: sqlite3.Connection) -> int:
+    return setting_int(conn, "best_buy_supply_cap", DEFAULT_BEST_BUY_SUPPLY_CAP, 1, 1_000_000_000)
+
+def minimum_potential_profit(conn: sqlite3.Connection) -> int:
+    return setting_int(conn, "minimum_potential_profit", DEFAULT_MINIMUM_POTENTIAL_PROFIT, 0, 1_000_000_000)
+
 def watched_columns(conn: sqlite3.Connection) -> List[Dict[str, str]]:
     default = [{"commodity": c, "side": "buy"} for c in watched_commodities(conn)]
     val = setting_get(conn, "watched_columns", default)
@@ -800,6 +815,8 @@ def api_settings() -> Dict[str, Any]:
             "watched_commodities": watched_commodities(conn),
             "watched_columns": watched_columns(conn),
             "best_buy_ignore_commodities": best_buy_ignore_commodities(conn),
+            "best_buy_supply_cap": best_buy_supply_cap(conn),
+            "minimum_potential_profit": minimum_potential_profit(conn),
         }
 
 
@@ -890,6 +907,18 @@ def api_save_settings(payload: Dict[str, Any]) -> Dict[str, Any]:
             setting_set(conn, "watched_columns", cols)
         if "best_buy_ignore_commodities" in payload and isinstance(payload["best_buy_ignore_commodities"], list):
             setting_set(conn, "best_buy_ignore_commodities", [str(x) for x in payload["best_buy_ignore_commodities"] if str(x).strip()])
+        if "best_buy_supply_cap" in payload:
+            try:
+                value = max(1, int(payload["best_buy_supply_cap"]))
+            except (TypeError, ValueError):
+                value = DEFAULT_BEST_BUY_SUPPLY_CAP
+            setting_set(conn, "best_buy_supply_cap", value)
+        if "minimum_potential_profit" in payload:
+            try:
+                value = max(0, int(payload["minimum_potential_profit"]))
+            except (TypeError, ValueError):
+                value = DEFAULT_MINIMUM_POTENTIAL_PROFIT
+            setting_set(conn, "minimum_potential_profit", value)
         conn.commit()
     return {"ok": True}
 
@@ -962,6 +991,8 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
         display_cols = watched_columns(conn)
         watched = watched_commodities(conn)
         ignored_best_buy = best_buy_ignore_commodities(conn)
+        supply_cap = best_buy_supply_cap(conn)
+        min_profit = minimum_potential_profit(conn)
 
     ignored_sql = ""
     ignored_sql_mp2 = ""
@@ -998,46 +1029,53 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
         "s.last_visit_datetime AS system_visit",
         "st.last_station_visit_datetime AS station_visit",
         "MAX(mp.market_price_update_datetime) AS market_updated",
-        # Best Buy score: (max_sell - current buy) * min(supply, 1000).
+        # Best Buy score: (max_sell - current buy) * min(supply, configured cap).
         "MAX(CASE WHEN cgs.max_sell IS NOT NULL AND mp.buy_price IS NOT NULL AND mp.buy_price > 0 AND COALESCE(mp.supply, 0) > 0 "
-        f"{ignored_sql} THEN (cgs.max_sell - mp.buy_price) * CASE WHEN COALESCE(mp.supply, 0) > 1000 THEN 1000 ELSE COALESCE(mp.supply, 0) END END) AS best_buy_score",
+        f"AND (cgs.max_sell - mp.buy_price) >= {min_profit} "
+        f"{ignored_sql} THEN (cgs.max_sell - mp.buy_price) * CASE WHEN COALESCE(mp.supply, 0) > {supply_cap} THEN {supply_cap} ELSE COALESCE(mp.supply, 0) END END) AS best_buy_score",
     ]
     # Commodity that produced the max Best Buy score. Ties are not important for scouting.
     select_cols.append(
         "(SELECT mp2.commodity FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
         "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 AND COALESCE(mp2.supply, 0) > 0 "
-        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_commodity"
+        f"AND (cgs2.max_sell - mp2.buy_price) >= {min_profit} "
+        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>{supply_cap} THEN {supply_cap} ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_commodity"
     )
     select_cols.append(
         "(SELECT mp2.buy_price FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
         "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 AND COALESCE(mp2.supply, 0) > 0 "
-        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_price"
+        f"AND (cgs2.max_sell - mp2.buy_price) >= {min_profit} "
+        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>{supply_cap} THEN {supply_cap} ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_price"
     )
     select_cols.append(
         "(SELECT mp2.supply FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
         "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 AND COALESCE(mp2.supply, 0) > 0 "
-        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_supply"
+        f"AND (cgs2.max_sell - mp2.buy_price) >= {min_profit} "
+        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>{supply_cap} THEN {supply_cap} ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_supply"
     )
     select_cols.append(
         "(SELECT cgs2.inara_id FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
         "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 AND COALESCE(mp2.supply, 0) > 0 "
-        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_inara_id"
+        f"AND (cgs2.max_sell - mp2.buy_price) >= {min_profit} "
+        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>{supply_cap} THEN {supply_cap} ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_inara_id"
     )
     select_cols.append(
         "(SELECT cgs2.max_sell FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
         "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 AND COALESCE(mp2.supply, 0) > 0 "
-        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_max_sell"
+        f"AND (cgs2.max_sell - mp2.buy_price) >= {min_profit} "
+        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>{supply_cap} THEN {supply_cap} ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_max_sell"
     )
     select_cols.append(
         "(SELECT CASE WHEN COALESCE(mp2.supply, 0) > 0 THEN (cgs2.max_sell - mp2.buy_price) END FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
         "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 AND COALESCE(mp2.supply, 0) > 0 "
-        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_potential_profit"
+        f"AND (cgs2.max_sell - mp2.buy_price) >= {min_profit} "
+        f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>{supply_cap} THEN {supply_cap} ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_potential_profit"
     )
     for c in display_commodities:
         safe = c.replace("'", "''")
@@ -1048,7 +1086,7 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
             f"MAX(CASE WHEN mp.commodity='{safe}' THEN mp.demand END) AS '{c}_demand'",
             f"MAX(CASE WHEN mp.commodity='{safe}' THEN cgs.inara_id END) AS '{c}_inara_id'",
             f"MAX(CASE WHEN mp.commodity='{safe}' THEN cgs.max_sell END) AS '{c}_max_sell'",
-            f"MAX(CASE WHEN mp.commodity='{safe}' AND mp.buy_price IS NOT NULL AND mp.buy_price > 0 AND COALESCE(mp.supply, 0) > 0 AND cgs.max_sell IS NOT NULL THEN cgs.max_sell - mp.buy_price END) AS '{c}_potential_profit'",
+            f"MAX(CASE WHEN mp.commodity='{safe}' AND mp.buy_price IS NOT NULL AND mp.buy_price > 0 AND COALESCE(mp.supply, 0) > 0 AND cgs.max_sell IS NOT NULL AND (cgs.max_sell - mp.buy_price) >= {min_profit} THEN cgs.max_sell - mp.buy_price END) AS '{c}_potential_profit'",
         ])
     sql = "SELECT " + ", ".join(select_cols) + " FROM stations st LEFT JOIN systems s ON s.system_address=st.system_address LEFT JOIN market_prices mp ON mp.market_id=st.market_id LEFT JOIN commodity_global_stats cgs ON cgs.commodity=mp.commodity"
     where: List[str] = []

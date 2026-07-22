@@ -22,7 +22,7 @@ export function ly(v) {
 
 export const POTENTIAL_PROFIT_LOW_MAX = 20000
 export const POTENTIAL_PROFIT_MEDIUM_MAX = 35000
-export const POTENTIAL_PROFIT_DISPLAY_THRESHOLD = 10000
+export const DEFAULT_POTENTIAL_PROFIT_DISPLAY_THRESHOLD = 10000
 
 export function shortTime(v) {
   if (!v) return '—'
@@ -93,7 +93,7 @@ export function potentialProfitTooltip(maxSell) {
   return `Search current sell prices on Inara. Theoretical max uses max sell: ${maxSellText} Cr/t.`
 }
 
-export function commodityCellParts(row, commodity, side) {
+export function commodityCellParts(row, commodity, side, minimumPotentialProfit = DEFAULT_POTENTIAL_PROFIT_DISPLAY_THRESHOLD) {
   const qtyName = side === 'buy' ? 'supply' : 'demand'
   const qtyValue = row[`${commodity}_${qtyName}`]
   const priceValue = row[`${commodity}_${side}`]
@@ -108,7 +108,7 @@ export function commodityCellParts(row, commodity, side) {
     showQuantity: !hiddenBuyPrice,
     potentialProfit: money(potentialProfit),
     potentialProfitClass: potentialProfitClass(potentialProfit),
-    hasPotentialProfit: (side !== 'buy' || buyAvailable) && shouldDisplayPotentialProfit(potentialProfit),
+    hasPotentialProfit: (side !== 'buy' || buyAvailable) && shouldDisplayPotentialProfit(potentialProfit, minimumPotentialProfit),
     inaraId: row[`${commodity}_inara_id`],
     maxSell: row[`${commodity}_max_sell`],
   }
@@ -131,9 +131,9 @@ export function potentialProfitClass(value) {
   return 'potentialHigh'
 }
 
-export function shouldDisplayPotentialProfit(value) {
+export function shouldDisplayPotentialProfit(value, minimumPotentialProfit = DEFAULT_POTENTIAL_PROFIT_DISPLAY_THRESHOLD) {
   const n = num(value)
-  return n !== null && n >= POTENTIAL_PROFIT_DISPLAY_THRESHOLD
+  return n !== null && n >= minimumPotentialProfit
 }
 
 export function stationDedupeKey(row) {

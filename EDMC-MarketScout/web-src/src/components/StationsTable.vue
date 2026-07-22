@@ -8,6 +8,7 @@ const props = defineProps({
   watchedCommodities: { type: Array, default: () => [] },
   priceThreshold: { type: Number, default: 6000 },
   supplyThreshold: { type: Number, default: 10000 },
+  minimumPotentialProfit: { type: Number, default: 10000 },
   currentSystem: { type: String, default: '' },
 })
 const emit = defineEmits(['select'])
@@ -18,6 +19,10 @@ function flag(row) {
 
 function searchSystem(row) {
   return props.currentSystem || row.system || ''
+}
+
+function cellParts(row, col) {
+  return commodityCellParts(row, col.commodity, col.side, props.minimumPotentialProfit)
 }
 </script>
 
@@ -46,11 +51,11 @@ function searchSystem(row) {
         <td><div class="systemName">{{ fmt(row.system) }}</div><div class="stationName">{{ fmt(row.station) }} <span class="stationMeta">Pad {{ fmt(row.pad) }}</span></div></td>
         <td><div class="cellMain">{{ fmt(row.state) }}</div><div class="cellSub">{{ fmt(row.economies) }}</div></td>
         <td>
-          <div v-if="row.best_buy_commodity" class="price"><div class="cellMain">{{ row.best_buy_commodity }} @ {{ money(row.best_buy_price) }}</div><div class="cellSub">Supply: <span :class="quantityClass(row.best_buy_supply)">{{ money(row.best_buy_supply) }}</span></div><div v-if="shouldDisplayPotentialProfit(row.best_buy_potential_profit)" class="cellSub"><a class="potentialLink" :href="inaraCommoditySellUrl(searchSystem(row), row.best_buy_inara_id)" :title="potentialProfitTooltip(row.best_buy_max_sell)" target="_blank" rel="noopener noreferrer" @click.stop>Potential Profit: <span :class="potentialProfitClass(row.best_buy_potential_profit)">{{ money(row.best_buy_potential_profit) }}</span> Cr/t</a></div></div>
+          <div v-if="row.best_buy_commodity" class="price"><div class="cellMain">{{ row.best_buy_commodity }} @ {{ money(row.best_buy_price) }}</div><div class="cellSub">Supply: <span :class="quantityClass(row.best_buy_supply)">{{ money(row.best_buy_supply) }}</span></div><div v-if="shouldDisplayPotentialProfit(row.best_buy_potential_profit, minimumPotentialProfit)" class="cellSub"><a class="potentialLink" :href="inaraCommoditySellUrl(searchSystem(row), row.best_buy_inara_id)" :title="potentialProfitTooltip(row.best_buy_max_sell)" target="_blank" rel="noopener noreferrer" @click.stop>Potential Profit: <span :class="potentialProfitClass(row.best_buy_potential_profit)">{{ money(row.best_buy_potential_profit) }}</span> Cr/t</a></div></div>
           <div v-else class="price"><span>—</span></div>
         </td>
         <td v-for="col in displayColumns" :key="columnKey(col)">
-          <div class="price"><div class="cellMain">{{ commodityCellParts(row, col.commodity, col.side).price }}</div><div v-if="commodityCellParts(row, col.commodity, col.side).showQuantity" class="cellSub">{{ commodityCellParts(row, col.commodity, col.side).qtyName }}: <span :class="commodityCellParts(row, col.commodity, col.side).qtyClass">{{ commodityCellParts(row, col.commodity, col.side).qty }}</span></div><div v-if="commodityCellParts(row, col.commodity, col.side).hasPotentialProfit" class="cellSub"><a class="potentialLink" :href="inaraCommoditySellUrl(searchSystem(row), commodityCellParts(row, col.commodity, col.side).inaraId)" :title="potentialProfitTooltip(commodityCellParts(row, col.commodity, col.side).maxSell)" target="_blank" rel="noopener noreferrer" @click.stop>Potential Profit: <span :class="commodityCellParts(row, col.commodity, col.side).potentialProfitClass">{{ commodityCellParts(row, col.commodity, col.side).potentialProfit }}</span> Cr/t</a></div></div>
+          <div class="price"><div class="cellMain">{{ cellParts(row, col).price }}</div><div v-if="cellParts(row, col).showQuantity" class="cellSub">{{ cellParts(row, col).qtyName }}: <span :class="cellParts(row, col).qtyClass">{{ cellParts(row, col).qty }}</span></div><div v-if="cellParts(row, col).hasPotentialProfit" class="cellSub"><a class="potentialLink" :href="inaraCommoditySellUrl(searchSystem(row), cellParts(row, col).inaraId)" :title="potentialProfitTooltip(cellParts(row, col).maxSell)" target="_blank" rel="noopener noreferrer" @click.stop>Potential Profit: <span :class="cellParts(row, col).potentialProfitClass">{{ cellParts(row, col).potentialProfit }}</span> Cr/t</a></div></div>
         </td>
         <td><div :title="localDateTime(row.market_updated)">{{ compactDateTime(row.market_updated) }}</div><div class="cellSub" :title="localDateTime(row.station_visit)">Visit: {{ compactDateTime(row.station_visit) }}</div></td>
       </tr>
