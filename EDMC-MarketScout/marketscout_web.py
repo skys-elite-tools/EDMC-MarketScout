@@ -979,44 +979,44 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
         "st.last_station_visit_datetime AS station_visit",
         "MAX(mp.market_price_update_datetime) AS market_updated",
         # Best Buy score: (max_sell - current buy) * min(supply, 1000).
-        "MAX(CASE WHEN cgs.max_sell IS NOT NULL AND mp.buy_price IS NOT NULL AND mp.buy_price > 0 "
+        "MAX(CASE WHEN cgs.max_sell IS NOT NULL AND mp.buy_price IS NOT NULL AND mp.buy_price > 0 AND COALESCE(mp.supply, 0) > 0 "
         f"{ignored_sql} THEN (cgs.max_sell - mp.buy_price) * CASE WHEN COALESCE(mp.supply, 0) > 1000 THEN 1000 ELSE COALESCE(mp.supply, 0) END END) AS best_buy_score",
     ]
     # Commodity that produced the max Best Buy score. Ties are not important for scouting.
     select_cols.append(
         "(SELECT mp2.commodity FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
-        "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 "
+        "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 AND COALESCE(mp2.supply, 0) > 0 "
         f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_commodity"
     )
     select_cols.append(
         "(SELECT mp2.buy_price FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
-        "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 "
+        "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 AND COALESCE(mp2.supply, 0) > 0 "
         f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_price"
     )
     select_cols.append(
         "(SELECT mp2.supply FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
-        "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 "
+        "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 AND COALESCE(mp2.supply, 0) > 0 "
         f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_supply"
     )
     select_cols.append(
         "(SELECT cgs2.inara_id FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
-        "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 "
+        "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 AND COALESCE(mp2.supply, 0) > 0 "
         f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_inara_id"
     )
     select_cols.append(
         "(SELECT cgs2.max_sell FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
-        "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 "
+        "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 AND COALESCE(mp2.supply, 0) > 0 "
         f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_max_sell"
     )
     select_cols.append(
         "(SELECT CASE WHEN COALESCE(mp2.supply, 0) > 0 THEN (cgs2.max_sell - mp2.buy_price) END FROM market_prices mp2 "
         "JOIN commodity_global_stats cgs2 ON cgs2.commodity=mp2.commodity "
-        "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 "
+        "WHERE mp2.market_id=st.market_id AND cgs2.max_sell IS NOT NULL AND mp2.buy_price IS NOT NULL AND mp2.buy_price > 0 AND COALESCE(mp2.supply, 0) > 0 "
         f"{ignored_sql_mp2} ORDER BY ((cgs2.max_sell - mp2.buy_price) * CASE WHEN COALESCE(mp2.supply,0)>1000 THEN 1000 ELSE COALESCE(mp2.supply,0) END) DESC LIMIT 1) AS best_buy_potential_profit"
     )
     for c in display_commodities:

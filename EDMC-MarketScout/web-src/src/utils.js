@@ -97,26 +97,27 @@ export function commodityCellParts(row, commodity, side) {
   const qtyName = side === 'buy' ? 'supply' : 'demand'
   const qtyValue = row[`${commodity}_${qtyName}`]
   const priceValue = row[`${commodity}_${side}`]
-  const hideZeroBuy = side === 'buy' && num(priceValue) === 0
+  const hiddenBuyPrice = side === 'buy' && (num(priceValue) === null || num(priceValue) <= 0)
+  const buyAvailable = side === 'buy' && !hiddenBuyPrice && num(qtyValue) !== null && num(qtyValue) > 0
   const potentialProfit = side === 'buy' ? row[`${commodity}_potential_profit`] : null
   return {
-    price: hideZeroBuy ? '—' : money(priceValue),
+    price: hiddenBuyPrice ? '—' : money(priceValue),
     qtyName,
     qty: money(qtyValue),
-    qtyClass: quantityClass(qtyValue),
-    showQuantity: !hideZeroBuy,
+    qtyClass: quantityClass(qtyValue, qtyName),
+    showQuantity: !hiddenBuyPrice,
     potentialProfit: money(potentialProfit),
     potentialProfitClass: potentialProfitClass(potentialProfit),
-    hasPotentialProfit: !hideZeroBuy && shouldDisplayPotentialProfit(potentialProfit),
+    hasPotentialProfit: (side !== 'buy' || buyAvailable) && shouldDisplayPotentialProfit(potentialProfit),
     inaraId: row[`${commodity}_inara_id`],
     maxSell: row[`${commodity}_max_sell`],
   }
 }
 
-export function quantityClass(value) {
+export function quantityClass(value, quantityKind = 'supply') {
   const n = num(value)
   if (n === null) return ''
-  if (n === 0) return 'quantityHigh'
+  if (n === 0) return quantityKind === 'demand' ? 'quantityHigh' : 'quantityLow'
   if (n <= 7000) return 'quantityLow'
   if (n <= 15000) return 'quantityMedium'
   return 'quantityHigh'
