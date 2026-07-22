@@ -1,9 +1,10 @@
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import Coloris from '@melloware/coloris'
-import '@melloware/coloris/dist/coloris.css'
+import { computed, ref, watch } from 'vue'
 import placeholderImage from '../assets/trade-placeholder.png'
-import ModalShell from './ModalShell.vue'
+import AnnouncementOutputs from './AnnouncementOutputs.vue'
+import AnnouncementTemplateEditor from './AnnouncementTemplateEditor.vue'
+import CarrierTradeForm from './CarrierTradeForm.vue'
+import TradePosterEditor from './TradePosterEditor.vue'
 
 const LAYOUT_STORAGE_KEY = 'marketscout.carrierTradeAlert.layouts'
 const DRAFT_STORAGE_KEY = 'marketscout.carrierTradeAlert.draft'
@@ -98,21 +99,13 @@ function normalizeCustomTemplateSet(draft) {
 const textColor = ref(savedDraft.textColor || '#f6fbff')
 const textStyle = ref(savedDraft.textStyle || 'classic')
 const textLayout = ref(savedDraft.textLayout || savedDraft.textStyle || 'classic')
-const stageRef = ref(null)
-const layoutMenuRef = ref(null)
-const stageWidth = ref(0)
 const defaultImageUrl = ref(placeholderImage)
 const uploadedImageUrl = ref(savedDraft.uploadedImageUrl || '')
-const copied = ref(false)
-const customTitleCopied = ref(false)
-const customBodyCopied = ref(false)
 const customTemplateModalOpen = ref(false)
 const customAnnouncementTemplates = ref(normalizeCustomTemplateSet(savedDraft))
 const layoutName = ref('')
 const layoutSaveStatus = ref('')
 const layoutMenuOpen = ref(false)
-let resizeObserver = null
-let activeDrag = null
 
 const savedLayouts = ref(loadSavedLayouts())
 const textColorPresets = ['#f6fbff', '#ffffff', '#78c8ff', '#9ff0d4', '#ffe27a', '#ff9f43', '#ff6bcb', '#b890ff']
@@ -398,12 +391,6 @@ function setTextColor(value) {
   textColor.value = normalized
 }
 
-function closeMenusOnOutsideClick(event) {
-  if (layoutMenuOpen.value && !layoutMenuRef.value?.contains(event.target)) {
-    layoutMenuOpen.value = false
-  }
-}
-
 function saveCurrentLayout() {
   const cleanName = String(layoutName.value || '').trim()
   if (!cleanName) {
@@ -456,11 +443,6 @@ function persistDraft() {
   }
 }
 
-function previewFontSize(layer) {
-  const exportedSize = Number(fontSizes.value[layer.sizeKey] || 32)
-  return Math.max(10, exportedSize * (stageWidth.value || 1200) / 1200)
-}
-
 function sizeKeyFor(field) {
   if (textStyle.value === 'floating') return field
   return {
@@ -486,107 +468,6 @@ function setFontSize(field, value) {
   fontSizes.value[sizeKeyFor(field)] = Math.max(8, Math.min(180, Math.round(n)))
 }
 
-function layerStyle(layer) {
-  const size = previewFontSize(layer)
-  return {
-    left: `${layer.x}%`,
-    top: `${layer.y}%`,
-    color: textColor.value,
-    fontSize: `${size}px`,
-    fontWeight: layer.weight,
-    textAlign: layer.align,
-    transform: layer.align === 'right' ? 'translate(-100%, -50%)' : 'translate(-50%, -50%)',
-  }
-}
-
-function drawDefaultBackdrop(width = 1600, height = 900) {
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const ctx = canvas.getContext('2d')
-  const sky = ctx.createLinearGradient(0, 0, width, height)
-  sky.addColorStop(0, '#071018')
-  sky.addColorStop(0.42, '#12243a')
-  sky.addColorStop(1, '#2c1737')
-  ctx.fillStyle = sky
-  ctx.fillRect(0, 0, width, height)
-
-  ctx.fillStyle = 'rgba(255,255,255,.8)'
-  for (let i = 0; i < 180; i += 1) {
-    const x = (i * 733) % width
-    const y = (i * 179) % Math.round(height * 0.62)
-    const r = (i % 4 === 0) ? 1.6 : 0.8
-    ctx.globalAlpha = 0.25 + ((i * 17) % 70) / 100
-    ctx.beginPath()
-    ctx.arc(x, y, r, 0, Math.PI * 2)
-    ctx.fill()
-  }
-  ctx.globalAlpha = 1
-
-  const planet = ctx.createRadialGradient(width * 0.18, height * 0.86, 40, width * 0.18, height * 0.86, width * 0.55)
-  planet.addColorStop(0, 'rgba(160,210,255,.55)')
-  planet.addColorStop(0.42, 'rgba(72,110,170,.24)')
-  planet.addColorStop(1, 'rgba(30,45,70,0)')
-  ctx.fillStyle = planet
-  ctx.fillRect(0, 0, width, height)
-
-  ctx.strokeStyle = 'rgba(170,220,255,.34)'
-  ctx.lineWidth = 2
-  ctx.beginPath()
-  ctx.ellipse(width * 0.5, height * 0.7, width * 0.52, height * 0.11, -0.12, 0, Math.PI * 2)
-  ctx.stroke()
-
-  ctx.fillStyle = 'rgba(5,8,14,.78)'
-  ctx.beginPath()
-  ctx.moveTo(width * 0.66, height * 0.36)
-  ctx.lineTo(width * 0.91, height * 0.49)
-  ctx.lineTo(width * 0.71, height * 0.55)
-  ctx.closePath()
-  ctx.fill()
-  ctx.fillStyle = 'rgba(120,210,255,.55)'
-  ctx.fillRect(width * 0.73, height * 0.465, width * 0.12, 4)
-
-  const vignette = ctx.createRadialGradient(width * 0.5, height * 0.5, width * 0.18, width * 0.5, height * 0.5, width * 0.72)
-  vignette.addColorStop(0, 'rgba(0,0,0,0)')
-  vignette.addColorStop(1, 'rgba(0,0,0,.62)')
-  ctx.fillStyle = vignette
-  ctx.fillRect(0, 0, width, height)
-  return canvas.toDataURL('image/png')
-}
-
-function updateStageSize() {
-  if (!stageRef.value) return
-  stageWidth.value = stageRef.value.getBoundingClientRect().width || 0
-}
-
-function startDrag(event, layer) {
-  if (!stageRef.value) return
-  event.preventDefault()
-  const rect = stageRef.value.getBoundingClientRect()
-  activeDrag = {
-    key: layer.key,
-    pointerId: event.pointerId,
-    dx: event.clientX - (rect.left + (layer.x / 100) * rect.width),
-    dy: event.clientY - (rect.top + (layer.y / 100) * rect.height),
-  }
-  event.currentTarget.setPointerCapture(event.pointerId)
-}
-
-function moveDrag(event) {
-  if (!activeDrag || !stageRef.value || activeDrag.pointerId !== event.pointerId) return
-  const rect = stageRef.value.getBoundingClientRect()
-  const x = ((event.clientX - activeDrag.dx - rect.left) / rect.width) * 100
-  const y = ((event.clientY - activeDrag.dy - rect.top) / rect.height) * 100
-  const positions = layerPositions.value[textStyle.value]
-  if (!positions?.[activeDrag.key]) return
-  positions[activeDrag.key].x = Math.min(96, Math.max(4, x))
-  positions[activeDrag.key].y = Math.min(94, Math.max(6, y))
-}
-
-function stopDrag(event) {
-  if (activeDrag?.pointerId === event.pointerId) activeDrag = null
-}
-
 function onFileChange(event) {
   const file = event.target.files?.[0]
   if (!file) return
@@ -595,6 +476,13 @@ function onFileChange(event) {
     uploadedImageUrl.value = String(reader.result || '')
   }
   reader.readAsDataURL(file)
+}
+
+function moveLayer({ key, x, y }) {
+  const positions = layerPositions.value[textStyle.value]
+  if (!positions?.[key]) return
+  positions[key].x = x
+  positions[key].y = y
 }
 
 function drawCoverImage(ctx, image, width, height) {
@@ -646,51 +534,6 @@ async function downloadImage(format = 'png') {
   link.click()
 }
 
-async function copyAnnouncement() {
-  await navigator.clipboard.writeText(announcement.value)
-  copied.value = true
-  setTimeout(() => { copied.value = false }, 1800)
-}
-
-async function copyCustomAnnouncementTitle() {
-  await navigator.clipboard.writeText(customAnnouncementTitle.value)
-  customTitleCopied.value = true
-  setTimeout(() => { customTitleCopied.value = false }, 1800)
-}
-
-async function copyCustomAnnouncementBody() {
-  await navigator.clipboard.writeText(customAnnouncement.value)
-  customBodyCopied.value = true
-  setTimeout(() => { customBodyCopied.value = false }, 1800)
-}
-
-onMounted(async () => {
-  document.addEventListener('pointerdown', closeMenusOnOutsideClick)
-  Coloris.init()
-  Coloris({
-    el: '.marketScoutTextColorInput',
-    theme: 'polaroid',
-    themeMode: 'dark',
-    format: 'hex',
-    formatToggle: false,
-    alpha: false,
-    closeButton: true,
-    closeLabel: 'Done',
-    swatches: textColorPresets,
-    onChange: color => setTextColor(color),
-  })
-  await nextTick()
-  updateStageSize()
-  resizeObserver = new ResizeObserver(updateStageSize)
-  if (stageRef.value) resizeObserver.observe(stageRef.value)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('pointerdown', closeMenusOnOutsideClick)
-  if (resizeObserver) resizeObserver.disconnect()
-})
-
-watch(imageUrl, () => nextTick(updateStageSize))
 watch(textLayout, value => applyTextLayout(value))
 watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, uploadedImageUrl, customAnnouncementTemplates], persistDraft, { deep: true })
 </script>
@@ -698,209 +541,51 @@ watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, upload
 <template>
   <div class="carrierTradeAlert">
     <div class="carrierLeftPane">
-      <section class="carrierSection">
-        <h2>Image</h2>
-        <div ref="stageRef" class="carrierImageStage">
-          <img v-if="imageUrl" :src="imageUrl" alt="" />
-          <div class="imageDownloadButtons" aria-label="Download image">
-            <button type="button" title="Download PNG" @click="downloadImage('png')">PNG ↓</button>
-            <button type="button" title="Download JPG" @click="downloadImage('jpg')">JPG ↓</button>
-          </div>
-          <div
-            v-for="layer in activeLayers"
-            :key="layer.key"
-            class="carrierTextLayer"
-            :class="`carrierLayer-${layer.key}`"
-            :style="layerStyle(layer)"
-            @pointerdown="startDrag($event, layer)"
-            @pointermove="moveDrag"
-            @pointerup="stopDrag"
-            @pointercancel="stopDrag"
-          >
-            {{ layerText[layer.key] }}
-          </div>
-        </div>
-      </section>
+      <TradePosterEditor
+        :image-url="imageUrl"
+        :active-layers="activeLayers"
+        :layer-text="layerText"
+        :font-sizes="fontSizes"
+        :text-color="textColor"
+        @download-image="downloadImage"
+        @move-layer="moveLayer"
+      />
 
-      <fieldset class="outputPanel">
-        <legend>Announcement</legend>
-        <div class="outputPanelHeader">
-          <h2>Discord/Reddit text</h2>
-          <button type="button" class="copySymbolButton" :title="copied ? 'Copied' : 'Copy announcement'" @click="copyAnnouncement">{{ copied ? '✓' : '⧉' }}</button>
-        </div>
-        <p class="outputText">{{ announcement }}</p>
-      </fieldset>
-
-      <fieldset class="outputPanel">
-        <legend>Custom Announcement</legend>
-        <div class="outputPanelHeader">
-          <h2>For forums, reddit and more</h2>
-          <span class="customTemplateTypeBadge">{{ activeCustomTemplateTypeLabel }} template</span>
-        </div>
-        <div class="customAnnouncementOutput">
-          <div class="customOutputSection">
-            <div class="customOutputHeader">
-              <span>Title</span>
-              <button type="button" class="copySymbolButton smallCopyButton" :title="customTitleCopied ? 'Copied' : 'Copy custom title'" @click="copyCustomAnnouncementTitle">{{ customTitleCopied ? '✓' : '⧉' }}</button>
-            </div>
-            <p class="outputTitle">{{ customAnnouncementTitle }}</p>
-          </div>
-          <div class="customOutputSection">
-            <div class="customOutputHeader">
-              <span>Body</span>
-              <button type="button" class="copySymbolButton smallCopyButton" :title="customBodyCopied ? 'Copied' : 'Copy custom body'" @click="copyCustomAnnouncementBody">{{ customBodyCopied ? '✓' : '⧉' }}</button>
-            </div>
-            <p class="outputText">{{ customAnnouncement }}</p>
-          </div>
-        </div>
-        <button type="button" class="editTemplateButton" @click="customTemplateModalOpen = true">Edit template</button>
-      </fieldset>
+      <AnnouncementOutputs
+        :announcement="announcement"
+        :custom-announcement-title="customAnnouncementTitle"
+        :custom-announcement="customAnnouncement"
+        :active-custom-template-type-label="activeCustomTemplateTypeLabel"
+        @edit-template="customTemplateModalOpen = true"
+      />
     </div>
 
-    <section class="carrierSection carrierFormPane">
-      <h2>Image Options</h2>
-      <div class="carrierImageTools">
-        <label>Upload image <input type="file" accept="image/*" @change="onFileChange" /></label>
-        <div class="textLayoutMenuField">
-          <span>Text Layout</span>
-          <div ref="layoutMenuRef" class="textLayoutMenu">
-            <button type="button" class="textLayoutMenuButton" @click="layoutMenuOpen = !layoutMenuOpen">{{ currentLayoutLabel }} ▾</button>
-            <div v-if="layoutMenuOpen" class="textLayoutMenuList">
-              <button type="button" class="textLayoutMenuOption" :class="{ active: textLayout === 'classic' }" @click="selectTextLayout('classic')">Classic</button>
-              <button type="button" class="textLayoutMenuOption" :class="{ active: textLayout === 'floating' }" @click="selectTextLayout('floating')">Free Floating</button>
-              <div class="textLayoutMenuDivider"></div>
-              <div class="layoutSaveRow">
-                <label>Layout name <input v-model="layoutName" type="text" placeholder="My carrier layout" @keydown.enter.prevent="saveCurrentLayout" /></label>
-                <button type="button" class="saveLayoutButton" @click="saveCurrentLayout">Save new</button>
-                <span class="small layoutSaveStatus">{{ layoutSaveStatus }}</span>
-              </div>
-              <div v-if="savedLayouts.length" class="textLayoutMenuDivider"></div>
-              <div v-for="layout in savedLayouts" :key="layout.id" class="textLayoutMenuRow" :class="{ active: textLayout === `custom:${layout.id}` }">
-                <button type="button" class="textLayoutMenuOption custom" @click="selectTextLayout(`custom:${layout.id}`)">{{ layout.name }}</button>
-                <button type="button" class="textLayoutDeleteButton" title="Delete layout" @click.stop="deleteSavedLayout(layout.id)">🗑</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <label class="textColorControl">Text Color
-          <input
-            v-model="textColor"
-            class="marketScoutTextColorInput"
-            type="text"
-            data-coloris
-            spellcheck="false"
-            @change="setTextColor($event.target.value)"
-            @blur="setTextColor($event.target.value)"
-          />
-        </label>
-      </div>
-      <h2>Trade</h2>
-      <div class="carrierFormGrid">
-        <fieldset class="tradeFieldset">
-          <legend>Trade</legend>
-          <div class="fieldWithFont">
-            <label>Commodity <input v-model="form.commodity" type="text" /></label>
-            <label>Font size <input :value="fontSizeFor('commodity')" type="number" min="8" max="180" step="1" @input="setFontSize('commodity', $event.target.value)" /></label>
-          </div>
-          <div class="fieldWithFont profitFieldWithOptions">
-            <label>Profit <input v-model="form.profit" type="text" /></label>
-            <label class="inlineCheckboxLabel"><input v-model="form.includeProfitLabelInImage" type="checkbox" /> Profit label</label>
-            <label>Font size <input :value="fontSizeFor('profitValue')" type="number" min="8" max="180" step="1" @input="setFontSize('profitValue', $event.target.value)" /></label>
-          </div>
-          <div class="fieldWithFont">
-            <label>Quantity (tons) <input v-model="form.quantity" type="text" /></label>
-            <label>Font size <input :value="fontSizeFor('quantity')" type="number" min="8" max="180" step="1" @input="setFontSize('quantity', $event.target.value)" /></label>
-          </div>
-          <div class="fieldWithFont">
-            <label>Type
-              <select v-model="form.type">
-                <option>Loading</option>
-                <option>Unloading</option>
-              </select>
-            </label>
-            <label>Font size <input :value="fontSizeFor('type')" type="number" min="8" max="180" step="1" @input="setFontSize('type', $event.target.value)" /></label>
-          </div>
-        </fieldset>
-        <fieldset class="carrierFieldset">
-          <legend>Carrier</legend>
-          <div class="fieldWithFont">
-            <label>Carrier Name <input v-model="form.carrierName" type="text" /></label>
-            <label>Font size <input :value="fontSizeFor('carrierName')" type="number" min="8" max="180" step="1" @input="setFontSize('carrierName', $event.target.value)" /></label>
-          </div>
-          <div class="fieldWithFont">
-            <label>Carrier ID <input v-model="form.carrierId" type="text" /></label>
-            <label>Font size <input :value="fontSizeFor('carrierId')" type="number" min="8" max="180" step="1" @input="setFontSize('carrierId', $event.target.value)" /></label>
-          </div>
-          <div class="fieldWithFont singleFieldRow">
-            <label>Carrier System <input v-model="form.carrierSystem" type="text" /></label>
-          </div>
-        </fieldset>
-        <fieldset class="marketFieldset">
-          <legend>Market</legend>
-          <div class="fieldWithFont">
-            <label>Station <input v-model="form.station" type="text" /></label>
-            <label>Font size <input :value="fontSizeFor('station')" type="number" min="8" max="180" step="1" @input="setFontSize('station', $event.target.value)" /></label>
-          </div>
-          <div class="fieldWithFont">
-            <label>System <input v-model="form.system" type="text" /></label>
-            <label>Font size <input :value="fontSizeFor('system')" type="number" min="8" max="180" step="1" @input="setFontSize('system', $event.target.value)" /></label>
-          </div>
-          <div class="fieldWithFont singleFieldRow">
-            <label>Station Type
-              <select v-model="form.stationType">
-                <option>Dodec Starport</option>
-                <option>Orbis Starport</option>
-                <option>Asteroid Base</option>
-                <option>Outpost</option>
-                <option>Planetary</option>
-              </select>
-            </label>
-          </div>
-          <div class="fieldWithFont">
-            <label>Pads
-              <select v-model="form.pads">
-                <option>Small</option>
-                <option>Medium</option>
-                <option>Large</option>
-              </select>
-            </label>
-            <label>Font size <input :value="fontSizeFor('pads')" type="number" min="8" max="180" step="1" @input="setFontSize('pads', $event.target.value)" /></label>
-          </div>
-        </fieldset>
-      </div>
-    </section>
+    <CarrierTradeForm
+      :form="form"
+      v-model:text-color="textColor"
+      :text-layout="textLayout"
+      :current-layout-label="currentLayoutLabel"
+      v-model:layout-menu-open="layoutMenuOpen"
+      v-model:layout-name="layoutName"
+      :layout-save-status="layoutSaveStatus"
+      :saved-layouts="savedLayouts"
+      :text-color-presets="textColorPresets"
+      :font-size-for="fontSizeFor"
+      :set-font-size="setFontSize"
+      @file-change="onFileChange"
+      @set-text-color="setTextColor"
+      @select-text-layout="selectTextLayout"
+      @save-current-layout="saveCurrentLayout"
+      @delete-saved-layout="deleteSavedLayout"
+    />
 
-    <ModalShell
+    <AnnouncementTemplateEditor
       v-if="customTemplateModalOpen"
-      title="Custom Announcement Template"
-      title-id="customTemplateTitle"
-      panel-class="templateModal"
+      v-model:title-template="customAnnouncementTitleTemplate"
+      v-model:body-template="customAnnouncementTemplate"
+      :active-custom-template-type-label="activeCustomTemplateTypeLabel"
+      :custom-token-list="customTokenList"
       @close="customTemplateModalOpen = false"
-    >
-      <template #header-extra>
-        <span class="customTemplateTypeBadge">{{ activeCustomTemplateTypeLabel }} template</span>
-      </template>
-
-      <div class="templateEditorGrid">
-        <div>
-          <h3>Tokens</h3>
-          <div class="tokenList">
-            <code v-for="[token, help] in customTokenList" :key="token" :title="help">[{{ token }}]</code>
-          </div>
-        </div>
-        <div class="templateFields">
-          <label>Announcement Title
-            <input v-model="customAnnouncementTitleTemplate" type="text" spellcheck="false" />
-          </label>
-          <label class="templateTextArea">Announcement Body
-            <textarea v-model="customAnnouncementTemplate" rows="14" spellcheck="false"></textarea>
-          </label>
-        </div>
-      </div>
-
-      <template #actions>
-        <button type="button" @click="customTemplateModalOpen = false">Done</button>
-      </template>
-    </ModalShell>
+    />
   </div>
 </template>

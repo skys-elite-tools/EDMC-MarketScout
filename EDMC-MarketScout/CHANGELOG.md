@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Refactored Carrier Trade Announcements into focused components for the form, poster editor, announcement outputs, and template editor.
+- Renamed the view source file from `CarrierTradeAlertView.vue` to `CarrierTradeAnnouncementsView.vue`.
+- Extracted shared `MetricCard.vue` and `ModalShell.vue` UI components.
+
 ## 0.2.6 Beta
 
 - Improved the Carrier Trade Calculator's `Rare Commodities: Station to Station` section for Community Goal style rare trading.

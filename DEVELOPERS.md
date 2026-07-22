@@ -86,7 +86,19 @@ Carrier Trade Calculator is split into a tab shell and one component per calcula
 - `CarrierTradeRareCalculator.vue`
 - `CarrierTradeRareStationCalculator.vue`
 
+Carrier Trade Announcements is split into a view shell plus focused UI components:
+
+- `CarrierTradeAnnouncementsView.vue`: owns announcement state, saved layout persistence, text/token computation, and image export.
+- `CarrierTradeForm.vue`: image options, layout selector, color picker, and trade/carrier/market inputs.
+- `TradePosterEditor.vue`: poster preview, draggable text layers, and PNG/JPG download buttons.
+- `AnnouncementOutputs.vue`: generated announcement display and copy actions.
+- `AnnouncementTemplateEditor.vue`: custom announcement template modal.
+
+The localStorage keys still use `marketscout.carrierTradeAlert.*` for backwards compatibility with saved user drafts and layouts.
+
 Use `AutocompleteDropdown.vue` for future text-input controls that also need an explicit dropdown menu. It is currently used by the Rare Station-to-Station Target Station control.
+
+Use `MetricCard.vue` for repeated calculator-style output cards, and `ModalShell.vue` for shared modal backdrop/header/close behavior.
 
 ## Python backend development
 

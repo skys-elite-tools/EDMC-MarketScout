@@ -11,7 +11,7 @@ import LedgerView from './components/LedgerView.vue'
 import RareCommoditiesView from './components/RareCommoditiesView.vue'
 import CommoditiesView from './components/CommoditiesView.vue'
 import AnalyzeCommoditiesView from './components/AnalyzeCommoditiesView.vue'
-import CarrierTradeAlertView from './components/CarrierTradeAlertView.vue'
+import CarrierTradeAnnouncementsView from './components/CarrierTradeAnnouncementsView.vue'
 import CarrierTradeCalculatorView from './components/CarrierTradeCalculatorView.vue'
 import ConfigurationView from './components/ConfigurationView.vue'
 import FooterBar from './components/FooterBar.vue'
@@ -550,7 +550,7 @@ onUnmounted(() => {
         <AnalyzeCommoditiesView
           v-else-if="currentView === 'analyze'"
         />
-        <CarrierTradeAlertView
+        <CarrierTradeAnnouncementsView
           v-else-if="currentView === 'carrier'"
         />
         <CarrierTradeCalculatorView

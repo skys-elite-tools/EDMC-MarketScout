@@ -103,12 +103,18 @@ EDMC-MarketScout/
         CommoditiesView.vue
         RareCommoditiesView.vue
         AnalyzeCommoditiesView.vue
-        CarrierTradeAlertView.vue
+        CarrierTradeAnnouncementsView.vue
+        CarrierTradeForm.vue
+        TradePosterEditor.vue
+        AnnouncementOutputs.vue
+        AnnouncementTemplateEditor.vue
         CarrierTradeCalculatorView.vue
         CarrierTradeStationCalculator.vue
         CarrierTradeRareCalculator.vue
         CarrierTradeRareStationCalculator.vue
         AutocompleteDropdown.vue
+        MetricCard.vue
+        ModalShell.vue
         FooterBar.vue
 local-tools/
   inara-commodities/          # Parses INARA commodity stats into rawdata/commodities.csv
