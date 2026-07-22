@@ -89,7 +89,23 @@ Creates Fleet Carrier trade announcements with generated share text, custom anno
 
 Calculates Fleet Carrier buy/sell prices and profit splits for station-to-station trades, rare commodity carrier sales, and rare commodity station-to-station planning.
 
-![Carrier Trade Calculator page showing carrier and hauler profit split outputs](presentation-assets/carrier-trade-calculator.png)
+#### Station To Station
+
+Calculates carrier buy and sell prices for a regular station-to-station trade, including carrier profit, loading hauler profit, and unloading hauler profit.
+
+![Carrier Trade Calculator station-to-station tab showing carrier and hauler profit split controls](presentation-assets/carrier-trade-calculator-st-to-st.png)
+
+#### Rare Commodities
+
+Calculates Fleet Carrier rare commodity sale pricing using the selected rare commodity, its origin buy price, and the maximum 100x galactic average carrier sale price.
+
+![Carrier Trade Calculator rare commodities tab showing rare commodity carrier sale pricing](presentation-assets/carrier-trade-calculator-rare.png)
+
+#### Rare Commodities: Station To Station
+
+Compares rare commodity origin supply against a selected target station, intended mostly for Community Goal-style rare commodity hauling.
+
+![Carrier Trade Calculator rare station-to-station tab showing target station comparison results](presentation-assets/carrier-trade-calculator-rare-st-to-st.png)
 
 ### Config
 
