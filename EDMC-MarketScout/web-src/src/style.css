@@ -757,6 +757,12 @@ fieldset.rareStationControls legend {
   color: var(--muted);
   font-size: 12px;
 }
+.inlineError {
+  color: var(--danger);
+}
+.inlineRetryButton {
+  margin-left: 8px;
+}
 .calculatorOutputs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

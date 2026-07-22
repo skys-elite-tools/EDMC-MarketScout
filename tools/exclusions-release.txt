@@ -3,6 +3,7 @@ __pycache__
 *.pyc
 *.log
 marketscout.sqlite3
+marketscout.sqlite3-*
 marketscout.config
 marketscout-ui.json
 marketscout-economy-presets.json

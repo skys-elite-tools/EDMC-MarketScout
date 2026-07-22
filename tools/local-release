@@ -39,7 +39,7 @@ mkdir -p "${PLUGIN_BACKUP_ARCHIVES_DIR}"
 if [[ -d "${LIVE_PLUGIN_DIR}" ]]; then
   echo "Backing up current live plugin to ${BACKUP_DIR}"
   mkdir -p "${BACKUP_DIR}"
-  rsync -av --exclude-from="${BACKUP_EXCLUDES}" "${LIVE_PLUGIN_DIR}" "${BACKUP_DIR}/"
+  rsync -av --delay-updates --exclude-from="${BACKUP_EXCLUDES}" "${LIVE_PLUGIN_DIR}" "${BACKUP_DIR}/"
 else
   echo "No current live plugin found at ${LIVE_PLUGIN_DIR}; skipping backup."
 fi
@@ -51,6 +51,6 @@ npm run build
 
 echo "Releasing MarketScout to ${EDMC_PLUGINS_DIR}"
 cd "${REPO_ROOT}"
-rsync -av --delete --exclude-from="${RELEASE_EXCLUDES}" "${PLUGIN_SOURCE_DIR}" "${EDMC_PLUGINS_DIR%/}/"
+rsync -av --delay-updates --delete-delay --exclude-from="${RELEASE_EXCLUDES}" "${PLUGIN_SOURCE_DIR}" "${EDMC_PLUGINS_DIR%/}/"
 
-echo "Release complete. Restart EDMC to load the updated plugin."
+echo "Release complete. Refresh the browser for Web UI-only changes; restart EDMC for Python or plugin-runtime changes."

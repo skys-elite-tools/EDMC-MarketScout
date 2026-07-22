@@ -13,6 +13,7 @@ const TRIP_PROFIT_TITLE = 'Aggregated Profit/Ship Trip = (carrier_capacity * pro
 const rareStationOptions = ref([])
 const rareStationRows = ref([])
 const rareStationStatus = ref('Loading visited stations...')
+const rareStationError = ref('')
 const rareStationLoading = ref(false)
 const targetQuery = ref('')
 const customSupplies = ref({})
@@ -172,10 +173,13 @@ function saveCustomSupply(row) {
 
 async function loadOptions() {
   rareStationStatus.value = 'Loading visited stations...'
+  rareStationError.value = ''
   try {
     const res = await fetch('/api/rare-station-trade-options', { cache: 'no-store' })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json()
     if (data.error) throw new Error(data.error)
+    if (!Array.isArray(data.rows)) throw new Error('Response did not include a rows array')
     rareStationOptions.value = data.rows || []
     if (props.inputs.marketId && !selectedStation.value) {
       props.inputs.marketId = ''
@@ -191,6 +195,7 @@ async function loadOptions() {
     props.inputs.marketId = ''
     syncTargetQuery()
     rareStationStatus.value = 'Could not load visited stations'
+    rareStationError.value = err?.message || String(err)
   }
 }
 
@@ -263,6 +268,8 @@ onMounted(loadOptions)
       <p class="calculatorHint">
         Origin Stock uses {{ inputs.originStockMode === 'usual' ? 'usual supply' : inputs.originStockMode === 'custom' ? 'custom supply where set, falling back to usual supply' : 'the most recently seen supply at the commodity origin, falling back to usual supply' }}.
         {{ rareStationStatus }}<span v-if="selectedStation"> · {{ selectedStation.label }}</span>
+        <span v-if="rareStationError" class="inlineError"> · {{ rareStationError }}</span>
+        <button v-if="rareStationError" type="button" class="linkButton inlineRetryButton" @click="loadOptions">Retry</button>
       </p>
     </fieldset>
 
