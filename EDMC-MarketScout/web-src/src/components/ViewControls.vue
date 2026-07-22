@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import AutocompleteDropdown from './AutocompleteDropdown.vue'
 import EconomyPresetInput from './EconomyPresetInput.vue'
 import EconomicStateInput from './EconomicStateInput.vue'
-import InfoButton from './InfoButton.vue'
 const props = defineProps({
   currentView: { type: String, required: true },
   filters: { type: Object, required: true },
@@ -127,13 +126,10 @@ const hasControls = computed(() => !['analyze', 'carrier', 'carrierCalc', 'confi
             <span>Watched Commodities</span>
             <span class="buttonCount">{{ watchedCount }} selected</span>
           </button>
-          <div class="settingsActionRow">
-            <button type="button" class="countButton" @click="emit('open-best-buy-ignore-list')">
-              <span>Best Buy Settings</span>
-              <span class="buttonCount">{{ bestBuyIgnoreCount }} selected</span>
-            </button>
-            <InfoButton title="How Best Buy works" @open="emit('open-help', 'best-buy')" />
-          </div>
+          <button type="button" class="countButton" @click="emit('open-best-buy-ignore-list')">
+            <span>Best Buy Settings</span>
+            <span class="buttonCount">{{ bestBuyIgnoreCount }} selected</span>
+          </button>
         </div>
       </template>
 

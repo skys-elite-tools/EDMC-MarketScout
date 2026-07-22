@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import InfoButton from './InfoButton.vue'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -14,6 +15,8 @@ const props = defineProps({
   showBestBuySettings: { type: Boolean, default: false },
   bestBuySupplyCap: { type: Number, default: 1000 },
   minimumPotentialProfit: { type: Number, default: 10000 },
+  helpArticle: { type: String, default: '' },
+  helpTitle: { type: String, default: 'Open help' },
 })
 const emit = defineEmits([
   'close',
@@ -23,6 +26,7 @@ const emit = defineEmits([
   'update:minimumPotentialProfit',
   'toggle-selected',
   'toggle-display-column',
+  'open-help',
 ])
 
 const selectedSet = computed(() => new Set(props.selectedCommodities))
@@ -43,7 +47,13 @@ function isColumnSelected(commodity, side) {
 
 <template>
   <section v-if="visible" class="settingsPanel">
-    <div class="settingsHeader"><h2>{{ title }}</h2><button type="button" @click="emit('close')">Close</button></div>
+    <div class="settingsHeader">
+      <h2>
+        <span>{{ title }}</span>
+        <InfoButton v-if="helpArticle" :title="helpTitle" @open="emit('open-help', helpArticle)" />
+      </h2>
+      <button type="button" @click="emit('close')">Close</button>
+    </div>
     <p class="subtitle">{{ description }}</p>
     <div v-if="showBestBuySettings" class="bestBuySettingsGrid">
       <label title="Best Buy score uses min(supply, this value), so very large supply does not dominate every result.">

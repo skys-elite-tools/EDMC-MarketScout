@@ -223,9 +223,6 @@ h1 { margin: 0; font-size: 20px; }
 .stationFilterActions button {
   width: 100%;
 }
-.stationFilterActions .infoButton {
-  width: 1.35rem;
-}
 .stationFilterPrimaryActions {
   display: grid;
   grid-template-columns: minmax(0, 7fr) minmax(4.5rem, 3fr);
@@ -247,18 +244,10 @@ h1 { margin: 0; font-size: 20px; }
   font-size: 11px;
   font-weight: 800;
 }
-.settingsActionRow,
 .headerWithInfo {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-.settingsActionRow {
-  display: flex;
-}
-.settingsActionRow .countButton {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 .infoButton {
   display: inline-flex;
@@ -1375,6 +1364,12 @@ fieldset.rareStationControls legend {
 .hidden { display: none; }
 .settingsPanel { margin: 0.75rem; padding: 0.75rem; border: 1px solid #444; border-radius: 6px; background: rgba(255,255,255,0.04); }
 .settingsHeader { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.settingsHeader h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+}
 .settingsPanel .subtitle { margin-bottom: 14px; }
 .settingsSubheading {
   margin: .25rem 0 .4rem;

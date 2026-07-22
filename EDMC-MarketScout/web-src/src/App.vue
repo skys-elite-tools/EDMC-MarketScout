@@ -516,12 +516,15 @@ onUnmounted(() => {
       :search="bestBuyIgnoreSearch"
       :show-display-columns="false"
       :show-best-buy-settings="true"
+      help-article="best-buy"
+      help-title="How Best Buy works"
       v-model:best-buy-supply-cap="bestBuySupplyCap"
       v-model:minimum-potential-profit="minimumPotentialProfit"
       @close="bestBuyIgnoreVisible = false"
       @save="saveBestBuyIgnoreSettings"
       @update:search="bestBuyIgnoreSearch = $event"
       @toggle-selected="setBestBuyIgnoreCommodity"
+      @open-help="openHelp"
     />
 
     <main :class="{ detailsOpen: selectedRow }">
