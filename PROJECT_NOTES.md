@@ -92,6 +92,14 @@ EDMC-MarketScout/
       main.js
       style.css
       utils.js
+      views/
+        AnalyzeCommoditiesView.vue
+        CarrierTradeAnnouncementsView.vue
+        CarrierTradeCalculatorView.vue
+        CommoditiesView.vue
+        ConfigurationView.vue
+        LedgerView.vue
+        RareCommoditiesView.vue
       components/
         TopBar.vue
         ViewControls.vue
@@ -99,16 +107,10 @@ EDMC-MarketScout/
         StationDetails.vue
         CommoditySettings.vue
         JackpotHistory.vue
-        LedgerView.vue
-        CommoditiesView.vue
-        RareCommoditiesView.vue
-        AnalyzeCommoditiesView.vue
-        CarrierTradeAnnouncementsView.vue
         CarrierTradeForm.vue
         TradePosterEditor.vue
         AnnouncementOutputs.vue
         AnnouncementTemplateEditor.vue
-        CarrierTradeCalculatorView.vue
         CarrierTradeStationCalculator.vue
         CarrierTradeRareCalculator.vue
         CarrierTradeRareStationCalculator.vue

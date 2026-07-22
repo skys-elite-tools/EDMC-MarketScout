@@ -1,10 +1,10 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import placeholderImage from '../assets/trade-placeholder.png'
-import AnnouncementOutputs from './AnnouncementOutputs.vue'
-import AnnouncementTemplateEditor from './AnnouncementTemplateEditor.vue'
-import CarrierTradeForm from './CarrierTradeForm.vue'
-import TradePosterEditor from './TradePosterEditor.vue'
+import AnnouncementOutputs from '../components/AnnouncementOutputs.vue'
+import AnnouncementTemplateEditor from '../components/AnnouncementTemplateEditor.vue'
+import CarrierTradeForm from '../components/CarrierTradeForm.vue'
+import TradePosterEditor from '../components/TradePosterEditor.vue'
 
 const LAYOUT_STORAGE_KEY = 'marketscout.carrierTradeAlert.layouts'
 const DRAFT_STORAGE_KEY = 'marketscout.carrierTradeAlert.draft'

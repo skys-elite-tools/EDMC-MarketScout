@@ -79,20 +79,22 @@ Browser-only personal state uses localStorage for convenience, including the act
 
 The Web UI has a responsive top navigation. Commodities, Rare Commodities, and Analyze Commodities are grouped under the Commodities menu on wider layouts; the navigation collapses to a hamburger menu on narrower windows. The footer provides About and Help modals.
 
-Carrier Trade Calculator is split into a tab shell and one component per calculator tab:
+Page-level Web UI screens live in `EDMC-MarketScout/web-src/src/views/`. Reusable controls and page child components live in `EDMC-MarketScout/web-src/src/components/`.
 
-- `CarrierTradeCalculatorView.vue`: owns active tab and `marketscout.carrierTradeCalculator.draft` persistence.
-- `CarrierTradeStationCalculator.vue`
-- `CarrierTradeRareCalculator.vue`
-- `CarrierTradeRareStationCalculator.vue`
+Carrier Trade Calculator is split into a view shell and one component per calculator tab:
+
+- `views/CarrierTradeCalculatorView.vue`: owns active tab and `marketscout.carrierTradeCalculator.draft` persistence.
+- `components/CarrierTradeStationCalculator.vue`
+- `components/CarrierTradeRareCalculator.vue`
+- `components/CarrierTradeRareStationCalculator.vue`
 
 Carrier Trade Announcements is split into a view shell plus focused UI components:
 
-- `CarrierTradeAnnouncementsView.vue`: owns announcement state, saved layout persistence, text/token computation, and image export.
-- `CarrierTradeForm.vue`: image options, layout selector, color picker, and trade/carrier/market inputs.
-- `TradePosterEditor.vue`: poster preview, draggable text layers, and PNG/JPG download buttons.
-- `AnnouncementOutputs.vue`: generated announcement display and copy actions.
-- `AnnouncementTemplateEditor.vue`: custom announcement template modal.
+- `views/CarrierTradeAnnouncementsView.vue`: owns announcement state, saved layout persistence, text/token computation, and image export.
+- `components/CarrierTradeForm.vue`: image options, layout selector, color picker, and trade/carrier/market inputs.
+- `components/TradePosterEditor.vue`: poster preview, draggable text layers, and PNG/JPG download buttons.
+- `components/AnnouncementOutputs.vue`: generated announcement display and copy actions.
+- `components/AnnouncementTemplateEditor.vue`: custom announcement template modal.
 
 The localStorage keys still use `marketscout.carrierTradeAlert.*` for backwards compatibility with saved user drafts and layouts.
 

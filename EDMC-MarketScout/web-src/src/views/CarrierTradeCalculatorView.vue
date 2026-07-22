@@ -1,8 +1,8 @@
 <script setup>
 import { ref, watch } from 'vue'
-import CarrierTradeRareCalculator from './CarrierTradeRareCalculator.vue'
-import CarrierTradeRareStationCalculator from './CarrierTradeRareStationCalculator.vue'
-import CarrierTradeStationCalculator from './CarrierTradeStationCalculator.vue'
+import CarrierTradeRareCalculator from '../components/CarrierTradeRareCalculator.vue'
+import CarrierTradeRareStationCalculator from '../components/CarrierTradeRareStationCalculator.vue'
+import CarrierTradeStationCalculator from '../components/CarrierTradeStationCalculator.vue'
 
 const STORAGE_KEY = 'marketscout.carrierTradeCalculator.draft'
 
