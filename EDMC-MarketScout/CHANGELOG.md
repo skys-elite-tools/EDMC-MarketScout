@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.6 Beta
 
 - Improved the Carrier Trade Calculator's `Rare Commodities: Station to Station` section for Community Goal style rare trading.
 - Target stations now list visited stations that have at least one commodity with a positive sell price, ordered by most recent station visit first.
