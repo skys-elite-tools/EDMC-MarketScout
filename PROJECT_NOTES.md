@@ -104,6 +104,11 @@ EDMC-MarketScout/
         RareCommoditiesView.vue
         AnalyzeCommoditiesView.vue
         CarrierTradeAlertView.vue
+        CarrierTradeCalculatorView.vue
+        CarrierTradeStationCalculator.vue
+        CarrierTradeRareCalculator.vue
+        CarrierTradeRareStationCalculator.vue
+        AutocompleteDropdown.vue
         FooterBar.vue
 local-tools/
   inara-commodities/          # Parses INARA commodity stats into rawdata/commodities.csv
@@ -169,6 +174,14 @@ The Carrier Trade Calculator has three tabs:
 - `Station to Station`: calculates carrier buy/sell prices and loading/unloading hauler profit splits from buy station price, sell station price, carrier profit percentage, hauler split, and quantity.
 - `Rare Commodities`: calculates rare commodity carrier-sale values using the origin buy price and a carrier sale price capped at 100x galactic average.
 - `Rare Commodities: Station to Station`: intended mostly for Community Goal planning. Target Station options come from visited stations that have at least one `market_prices.sell_price > 0`, ordered by most recent station visit first. This section compares rare commodity origin buy prices against target station sell prices. Buy/sell labels are always from the player's perspective.
+
+The calculator view is intentionally split into focused components:
+
+- `CarrierTradeCalculatorView.vue`: tab shell and localStorage draft persistence.
+- `CarrierTradeStationCalculator.vue`: Station to Station calculations and controls.
+- `CarrierTradeRareCalculator.vue`: rare commodity carrier-sale calculations and rare commodity loading.
+- `CarrierTradeRareStationCalculator.vue`: rare commodity station-to-station table, target station loading, and custom supply handling.
+- `AutocompleteDropdown.vue`: reusable text input plus explicit dropdown component, currently used by Target Station.
 
 Rare station-to-station supply selection is intentionally explicit:
 

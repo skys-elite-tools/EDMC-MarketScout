@@ -79,6 +79,15 @@ Browser-only personal state uses localStorage for convenience, including the act
 
 The Web UI has a responsive top navigation. Commodities, Rare Commodities, and Analyze Commodities are grouped under the Commodities menu on wider layouts; the navigation collapses to a hamburger menu on narrower windows. The footer provides About and Help modals.
 
+Carrier Trade Calculator is split into a tab shell and one component per calculator tab:
+
+- `CarrierTradeCalculatorView.vue`: owns active tab and `marketscout.carrierTradeCalculator.draft` persistence.
+- `CarrierTradeStationCalculator.vue`
+- `CarrierTradeRareCalculator.vue`
+- `CarrierTradeRareStationCalculator.vue`
+
+Use `AutocompleteDropdown.vue` for future text-input controls that also need an explicit dropdown menu. It is currently used by the Rare Station-to-Station Target Station control.
+
 ## Python backend development
 
 The local Web UI API is implemented in `marketscout_web.py`. It starts with a loopback listener and can optionally start a separate LAN listener when enabled in runtime configuration.

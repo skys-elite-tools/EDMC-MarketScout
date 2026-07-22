@@ -10,6 +10,7 @@
 - Added Ship Cargo Capacity and changed `Agg. Profit/Trip` to estimate aggregated profit per ship trip using carrier capacity, origin supply, and load/unload trip counts.
 - Hardened the rare station-trade options endpoint against SQLite temporary I/O errors by using in-memory temp storage and Python-side sorting.
 - Updated rare commodity `usual_supply` values from the master allocation source where available.
+- Refactored the Carrier Trade Calculator into separate tab components and extracted a reusable autocomplete/dropdown component.
 
 ## 0.2.5 Beta
 
