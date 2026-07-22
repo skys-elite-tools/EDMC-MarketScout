@@ -13,6 +13,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'select', 'clear'])
 
+const rootEl = ref(null)
 const inputEl = ref(null)
 const menuOpen = ref(false)
 const showAll = ref(false)
@@ -90,7 +91,7 @@ function onKeydown(event) {
 }
 
 function onDocumentPointerDown(event) {
-  if (!event.target.closest?.('.autocompleteDropdown')) {
+  if (!rootEl.value?.contains(event.target)) {
     menuOpen.value = false
     showAll.value = false
     highlightedIndex.value = -1
@@ -102,7 +103,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
 </script>
 
 <template>
-  <div class="autocompleteDropdown">
+  <div ref="rootEl" class="autocompleteDropdown">
     <input
       ref="inputEl"
       :value="modelValue"

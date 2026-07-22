@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import AutocompleteDropdown from './AutocompleteDropdown.vue'
 import EconomyPresetInput from './EconomyPresetInput.vue'
 import EconomicStateInput from './EconomicStateInput.vue'
 const props = defineProps({
@@ -74,16 +75,22 @@ const hasControls = computed(() => !['analyze', 'carrier', 'carrierCalc', 'confi
       <template v-if="currentView === 'stations'">
         <div class="stationFilterFields">
           <label>System
-            <input v-model="filters.system" type="text" list="marketscoutSystemSuggestions" />
-            <datalist id="marketscoutSystemSuggestions">
-              <option v-for="system in systemSuggestions" :key="system" :value="system" />
-            </datalist>
+            <AutocompleteDropdown
+              v-model="filters.system"
+              :options="systemSuggestions"
+              placeholder="Any system"
+              empty-text="No matching systems"
+              button-title="Show visited systems"
+            />
           </label>
           <label>Station
-            <input v-model="filters.station" type="text" list="marketscoutStationSuggestions" />
-            <datalist id="marketscoutStationSuggestions">
-              <option v-for="station in stationSuggestions" :key="station" :value="station" />
-            </datalist>
+            <AutocompleteDropdown
+              v-model="filters.station"
+              :options="stationSuggestions"
+              placeholder="Any station"
+              empty-text="No matching stations"
+              button-title="Show visited stations"
+            />
           </label>
           <EconomyPresetInput
             v-model="filters.economy"
