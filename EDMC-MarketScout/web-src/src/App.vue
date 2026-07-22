@@ -537,6 +537,7 @@ onUnmounted(() => {
           :minimum-potential-profit="minimumPotentialProfit"
           :current-system="latestJournalEvent?.system || ''"
           @select="setSelected"
+          @open-help="openHelp"
         />
         <JackpotHistory
           v-else-if="currentView === 'jackpots'"

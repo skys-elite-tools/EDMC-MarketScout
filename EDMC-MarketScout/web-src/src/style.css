@@ -198,7 +198,14 @@ h1 { margin: 0; font-size: 20px; }
   gap: 12px 16px;
   align-items: stretch;
 }
-.controlGroupTitle { color: var(--accent); font-weight: 800; margin-right: 4px; }
+.controlGroupTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-weight: 800;
+  margin-right: 4px;
+}
 .stationFilterFields {
   display: flex;
   gap: 8px 12px;
@@ -215,6 +222,9 @@ h1 { margin: 0; font-size: 20px; }
 }
 .stationFilterActions button {
   width: 100%;
+}
+.stationFilterActions .infoButton {
+  width: 1.35rem;
 }
 .stationFilterPrimaryActions {
   display: grid;
@@ -236,6 +246,40 @@ h1 { margin: 0; font-size: 20px; }
   background: rgba(140, 200, 255, .08);
   font-size: 11px;
   font-weight: 800;
+}
+.settingsActionRow,
+.headerWithInfo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.settingsActionRow {
+  display: flex;
+}
+.settingsActionRow .countButton {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.infoButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(140, 200, 255, .45);
+  background: rgba(140, 200, 255, .08);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+.infoButton:hover {
+  border-color: var(--accent);
+  background: rgba(140, 200, 255, .18);
+  color: var(--text);
 }
 .applyFiltersButton {
   min-height: 3rem;
@@ -1332,6 +1376,12 @@ fieldset.rareStationControls legend {
 .settingsPanel { margin: 0.75rem; padding: 0.75rem; border: 1px solid #444; border-radius: 6px; background: rgba(255,255,255,0.04); }
 .settingsHeader { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
 .settingsPanel .subtitle { margin-bottom: 14px; }
+.settingsSubheading {
+  margin: .25rem 0 .4rem;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 900;
+}
 .commoditySettings { max-height: 22rem; overflow: auto; margin-top: 0.5rem; border: 1px solid #333; border-radius: 4px; }
 .commodityRow { display: grid; grid-template-columns: minmax(14rem, 1fr) 6rem 6rem; gap: .5rem; padding: .25rem .5rem; border-bottom: 1px solid rgba(255,255,255,.06); }
 .commodityRow.singleSelect { grid-template-columns: minmax(14rem, 1fr); }
@@ -1559,6 +1609,7 @@ fieldset.rareStationControls legend {
 .edmcSettingStatus {
   display: inline-flex;
   align-items: center;
+  gap: 5px;
   min-height: 1.35rem;
   padding: 1px 7px;
   border: 1px solid rgba(202, 132, 255, .50);

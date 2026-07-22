@@ -67,6 +67,7 @@ function isColumnSelected(commodity, side) {
         />
       </label>
     </div>
+    <h3 v-if="showBestBuySettings" class="settingsSubheading">Best Buy Ignore List</h3>
     <label>Filter commodities <input :value="search" type="text" placeholder="gold, palladium, osmium..." @input="emit('update:search', $event.target.value)" /></label>
     <div class="commoditySettings">
       <div v-for="commodity in sortedCommodities" :key="commodity" class="commodityRow" :class="{ singleSelect: !showDisplayColumns }">

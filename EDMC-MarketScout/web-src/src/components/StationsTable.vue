@@ -1,4 +1,5 @@
 <script setup>
+import InfoButton from './InfoButton.vue'
 import { columnKey, commodityCellParts, compactDateTime, fmt, inaraCommoditySellUrl, localDateTime, money, potentialProfitClass, potentialProfitTooltip, quantityClass, rowFlag, shouldDisplayPotentialProfit } from '../utils.js'
 
 const props = defineProps({
@@ -11,7 +12,7 @@ const props = defineProps({
   minimumPotentialProfit: { type: Number, default: 10000 },
   currentSystem: { type: String, default: '' },
 })
-const emit = defineEmits(['select'])
+const emit = defineEmits(['select', 'open-help'])
 
 function flag(row) {
   return rowFlag(row, props.watchedCommodities, props.priceThreshold, props.supplyThreshold)
@@ -38,7 +39,8 @@ function cellParts(row, col) {
     </colgroup>
     <thead>
       <tr>
-        <th>Flag</th><th>System / Station</th><th>State / Economy</th><th>Best Buy</th>
+        <th>Flag</th><th>System / Station</th><th>State / Economy</th>
+        <th><span class="headerWithInfo">Best Buy <InfoButton title="How Best Buy works" @open="emit('open-help', 'best-buy')" /></span></th>
         <th v-for="col in displayColumns" :key="columnKey(col)">{{ col.commodity }} {{ col.side === 'buy' ? 'Buy' : 'Sell' }}</th>
         <th>Updated</th>
       </tr>

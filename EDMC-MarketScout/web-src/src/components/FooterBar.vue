@@ -71,5 +71,26 @@ watch(() => props.helpRequestId, () => {
       <p>MarketScout receives live Journal and market callbacks from EDMC while EDMC and the plugin are running. EDMC does not normally replay your full historical Journal stream to plugins, so MarketScout cannot reconstruct station visits or market snapshots from before it was installed or before EDMC was open.</p>
       <p>For best results, start EDMC before flying, docking, opening station markets, or trading.</p>
     </article>
+    <article id="help-best-buy" class="helpArticle">
+      <h3>How Best Buy Works</h3>
+      <p>Best Buy is not simply the highest profit per tonne. MarketScout combines potential profit with available supply so a commodity with a slightly lower margin but much better stock can rank higher than a commodity with only a few tonnes available.</p>
+      <p><code>score = potential_profit_per_tonne * min(supply, Best Buy supply cap)</code></p>
+      <p>The Best Buy settings panel lets you change the supply cap, set the minimum potential profit required for a commodity to qualify, and exclude commodities that are not practical for your trading style.</p>
+    </article>
+    <article id="help-eddn-station" class="helpArticle">
+      <h3>EDDN Station Data</h3>
+      <p>The EDDN Station status shows whether EDMC is currently configured to send station market data to the Elite Dangerous Data Network. When station data is sent to EDDN, external market tools may pick up the station's commodity prices.</p>
+      <p>MarketScout currently shows this as a read-only status indicator. Change the setting in EDMC under Settings, then EDDN.</p>
+    </article>
+    <article id="help-rare-supply" class="helpArticle">
+      <h3>Rare Commodity Supply</h3>
+      <p>Rare commodity supply is meaningful only at the commodity's origin station. MarketScout records recent rare supply from origin stations and uses usual supply as a fallback when recent station data is not available.</p>
+      <p>For rare station-to-station planning, custom supply values are stored in your browser and can override the usual supply for your own planning.</p>
+    </article>
+    <article id="help-carrier-calculator" class="helpArticle">
+      <h3>Carrier Trade Calculator Formulas</h3>
+      <p>The Carrier Trade Calculator estimates carrier prices and profit splits for station-to-station trades, rare commodity carrier sales, and Community Goal-style rare commodity hauling.</p>
+      <p>For station-to-station trades, the price difference is divided between carrier profit, loading hauler profit, and unloading hauler profit. For rare commodity carrier sales, the sale price is capped by the maximum carrier sale price of 100x galactic average.</p>
+    </article>
   </ModalShell>
 </template>

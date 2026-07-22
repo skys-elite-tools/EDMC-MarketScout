@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import AutocompleteDropdown from './AutocompleteDropdown.vue'
 import EconomyPresetInput from './EconomyPresetInput.vue'
 import EconomicStateInput from './EconomicStateInput.vue'
+import InfoButton from './InfoButton.vue'
 const props = defineProps({
   currentView: { type: String, required: true },
   filters: { type: Object, required: true },
@@ -34,6 +35,7 @@ const pageMetaByView = {
   rare: {
     title: 'Rare Commodities',
     description: 'Lists rare commodity sources, engineering unlock needs, and travel distances.',
+    helpArticle: 'rare-supply',
   },
   commodities: {
     title: 'Commodities',
@@ -50,6 +52,7 @@ const pageMetaByView = {
   carrierCalc: {
     title: 'Carrier Trade Calculator',
     description: 'Calculates carrier buy/sell prices and profit splits for station trades and rare commodities.',
+    helpArticle: 'carrier-calculator',
   },
   config: {
     title: 'Configuration',
@@ -63,7 +66,10 @@ const hasControls = computed(() => !['analyze', 'carrier', 'carrierCalc', 'confi
 <template>
   <section class="viewControls" :class="{ stationControls: currentView === 'stations' }">
     <div class="viewControlsHeader">
-      <div class="controlGroupTitle">{{ pageMeta.title }}</div>
+      <div class="controlGroupTitle">
+        <span>{{ pageMeta.title }}</span>
+        <InfoButton v-if="pageMeta.helpArticle" :title="`About ${pageMeta.title}`" @open="emit('open-help', pageMeta.helpArticle)" />
+      </div>
       <p v-if="currentView === 'stations'" class="viewControlsDescription">
         Lists scouting data for stations visited
         <button type="button" class="inlineHelpLink" @click="emit('open-help', 'edmc-running')">while EDMC was running</button>.
@@ -121,10 +127,13 @@ const hasControls = computed(() => !['analyze', 'carrier', 'carrierCalc', 'confi
             <span>Watched Commodities</span>
             <span class="buttonCount">{{ watchedCount }} selected</span>
           </button>
-          <button type="button" class="countButton" @click="emit('open-best-buy-ignore-list')">
-            <span>Best Buy Settings</span>
-            <span class="buttonCount">{{ bestBuyIgnoreCount }} selected</span>
-          </button>
+          <div class="settingsActionRow">
+            <button type="button" class="countButton" @click="emit('open-best-buy-ignore-list')">
+              <span>Best Buy Settings</span>
+              <span class="buttonCount">{{ bestBuyIgnoreCount }} selected</span>
+            </button>
+            <InfoButton title="How Best Buy works" @open="emit('open-help', 'best-buy')" />
+          </div>
         </div>
       </template>
 
