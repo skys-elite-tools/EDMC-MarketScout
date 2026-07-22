@@ -87,7 +87,7 @@ Creates Fleet Carrier trade announcements with generated share text, custom anno
 
 ### Carrier Trade Calculator
 
-Calculates Fleet Carrier buy/sell prices and profit splits for station-to-station trades and rare commodity trading.
+Calculates Fleet Carrier buy/sell prices and profit splits for station-to-station trades, rare commodity carrier sales, and rare commodity station-to-station planning.
 
 ![Carrier Trade Calculator page showing carrier and hauler profit split outputs](presentation-assets/carrier-trade-calculator.png)
 

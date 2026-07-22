@@ -99,7 +99,7 @@ The helper scripts for regenerating these files live under `local-tools/` in the
 - `Rare Commodities`: rare commodity source table with engineering unlock labels, usual supply, distance, and 100x galactic-average carrier-sale estimates.
 - `Analyze Commodities`: paste a comma-separated commodity list and split matches into regular and rare commodity tables.
 - `Carrier Trade Announcements`: create local Fleet Carrier trade announcements with draggable on-image text and copyable Discord/Reddit text.
-- `Carrier Trade Calculator`: calculate Fleet Carrier buy/sell prices and profit splits for station-to-station trades and rare commodity trading.
+- `Carrier Trade Calculator`: calculate Fleet Carrier buy/sell prices and profit splits for station-to-station trades, rare commodity carrier sales, and rare commodity station-to-station planning.
 
 ## Changelog
 
@@ -112,4 +112,3 @@ See [CHANGELOG.md](CHANGELOG.md).
 - Market prices are stored for all captured commodities.
 - Candidate imports from Spansh have no market prices until you actually visit/update the station.
 - No route planner yet.
-

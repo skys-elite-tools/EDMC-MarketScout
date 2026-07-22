@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Improved the Carrier Trade Calculator's `Rare Commodities: Station to Station` section for Community Goal style rare trading.
+- Target stations now list visited stations that have at least one commodity with a positive sell price, ordered by most recent station visit first.
+- Renamed station-trade price labels so buy/sell wording is consistently from the player's perspective.
+- Replaced the single Origin Stock input with supply source buttons: Usual, Most Recent, and Custom.
+- Added browser-local custom rare commodity supply overrides.
+- Added Ship Cargo Capacity and changed `Agg. Profit/Trip` to estimate aggregated profit per ship trip using carrier capacity, origin supply, and load/unload trip counts.
+- Hardened the rare station-trade options endpoint against SQLite temporary I/O errors by using in-memory temp storage and Python-side sorting.
+- Updated rare commodity `usual_supply` values from the master allocation source where available.
+
 ## 0.2.5 Beta
 
 - Refactored database migrations into dedicated migration files with a `schema_migrations` table, plus a developer helper for creating new migrations.

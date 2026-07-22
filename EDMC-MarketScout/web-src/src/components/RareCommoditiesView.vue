@@ -1,5 +1,5 @@
 <script setup>
-import { fmt, ly, money, num } from '../utils.js'
+import { fmt, ly, money, num, rareDateTime } from '../utils.js'
 
 defineProps({
   rows: { type: Array, default: () => [] },
@@ -30,10 +30,13 @@ function profitClass(row) {
         <th>Station</th>
         <th class="num">St. dist</th>
         <th class="num">Distance</th>
-        <th class="num">Usual Supply</th>
+        <th class="num">Supply</th>
+        <th class="num">Highest</th>
+        <th class="num">Recent</th>
+        <th class="num">Rec.Date</th>
         <th class="num">Buy Price</th>
-        <th class="num">Galactic Average</th>
-        <th class="num">100x Galactic Average</th>
+        <th class="num">Gal. Avg</th>
+        <th class="num">100x Gal. Avg</th>
         <th class="num">Profit</th>
       </tr>
     </thead>
@@ -49,6 +52,9 @@ function profitClass(row) {
         <td class="num">{{ money(row.station_distance_ls) }}</td>
         <td class="num">{{ ly(row.distance_from_current_ly) }}</td>
         <td class="num">{{ money(row.usual_supply) }}</td>
+        <td class="num" :title="`Highest seen: ${rareDateTime(row.highest_supply_datetime)}`">{{ money(row.highest_supply) }}</td>
+        <td class="num">{{ money(row.recent_supply) }}</td>
+        <td class="num">{{ rareDateTime(row.recent_supply_datetime) }}</td>
         <td class="num">{{ money(row.buy_price) }}</td>
         <td class="num">{{ money(row.galactic_average_price) }}</td>
         <td class="num">{{ money(row.galactic_average_100x) }}</td>

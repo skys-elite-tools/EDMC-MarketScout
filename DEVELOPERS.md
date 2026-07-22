@@ -75,7 +75,7 @@ Current top-level Web UI views are:
 - Carrier Trade Calculator
 - Config
 
-Browser-only personal state uses localStorage for convenience, including the active view, Analyze Commodities pasted input, Carrier Trade Announcements drafts/custom text layouts, and Carrier Trade Calculator inputs.
+Browser-only personal state uses localStorage for convenience, including the active view, Analyze Commodities pasted input, Carrier Trade Announcements drafts/custom text layouts, Carrier Trade Calculator inputs, and custom rare commodity supply overrides.
 
 The Web UI has a responsive top navigation. Commodities, Rare Commodities, and Analyze Commodities are grouped under the Commodities menu on wider layouts; the navigation collapses to a hamburger menu on narrower windows. The footer provides About and Help modals.
 
@@ -127,7 +127,11 @@ Useful Web API areas:
 - `/api/station-filter-options`: visited system/station suggestions for Stations filters.
 - `/api/jackpots`, `/api/ledger`, `/api/rare-commodities`, `/api/commodity-stats`: view data.
 - `/api/analyze-commodities`: splits pasted commodity lists into regular and rare matches.
+- `/api/rare-station-trade-options`: visited target stations for Rare Commodities station-to-station planning. It lists stations with at least one positive `market_prices.sell_price`, ordered newest station visit first.
+- `/api/rare-station-trade`: rare commodity origin buy prices compared against a selected target station's sell prices.
 - `/api/commodities`, `/api/settings`, `/api/economy-presets`, `/api/config`: catalogs/settings/config helpers.
+
+SQLite web connections use `PRAGMA temp_store=MEMORY` to avoid temporary-file I/O issues in EDMC runtime environments. Keep small dropdown/result sorting in Python when it avoids brittle SQLite temp sorting and does not materially affect performance.
 
 ## Local testing checklist
 
@@ -146,6 +150,7 @@ After backend or Web UI changes:
    - Rare Commodities
    - Analyze Commodities
    - Carrier Trade Announcements
+   - Carrier Trade Calculator, including Rare Commodities: Station to Station target station options
    - Config
    - Commodities settings
    - Best Buy ignore list
@@ -159,7 +164,7 @@ For Carrier Trade Announcements changes, verify:
 - custom layouts can be saved, updated, selected, deleted, and closed by clicking outside the menu
 - PNG/JPG downloads render the visible text layout
 
-For rawdata/import changes, run the relevant parser under `local-tools/`, then restart MarketScout or run importer-oriented checks against a disposable database. Large Spansh JSON dumps must be streamed rather than loaded into memory.
+For rawdata/import changes, run the relevant parser under `local-tools/`, then restart MarketScout or run importer-oriented checks against a disposable database. Large Spansh JSON dumps must be streamed rather than loaded into memory. Rare commodity allocation/source updates should be reflected in `EDMC-MarketScout/rawdata/commodities_rare.csv`; the runtime importer will refresh `rare_commodities` when the SHA-256 changes.
 
 ## Packaging
 

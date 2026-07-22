@@ -144,7 +144,7 @@ Current views:
 - `Rare Commodities`: rare commodity reference table with engineering-only filtering, usual supply sorting, current-position distance, engineer unlock labels, and carrier-sale profit estimates based on 100x galactic average.
 - `Analyze Commodities`: paste a comma-separated commodity list and split matches into regular and rare commodity tables. The last pasted list is stored in browser localStorage.
 - `Carrier Trade Announcements`: Fleet Carrier trade advertisement builder with editable form data, image upload, draggable text layers, downloadable PNG/JPG output, and copyable Discord/Reddit announcement text.
-- `Carrier Trade Calculator`: Fleet Carrier trade profit splitter for station-to-station and rare commodity trades. Inputs are stored in browser localStorage.
+- `Carrier Trade Calculator`: Fleet Carrier trade profit splitter for station-to-station, rare commodity carrier sales, and rare commodity station-to-station/Community Goal style trades. Inputs are stored in browser localStorage.
 - `Config`: runtime-local address/port/LAN configuration, LAN quick-fill, and QR-code sharing when LAN access is enabled.
 
 The Python local web server provides JSON endpoints; Vue should not know about SQLite directly.
@@ -158,8 +158,38 @@ Several purely personal UI preferences are stored in browser localStorage, not S
 - `marketscout.carrierTradeAlert.draft`: Carrier Trade Announcements form values, text color, active layout, text positions/font sizes, and uploaded image data URL.
 - `marketscout.carrierTradeAlert.layouts`: user-saved Carrier Trade Announcements text layouts.
 - `marketscout.carrierTradeCalculator.draft`: Carrier Trade Calculator active tab and input values.
+- `marketscout.rareCommodityCustomSupply`: per-commodity custom rare supply overrides used by rare commodity tooling.
 
 These values are local browser convenience state only. They should not be uploaded or treated as shared project data.
+
+### Carrier Trade Calculator details
+
+The Carrier Trade Calculator has three tabs:
+
+- `Station to Station`: calculates carrier buy/sell prices and loading/unloading hauler profit splits from buy station price, sell station price, carrier profit percentage, hauler split, and quantity.
+- `Rare Commodities`: calculates rare commodity carrier-sale values using the origin buy price and a carrier sale price capped at 100x galactic average.
+- `Rare Commodities: Station to Station`: intended mostly for Community Goal planning. Target Station options come from visited stations that have at least one `market_prices.sell_price > 0`, ordered by most recent station visit first. This section compares rare commodity origin buy prices against target station sell prices. Buy/sell labels are always from the player's perspective.
+
+Rare station-to-station supply selection is intentionally explicit:
+
+- `Usual`: use `rare_commodities.usual_supply`.
+- `Most Recent`: use the latest `rare_commodities_history.supply` for that commodity, falling back to usual supply.
+- `Custom`: use browser-local custom supply where set, falling back to usual supply.
+
+`rare_commodities_history` should contain rare supply observations only from the rare commodity origin station/system. Zero supply can be legitimate there and must not be filtered out just because it is zero. Market data from non-origin stations may still contain rare commodity sell prices and should remain in `market_prices`, but it should not create rare supply history rows.
+
+`Agg. Profit/Trip` in the rare station-to-station table is:
+
+```text
+loads_per_carrier = ceil(carrier_capacity / min(ship_cargo_capacity, origin_station_supply))
+unloads_per_carrier = ceil(carrier_capacity / ship_cargo_capacity)
+profit_per_carrier = carrier_capacity * profit
+profit_per_ship_trip = profit_per_carrier / (loads_per_carrier + unloads_per_carrier)
+```
+
+If cargo capacity, ship capacity, or origin supply make a trip count impossible, the UI reports zero rather than dividing by zero.
+
+`Ship Cargo Capacity` defaults to 1000 and is stored in `marketscout.carrierTradeCalculator.draft`.
 
 ### Carrier Trade Announcements details
 
@@ -235,6 +265,7 @@ Current helper scripts:
 
 - `local-tools/inara-commodities/parse-inara-commodities.sh` runs `parse_inara_commodities.py` and writes `EDMC-MarketScout/rawdata/commodities.csv`.
 - `local-tools/inara-commodities-rare/parse-inara-rare-commodities.sh` runs `parse_inara_rare_commodities.py` and writes `EDMC-MarketScout/rawdata/commodities_rare.csv`.
+- `local-tools/rare-commodities-master-allocation.csv` is a maintainer-only source for rare commodity `allocation` values. When used, copy matching `allocation` values into `rawdata/commodities_rare.csv` as `usual_supply`; MarketScout then refreshes `rare_commodities` through the normal SHA-256 import path. Some source names may need manual aliasing if the master file has spelling variants.
 - `local-tools/engineers/parse-engineers-unlock.sh` consumes the maintained CSV `local-tools/engineers/engineers-unlock.csv` and writes/copies `EDMC-MarketScout/rawdata/engineers-unlock.csv`. `engineers-text.txt` was only bootstrap input and should not be required for future edits.
 - `local-tools/spansh-systems/extract-marketscout-systems.sh` streams a very large Spansh `galaxy_stations.json` dump and extracts only systems referenced by `engineers_unlock.engineer_system` and `rare_commodities.system_name`, writing `EDMC-MarketScout/rawdata/systems_data.csv`.
 
@@ -264,7 +295,7 @@ Main data concepts:
 - Stations: station-level data such as name, market ID, station type, pad size, economies, faction/state, source, source timestamps, fleet carrier flag.
 - Market prices: commodity rows per market/station. Current direction is to store all commodities, not just a fixed metal list.
 - Commodity global stats: catalog/config table populated from `rawdata/commodities.csv` with commodity display name, category, INARA ID, average buy/sell/profit, max sell, min buy, and max profit.
-- Rare commodities: catalog table populated from `rawdata/commodities_rare.csv` with commodity, INARA IDs, source station/system, usual supply, buy price, galactic average price, and preserved distance metadata.
+- Rare commodities: catalog table populated from `rawdata/commodities_rare.csv` with commodity, INARA IDs, source station/system, usual supply, buy price, galactic average price, and preserved distance metadata. `usual_supply` should track source allocation values where known.
 - Engineer unlocks: table populated from `rawdata/engineers-unlock.csv` with public/discovery-chain status, required commodity/quantity, other requirements, and an `is_rare_commodity` flag derived by matching against `rare_commodities`.
 - Jackpot events/samples: static jackpot context plus event-driven time-series samples.
 - Trade events/lots: ledger rows for MarketBuy/MarketSell, Journal profit fields, and optional LIFO details.

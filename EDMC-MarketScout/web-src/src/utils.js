@@ -45,6 +45,16 @@ export function compactDateTime(v) {
   return `${date}, ${time}`
 }
 
+export function rareDateTime(v) {
+  if (!v) return '—'
+  const d = new Date(v)
+  if (Number.isNaN(d.getTime())) return String(v)
+  const month = d.toLocaleString(undefined, { month: 'short' }).replace(/\.$/, '')
+  const day = String(d.getDate()).padStart(2, '0')
+  const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
+  return `${month}.${day} ${time}`
+}
+
 export function query(params) {
   return new URLSearchParams(params).toString()
 }

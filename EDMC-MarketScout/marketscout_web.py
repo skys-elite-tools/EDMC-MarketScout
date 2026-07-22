@@ -517,6 +517,10 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
                 return self.send_json(api_ledger(parse_qs(parsed.query)))
             if path == "/api/rare-commodities":
                 return self.send_json(api_rare_commodities(parse_qs(parsed.query)))
+            if path == "/api/rare-station-trade-options":
+                return self.send_json(api_rare_station_trade_options())
+            if path == "/api/rare-station-trade":
+                return self.send_json(api_rare_station_trade(parse_qs(parsed.query)))
             if path == "/api/commodity-stats":
                 return self.send_json(api_commodity_stats(parse_qs(parsed.query)))
             if path == "/api/ledger/summary":
@@ -598,8 +602,10 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
 
 
 def connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(_CONTEXT["db_path"])
+    conn = sqlite3.connect(_CONTEXT["db_path"], timeout=10.0)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA busy_timeout=10000")
+    conn.execute("PRAGMA temp_store=MEMORY")
     return conn
 
 
@@ -1202,6 +1208,34 @@ def api_rare_commodities(qs: Dict[str, List[str]]) -> Dict[str, Any]:
                 rc.usual_supply,
                 rc.buy_price,
                 rc.galactic_average_price,
+                (
+                    SELECT rch.supply
+                    FROM rare_commodities_history rch
+                    WHERE rch.commodity = rc.commodity
+                    ORDER BY rch.supply IS NULL, rch.supply DESC, rch.seen_datetime DESC
+                    LIMIT 1
+                ) AS highest_supply,
+                (
+                    SELECT rch.seen_datetime
+                    FROM rare_commodities_history rch
+                    WHERE rch.commodity = rc.commodity
+                    ORDER BY rch.supply IS NULL, rch.supply DESC, rch.seen_datetime DESC
+                    LIMIT 1
+                ) AS highest_supply_datetime,
+                (
+                    SELECT rch.supply
+                    FROM rare_commodities_history rch
+                    WHERE rch.commodity = rc.commodity
+                    ORDER BY rch.seen_datetime DESC
+                    LIMIT 1
+                ) AS recent_supply,
+                (
+                    SELECT rch.seen_datetime
+                    FROM rare_commodities_history rch
+                    WHERE rch.commodity = rc.commodity
+                    ORDER BY rch.seen_datetime DESC
+                    LIMIT 1
+                ) AS recent_supply_datetime,
                 sd.x AS system_x,
                 sd.y AS system_y,
                 sd.z AS system_z,
@@ -1266,6 +1300,151 @@ def api_rare_commodities(qs: Dict[str, List[str]]) -> Dict[str, Any]:
         except sqlite3.OperationalError:
             rows = []
     return {"rows": rows, "count": len(rows)}
+
+
+def normalized_commodity_sql(column: str) -> str:
+    return f"lower(replace(replace(replace(replace({column}, char(160), ''), ' ', ''), '-', ''), '_', ''))"
+
+
+def rare_recent_supply_sql() -> str:
+    return """
+        SELECT rch.supply
+        FROM rare_commodities_history rch
+        WHERE rch.commodity = rc.commodity
+        ORDER BY rch.seen_datetime DESC
+        LIMIT 1
+    """
+
+
+def rare_recent_supply_datetime_sql() -> str:
+    return """
+        SELECT rch.seen_datetime
+        FROM rare_commodities_history rch
+        WHERE rch.commodity = rc.commodity
+        ORDER BY rch.seen_datetime DESC
+        LIMIT 1
+    """
+
+
+def api_rare_station_trade_options() -> Dict[str, Any]:
+    stage = "connect"
+    with connect() as conn:
+        try:
+            stage = "target_market_ids"
+            market_ids = [
+                int(r[0])
+                for r in conn.execute(
+                    """
+                    SELECT DISTINCT market_id
+                    FROM market_prices
+                    WHERE sell_price IS NOT NULL
+                      AND sell_price > 0
+                      AND market_id IS NOT NULL
+                    """
+                ).fetchall()
+            ]
+            if not market_ids:
+                return {"rows": [], "count": 0}
+
+            placeholders = ",".join("?" for _ in market_ids)
+            stage = "station_lookup"
+            rows = [
+                row_to_dict(r)
+                for r in conn.execute(
+                    f"""
+                    SELECT
+                        st.market_id,
+                        COALESCE(s.system_name, '') AS system_name,
+                        st.station_name,
+                        st.station_type,
+                        st.largest_pad,
+                        st.last_station_visit_datetime,
+                        NULL AS market_updated
+                    FROM stations st
+                    LEFT JOIN systems s ON s.system_address = st.system_address
+                    WHERE st.station_name IS NOT NULL
+                      AND trim(st.station_name) != ''
+                      AND st.market_id IN ({placeholders})
+                    """,
+                    market_ids,
+                ).fetchall()
+            ]
+        except sqlite3.OperationalError as exc:
+            log_sqlite_diagnostic("api_rare_station_trade_options", stage, exc)
+            return {"rows": [], "count": 0, "error": str(exc), "stage": stage}
+
+    rows.sort(key=lambda row: (str(row.get("system_name") or "").lower(), str(row.get("station_name") or "").lower()))
+    rows.sort(key=lambda row: row.get("last_station_visit_datetime") or "", reverse=True)
+    rows = rows[:1000]
+    for index, row in enumerate(rows):
+        row["is_current"] = 1 if index == 0 else 0
+        row["label"] = f"{row.get('station_name') or 'Unknown station'} in {row.get('system_name') or 'Unknown system'}"
+    return {"rows": rows, "count": len(rows)}
+
+
+def api_rare_station_trade(qs: Dict[str, List[str]]) -> Dict[str, Any]:
+    def one(name: str) -> str:
+        return (qs.get(name, [""])[0] or "").strip()
+
+    try:
+        market_id = int(one("market_id") or "0")
+    except ValueError:
+        market_id = 0
+    if market_id == 0:
+        return {"rows": [], "count": 0, "station": None}
+
+    rc_key = normalized_commodity_sql("rc.commodity")
+    mp_key = normalized_commodity_sql("mp.commodity")
+    recent_supply_sql = rare_recent_supply_sql()
+    recent_supply_datetime_sql = rare_recent_supply_datetime_sql()
+    sql = f"""
+        SELECT
+            rc.commodity,
+            rc.system_name,
+            rc.station_name,
+            rc.usual_supply,
+            rc.buy_price AS origin_buy_price,
+            rc.galactic_average_price,
+            mp.sell_price,
+            mp.market_price_update_datetime,
+            ({recent_supply_sql}) AS recent_supply,
+            ({recent_supply_datetime_sql}) AS recent_supply_datetime,
+            COALESCE(
+                ({recent_supply_sql}),
+                rc.usual_supply,
+                0
+            ) AS default_origin_stock
+        FROM rare_commodities rc
+        JOIN market_prices mp
+          ON mp.market_id = ?
+         AND {mp_key} = {rc_key}
+        WHERE mp.sell_price IS NOT NULL
+          AND mp.sell_price > 0
+          AND rc.buy_price IS NOT NULL
+        ORDER BY rc.commodity ASC
+    """
+    with connect() as conn:
+        try:
+            station_row = conn.execute(
+                """
+                SELECT st.market_id, COALESCE(s.system_name, '') AS system_name,
+                       st.station_name, st.station_type, st.largest_pad,
+                       st.last_station_visit_datetime
+                FROM stations st
+                LEFT JOIN systems s ON s.system_address = st.system_address
+                WHERE st.market_id=?
+                """,
+                (market_id,),
+            ).fetchone()
+            rows = [row_to_dict(r) for r in conn.execute(sql, (market_id,)).fetchall()]
+        except sqlite3.OperationalError:
+            station_row = None
+            rows = []
+    return {
+        "rows": rows,
+        "count": len(rows),
+        "station": row_to_dict(station_row) if station_row else None,
+    }
 
 
 def normalized_name(value: Any) -> str:
@@ -1458,6 +1637,51 @@ def log_web_exception(exc: BaseException) -> None:
         with open(path, "a", encoding="utf-8") as f:
             f.write("----- web exception -----\n")
             traceback.print_exc(file=f)
+            f.write("\n")
+    except Exception:
+        pass
+
+
+def log_sqlite_diagnostic(where: str, stage: str, exc: BaseException) -> None:
+    """Write a small local-only SQLite diagnostic for runtime-only failures."""
+    try:
+        plugin_dir = _CONTEXT.get("plugin_dir") or os.getcwd()
+        db_path = str(_CONTEXT.get("db_path") or "")
+        path = os.path.join(plugin_dir, "marketscout-web-error.log")
+        probes: Dict[str, Any] = {}
+        if db_path:
+            for suffix in ("", "-wal", "-shm"):
+                candidate = db_path + suffix
+                try:
+                    probes[f"file{suffix or '-main'}"] = {
+                        "exists": os.path.exists(candidate),
+                        "size": os.path.getsize(candidate) if os.path.exists(candidate) else None,
+                    }
+                except OSError as file_exc:
+                    probes[f"file{suffix or '-main'}"] = {"error": str(file_exc)}
+        try:
+            with sqlite3.connect(db_path, timeout=2.0) as probe_conn:
+                probe_conn.row_factory = sqlite3.Row
+                probe_conn.execute("PRAGMA busy_timeout=2000")
+                probe_conn.execute("PRAGMA temp_store=MEMORY")
+                probes["database_list"] = [tuple(r) for r in probe_conn.execute("PRAGMA database_list").fetchall()]
+                probes["journal_mode"] = probe_conn.execute("PRAGMA journal_mode").fetchone()[0]
+                probes["quick_check"] = probe_conn.execute("PRAGMA quick_check").fetchone()[0]
+                probes["market_prices_count"] = probe_conn.execute("SELECT COUNT(*) FROM market_prices").fetchone()[0]
+                probes["positive_sell_market_count"] = probe_conn.execute(
+                    "SELECT COUNT(DISTINCT market_id) FROM market_prices WHERE sell_price IS NOT NULL AND sell_price > 0"
+                ).fetchone()[0]
+        except Exception as probe_exc:
+            probes["probe_error"] = str(probe_exc)
+        with open(path, "a", encoding="utf-8") as f:
+            f.write("----- sqlite diagnostic -----\n")
+            f.write(f"where={where}\n")
+            f.write(f"stage={stage}\n")
+            f.write(f"error={exc}\n")
+            f.write(f"db_path={db_path}\n")
+            f.write(f"cwd={os.getcwd()}\n")
+            f.write(f"sqlite_version={sqlite3.sqlite_version}\n")
+            f.write(json.dumps(probes, indent=2, default=str))
             f.write("\n")
     except Exception:
         pass

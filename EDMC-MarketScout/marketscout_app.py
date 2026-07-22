@@ -159,8 +159,9 @@ def plugin_start3(plugin_dir: str) -> str:
     global DB_PATH, CONN, PLUGIN_DIR
     PLUGIN_DIR = plugin_dir
     DB_PATH = os.path.join(plugin_dir, "marketscout.sqlite3")
-    CONN = sqlite3.connect(DB_PATH)
+    CONN = sqlite3.connect(DB_PATH, timeout=10.0)
     CONN.row_factory = sqlite3.Row
+    configure_sqlite_connection(CONN)
     init_db(CONN)
     refresh_rawdata_imports(CONN, plugin_dir)
     deduplicate_market_price_commodities(CONN)
@@ -170,6 +171,14 @@ def plugin_start3(plugin_dir: str) -> str:
     except Exception:
         log_exception("start_update_check")
     return PLUGIN_NAME
+
+
+def configure_sqlite_connection(conn: sqlite3.Connection) -> None:
+    conn.execute("PRAGMA busy_timeout=10000")
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+    except sqlite3.OperationalError:
+        pass
 
 
 def plugin_stop() -> None:
@@ -571,6 +580,8 @@ def record_marketdata(marketdata: Dict[str, Any], data: Any) -> int:
         log_market_debug("record_marketdata: no commodities list", summarize_mapping(marketdata))
         return 0
 
+    market_station_name, market_system_name = market_location_for_history(market_id, station_name)
+    rare_origins = rare_commodity_origins()
     inserted = 0
     seen_commodities: List[str] = []
     for item in commodities:
@@ -600,6 +611,14 @@ def record_marketdata(marketdata: Dict[str, Any], data: Any) -> int:
                 "Demand": item.get("Demand"),
                 "demandBracket": item.get("demandBracket"),
             })
+        buy_price = first_int(item.get("buyPrice"), item.get("buy_price"), item.get("buy"), item.get("BuyPrice"), item.get("buyprice"), item.get("meanPrice"))
+        sell_price = first_int(item.get("sellPrice"), item.get("sell_price"), item.get("sell"), item.get("SellPrice"), item.get("sellprice"))
+        # IMPORTANT: stockBracket/demandBracket are bracket/category values, not actual tonnage.
+        # Do not use them as supply/demand, or a partial CAPI payload can flatten real
+        # quantities (observed especially with Gold) to 0. If a payload lacks real
+        # Stock/Supply/Demand fields, preserve the previous known quantity.
+        supply = first_int(item.get("stock"), item.get("supply"), item.get("Stock"), item.get("Supply"))
+        demand = first_int(item.get("demand"), item.get("Demand"))
         CONN.execute(
             """
             INSERT INTO market_prices(market_id, commodity, buy_price, sell_price, supply, demand, market_price_update_datetime)
@@ -614,16 +633,20 @@ def record_marketdata(marketdata: Dict[str, Any], data: Any) -> int:
             (
                 market_id,
                 commodity,
-                first_int(item.get("buyPrice"), item.get("buy_price"), item.get("buy"), item.get("BuyPrice"), item.get("buyprice"), item.get("meanPrice")),
-                first_int(item.get("sellPrice"), item.get("sell_price"), item.get("sell"), item.get("SellPrice"), item.get("sellprice")),
-                # IMPORTANT: stockBracket/demandBracket are bracket/category values, not actual tonnage.
-                # Do not use them as supply/demand, or a partial CAPI payload can flatten real
-                # quantities (observed especially with Gold) to 0. If a payload lacks real
-                # Stock/Supply/Demand fields, preserve the previous known quantity.
-                first_int(item.get("stock"), item.get("supply"), item.get("Stock"), item.get("Supply")),
-                first_int(item.get("demand"), item.get("Demand")),
+                buy_price,
+                sell_price,
+                supply,
+                demand,
                 update_time,
             ),
+        )
+        record_rare_commodity_history(
+            commodity,
+            supply,
+            update_time,
+            market_station_name,
+            market_system_name,
+            rare_origins,
         )
         inserted += 1
 
@@ -1127,6 +1150,104 @@ def commodity_display_from_stats_key(key: Optional[str]) -> Optional[str]:
     return None
 
 
+def commodity_display_from_rare_key(key: Optional[str]) -> Optional[str]:
+    """Return the rare commodity display name from rare_commodities for key."""
+    if not key or CONN is None:
+        return None
+    try:
+        rows = CONN.execute("SELECT commodity FROM rare_commodities").fetchall()
+        for row in rows:
+            name = row[0]
+            if canonical_commodity_key(name) == key:
+                return str(name)
+    except Exception:
+        return None
+    return None
+
+
+def commodity_display_from_catalog_key(key: Optional[str]) -> Optional[str]:
+    return commodity_display_from_stats_key(key) or commodity_display_from_rare_key(key)
+
+
+def market_location_for_history(market_id: int, fallback_station_name: Optional[str]) -> Tuple[str, str]:
+    if CONN is None:
+        return (fallback_station_name or "", "")
+    try:
+        row = CONN.execute(
+            """
+            SELECT st.station_name, s.system_name
+            FROM stations st
+            LEFT JOIN systems s ON s.system_address=st.system_address
+            WHERE st.market_id=?
+            """,
+            (market_id,),
+        ).fetchone()
+    except Exception:
+        row = None
+    if row is None:
+        return (fallback_station_name or "", "")
+    return (str(row["station_name"] or fallback_station_name or ""), str(row["system_name"] or ""))
+
+
+def rare_commodity_origins() -> Dict[str, Tuple[str, str, str]]:
+    if CONN is None:
+        return {}
+    out: Dict[str, Tuple[str, str, str]] = {}
+    try:
+        rows = CONN.execute("SELECT commodity, station_name, system_name FROM rare_commodities").fetchall()
+    except Exception:
+        return out
+    for row in rows:
+        commodity = str(row["commodity"] or "")
+        key = canonical_commodity_key(commodity)
+        if key:
+            out[key] = (
+                commodity,
+                str(row["station_name"] or ""),
+                str(row["system_name"] or ""),
+            )
+    return out
+
+
+def record_rare_commodity_history(
+    commodity: str,
+    supply: Optional[int],
+    seen_datetime: str,
+    market_station_name: str,
+    market_system_name: str,
+    rare_origins: Dict[str, Tuple[str, str, str]],
+) -> bool:
+    if CONN is None or supply is None:
+        return False
+    key = canonical_commodity_key(commodity)
+    origin = rare_origins.get(key)
+    if origin is None:
+        return False
+    rare_name, rare_station_name, rare_system_name = origin
+    if canonical_station_key(rare_station_name) != canonical_station_key(market_station_name):
+        return False
+    market_system = canonical_station_key(market_system_name)
+    rare_system = canonical_station_key(rare_system_name)
+    if market_system and rare_system and market_system != rare_system:
+        return False
+    try:
+        CONN.execute(
+            """
+            INSERT INTO rare_commodities_history(commodity, supply, seen_datetime)
+            SELECT ?, ?, ?
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM rare_commodities_history
+                WHERE commodity=? AND seen_datetime=?
+            )
+            """,
+            (rare_name, supply, seen_datetime, rare_name, seen_datetime),
+        )
+    except sqlite3.OperationalError:
+        return False
+    return True
+
+
 
 def canonical_station_key(value: Optional[str]) -> str:
     if value is None:
@@ -1295,7 +1416,7 @@ def deduplicate_market_price_commodities(conn: sqlite3.Connection) -> int:
 
         changed = 0
         for (market_id, key), group in grouped.items():
-            canonical_name = commodity_display_from_stats_key(key) or normalize_commodity_name(group[0]["commodity"]) or group[0]["commodity"]
+            canonical_name = commodity_display_from_catalog_key(key) or normalize_commodity_name(group[0]["commodity"]) or group[0]["commodity"]
             if len(group) == 1 and group[0]["commodity"] == canonical_name:
                 continue
 
@@ -1367,7 +1488,7 @@ def normalize_commodity_name(raw: Any) -> Optional[str]:
     # Prefer the user's commodities.csv catalogue when it has a nice display
     # name for this Frontier symbol. Example: $agronomictreatment_name; ->
     # Agronomic Treatment, not Agronomictreatment.
-    catalog_name = commodity_display_from_stats_key(key)
+    catalog_name = commodity_display_from_catalog_key(key)
     if catalog_name:
         return catalog_name
     # Convert internal symbols to a readable title. This is intentionally simple
