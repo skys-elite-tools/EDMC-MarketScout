@@ -630,30 +630,30 @@ fieldset.rareStationControls legend {
   align-self: end;
   white-space: nowrap;
 }
-.rareStationTargetCombo {
+.autocompleteDropdown {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 2rem;
   min-width: 0;
 }
-.rareStationTargetCombo input {
+.autocompleteDropdown input {
   min-width: 0;
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
 }
-.rareStationTargetMenu {
+.autocompleteDropdownMenu {
   min-width: min(28rem, calc(100vw - 3rem));
 }
-.rareStationTargetOption {
+.autocompleteDropdownOption {
   display: grid;
   gap: 2px;
 }
-.rareStationTargetOption small {
+.autocompleteDropdownOption small {
   color: var(--muted);
   font-size: 11px;
 }
-.rareStationTargetOption:hover small,
-.rareStationTargetOption.active small {
+.autocompleteDropdownOption:hover small,
+.autocompleteDropdownOption.active small {
   color: #cfd8e3;
 }
 .supplyModeField {
