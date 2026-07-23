@@ -1,5 +1,6 @@
 <script setup>
 import CopyablePanel from './CopyablePanel.vue'
+import SavedTextMenu from './SavedTextMenu.vue'
 
 defineProps({
   announcement: { type: String, required: true },
@@ -7,9 +8,20 @@ defineProps({
   customAnnouncement: { type: String, required: true },
   activeCustomTemplateTypeLabel: { type: String, required: true },
   includeShortStationType: { type: Boolean, default: false },
+  shortPrefixEnabled: { type: Boolean, default: false },
+  shortPrefixId: { type: String, default: '' },
+  shortPrefixes: { type: Array, default: () => [] },
+  shortPrefixStatus: { type: String, default: '' },
 })
 
-const emit = defineEmits(['edit-template', 'update:include-short-station-type'])
+const emit = defineEmits([
+  'edit-template',
+  'update:include-short-station-type',
+  'update:short-prefix-enabled',
+  'update:short-prefix-id',
+  'save-short-prefix',
+  'delete-short-prefix',
+])
 </script>
 
 <template>
@@ -20,14 +32,38 @@ const emit = defineEmits(['edit-template', 'update:include-short-station-type'])
     copy-title="Copy announcement"
   >
     <template #header-extra>
-      <label class="shortAnnouncementToggle">
-        <input
-          :checked="includeShortStationType"
-          type="checkbox"
-          @change="emit('update:include-short-station-type', $event.target.checked)"
+      <div class="shortAnnouncementControls">
+        <label class="shortAnnouncementToggle">
+          <input
+            :checked="shortPrefixEnabled"
+            type="checkbox"
+            @change="emit('update:short-prefix-enabled', $event.target.checked)"
+          />
+          Prefix
+        </label>
+        <SavedTextMenu
+          class="shortPrefixMenu"
+          :model-value="shortPrefixId"
+          :items="shortPrefixes"
+          label=""
+          none-label="No prefix"
+          placeholder="(Community Goal)"
+          save-label="Save new"
+          :status="shortPrefixStatus"
+          button-title="Select announcement prefix"
+          @update:model-value="emit('update:short-prefix-id', $event)"
+          @save-new="emit('save-short-prefix', $event)"
+          @delete="emit('delete-short-prefix', $event)"
         />
-        Station type
-      </label>
+        <label class="shortAnnouncementToggle">
+          <input
+            :checked="includeShortStationType"
+            type="checkbox"
+            @change="emit('update:include-short-station-type', $event.target.checked)"
+          />
+          Station type
+        </label>
+      </div>
     </template>
   </CopyablePanel>
 
@@ -102,11 +138,18 @@ const emit = defineEmits(['edit-template', 'update:include-short-station-type'])
   white-space: nowrap;
 }
 
+.shortAnnouncementControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  min-width: 0;
+}
+
 .shortAnnouncementToggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
   color: var(--muted);
   font-size: 12px;
   white-space: nowrap;
@@ -114,6 +157,11 @@ const emit = defineEmits(['edit-template', 'update:include-short-station-type'])
 
 .shortAnnouncementToggle input {
   width: auto;
+}
+
+.shortPrefixMenu {
+  min-width: 11rem;
+  max-width: 14rem;
 }
 
 .customAnnouncementOutput {

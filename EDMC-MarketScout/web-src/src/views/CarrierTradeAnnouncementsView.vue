@@ -28,6 +28,18 @@ function normalizeSavedLayouts(layouts) {
   return Array.isArray(layouts) ? layouts.filter(item => item?.id && item?.name && item?.mode) : []
 }
 
+function normalizeSavedPrefixes(prefixes) {
+  return Array.isArray(prefixes)
+    ? prefixes
+      .filter(item => item?.id && typeof item?.value === 'string' && item.value.trim())
+      .map(item => ({
+        id: String(item.id),
+        value: item.value.trim(),
+        label: String(item.label || item.value).trim(),
+      }))
+    : []
+}
+
 function normalizeDraft(draft) {
   return draft && typeof draft === 'object' && !Array.isArray(draft) ? draft : {}
 }
@@ -39,6 +51,8 @@ const defaultForm = {
   profit: '12,000',
   includeProfitLabelInImage: true,
   includeStationTypeInShortAnnouncement: false,
+  shortPrefixEnabled: false,
+  shortPrefixId: '',
   quantity: '16k',
   type: 'Loading',
   carrierName: 'Fleet Carrier',
@@ -108,8 +122,10 @@ const customAnnouncementTemplates = ref(normalizeCustomTemplateSet(savedDraft))
 const layoutName = ref('')
 const layoutSaveStatus = ref('')
 const layoutMenuOpen = ref(false)
+const shortPrefixStatus = ref('')
 
 const savedLayouts = ref(loadSavedLayouts())
+const shortAnnouncementPrefixes = ref(normalizeSavedPrefixes(savedDraft.shortAnnouncementPrefixes))
 const textColorPresets = ['#f6fbff', '#ffffff', '#78c8ff', '#9ff0d4', '#ffe27a', '#ff9f43', '#ff6bcb', '#b890ff']
 const UPPERCASE_LAYER_KEYS = new Set(['commodity', 'carrier'])
 const TEXT_LETTER_SPACING_EM = 0.02
@@ -169,6 +185,8 @@ const activeCustomTemplateTypeLabel = computed(() => tradeTypeLabel(form.value.t
 const imageUrl = computed(() => uploadedImageUrl.value || defaultImageUrl.value)
 const imageProfitText = computed(() => `${adValue(form.value.profit)} Cr/t${form.value.includeProfitLabelInImage === false ? '' : ' profit'}`)
 const isPlanetaryStation = computed(() => String(form.value.stationType || '').toLowerCase() === 'planetary')
+const selectedShortPrefix = computed(() => shortAnnouncementPrefixes.value.find(item => item.id === form.value.shortPrefixId) || null)
+const activeShortPrefix = computed(() => (form.value.shortPrefixEnabled ? selectedShortPrefix.value?.value || '' : ''))
 
 const customAnnouncementTitleTemplate = computed({
   get() {
@@ -290,7 +308,8 @@ const announcement = computed(() => {
     : `(${padText})`
   const profitUnit = 'ton'
   const quantityUnit = 'tons'
-  return `**${form.value.carrierName || 'Carrier Name'} (${form.value.carrierId || 'Carrier ID'})** is ${tradeTypeLower.value} **${form.value.commodity || 'Commodity'}** ${direction} **${form.value.station || 'Station'}** ${stationInfo} in **${form.value.system || 'System'}**. **${adValue(form.value.profit)}**/${profitUnit} profit, **${adValue(form.value.quantity)}** ${quantityUnit}.`
+  const body = `**${form.value.carrierName || 'Carrier Name'} (${form.value.carrierId || 'Carrier ID'})** is ${tradeTypeLower.value} **${form.value.commodity || 'Commodity'}** ${direction} **${form.value.station || 'Station'}** ${stationInfo} in **${form.value.system || 'System'}**. **${adValue(form.value.profit)}**/${profitUnit} profit, **${adValue(form.value.quantity)}** ${quantityUnit}.`
+  return activeShortPrefix.value ? `${activeShortPrefix.value} ${body}` : body
 })
 
 function renderCustomTemplate(template) {
@@ -386,6 +405,34 @@ function deleteSavedLayout(id) {
   setTimeout(() => { layoutSaveStatus.value = '' }, 1800)
 }
 
+function saveShortPrefix(value) {
+  const cleanValue = String(value || '').trim()
+  if (!cleanValue) {
+    shortPrefixStatus.value = 'Enter a prefix'
+    return
+  }
+  const existing = shortAnnouncementPrefixes.value.find(item => item.value.trim().toLowerCase() === cleanValue.toLowerCase())
+  const id = existing?.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const prefix = { id, value: cleanValue, label: cleanValue }
+  shortAnnouncementPrefixes.value = existing
+    ? shortAnnouncementPrefixes.value.map(item => item.id === id ? prefix : item)
+    : [...shortAnnouncementPrefixes.value, prefix]
+  form.value.shortPrefixId = id
+  form.value.shortPrefixEnabled = true
+  shortPrefixStatus.value = existing ? 'Selected existing prefix' : 'Saved prefix'
+  setTimeout(() => { shortPrefixStatus.value = '' }, 1800)
+}
+
+function deleteShortPrefix(id) {
+  shortAnnouncementPrefixes.value = shortAnnouncementPrefixes.value.filter(item => item.id !== id)
+  if (form.value.shortPrefixId === id) {
+    form.value.shortPrefixId = ''
+    form.value.shortPrefixEnabled = false
+  }
+  shortPrefixStatus.value = 'Deleted prefix'
+  setTimeout(() => { shortPrefixStatus.value = '' }, 1800)
+}
+
 function normalizeHexColor(value) {
   const raw = String(value || '').trim()
   if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toLowerCase()
@@ -451,6 +498,7 @@ function persistDraft() {
     customAnnouncementTemplates: customAnnouncementTemplates.value,
     customAnnouncementTitleTemplate: customAnnouncementTitleTemplate.value,
     customAnnouncementTemplate: customAnnouncementTemplate.value,
+    shortAnnouncementPrefixes: shortAnnouncementPrefixes.value,
   }
   dataStore.set(DRAFT_STORAGE_KEY, draft)
 }
@@ -463,6 +511,7 @@ function applyDraft(draft) {
   textLayout.value = normalized.textLayout || normalized.textStyle || 'classic'
   uploadedImageUrl.value = normalized.uploadedImageUrl || ''
   customAnnouncementTemplates.value = normalizeCustomTemplateSet(normalized)
+  shortAnnouncementPrefixes.value = normalizeSavedPrefixes(normalized.shortAnnouncementPrefixes)
   layerPositions.value = {
     ...clone(defaultLayerPositions),
     ...(normalized.layerPositions || {}),
@@ -576,7 +625,7 @@ async function downloadImage(format = 'png') {
 }
 
 watch(textLayout, value => applyTextLayout(value))
-watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, uploadedImageUrl, customAnnouncementTemplates], persistDraft, { deep: true })
+watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, uploadedImageUrl, customAnnouncementTemplates, shortAnnouncementPrefixes], persistDraft, { deep: true })
 onMounted(refreshStoredAnnouncementData)
 </script>
 
@@ -599,7 +648,15 @@ onMounted(refreshStoredAnnouncementData)
         :custom-announcement="customAnnouncement"
         :active-custom-template-type-label="activeCustomTemplateTypeLabel"
         :include-short-station-type="form.includeStationTypeInShortAnnouncement"
+        :short-prefix-enabled="form.shortPrefixEnabled"
+        :short-prefix-id="form.shortPrefixId"
+        :short-prefixes="shortAnnouncementPrefixes"
+        :short-prefix-status="shortPrefixStatus"
         @update:include-short-station-type="form.includeStationTypeInShortAnnouncement = $event"
+        @update:short-prefix-enabled="form.shortPrefixEnabled = $event"
+        @update:short-prefix-id="form.shortPrefixId = $event"
+        @save-short-prefix="saveShortPrefix"
+        @delete-short-prefix="deleteShortPrefix"
         @edit-template="customTemplateModalOpen = true"
       />
     </div>
