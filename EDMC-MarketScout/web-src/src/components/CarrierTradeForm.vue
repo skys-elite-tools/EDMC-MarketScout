@@ -178,3 +178,253 @@ onUnmounted(() => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.carrierFormPane {
+  align-self: start;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.carrierSection h2 {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 15px;
+}
+
+.carrierImageTools {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) minmax(10rem, .7fr) minmax(6.5rem, auto);
+  gap: 12px;
+  align-items: end;
+}
+
+.carrierImageTools label,
+.carrierFormGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.textLayoutMenuField {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+
+.textLayoutMenu {
+  position: relative;
+}
+
+.textLayoutMenuButton {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.textLayoutMenuList {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 18rem;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0b1016;
+  box-shadow: 0 12px 30px rgba(0,0,0,.35);
+  padding: 4px;
+}
+
+.textLayoutMenuOption {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.textLayoutMenuOption:hover,
+.textLayoutMenuOption.active,
+.textLayoutMenuRow.active .textLayoutMenuOption {
+  background: #263142;
+  color: white;
+}
+
+.textLayoutMenuDivider {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--line);
+}
+
+.textLayoutMenuRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2rem;
+  gap: 3px;
+}
+
+.textLayoutMenuOption.custom {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.textLayoutDeleteButton {
+  min-width: 2rem;
+  padding: 0;
+  text-align: center;
+  border: 0;
+  background: transparent;
+}
+
+.textLayoutDeleteButton:hover {
+  background: rgba(255, 100, 100, .12);
+  border-color: rgba(255, 100, 100, .45);
+}
+
+.layoutSaveRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+  padding: 6px 4px 2px;
+}
+
+.layoutSaveRow label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 0;
+}
+
+.layoutSaveRow input {
+  width: 100%;
+  height: 2rem;
+}
+
+.saveLayoutButton {
+  white-space: nowrap;
+  height: 2rem;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.layoutSaveStatus {
+  grid-column: 1 / -1;
+  min-height: 0;
+}
+
+.textColorControl {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+  justify-self: end;
+  min-width: 9rem;
+  width: 100%;
+}
+
+.textColorControl :deep(.clr-field) {
+  width: 100%;
+}
+
+.textColorControl :deep(.clr-field input) {
+  width: 100%;
+  padding-right: 2.4rem;
+}
+
+.carrierFormGrid {
+  display: grid;
+  grid-template-columns: minmax(15rem, .92fr) minmax(16rem, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.carrierFormGrid fieldset {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+  margin: 0;
+  background: rgba(255,255,255,.025);
+}
+
+.carrierFormGrid legend {
+  color: var(--accent2);
+  font-weight: 800;
+  padding: 0 4px;
+}
+
+.tradeFieldset {
+  grid-row: span 2;
+}
+
+.fieldWithFont {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5.5rem;
+  gap: 8px;
+  align-items: end;
+}
+
+.profitFieldWithOptions {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 5.5rem;
+}
+
+.singleFieldRow {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.fieldWithFont label {
+  min-width: 0;
+}
+
+.fieldWithFont label:last-child:not(:only-child) {
+  color: var(--accent);
+}
+
+.fieldWithFont .inlineCheckboxLabel {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 2rem;
+  min-height: 0;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(255,255,255,.025);
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.carrierFormGrid .inlineCheckboxLabel input {
+  width: auto;
+}
+
+.carrierFormGrid input,
+.carrierFormGrid select {
+  width: 100%;
+}
+
+@media (max-width: 1100px) {
+  .carrierFormGrid,
+  .carrierImageTools {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

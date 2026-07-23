@@ -43,3 +43,63 @@ const emit = defineEmits(['edit-template'])
     <button type="button" class="editTemplateButton" @click="emit('edit-template')">Edit template</button>
   </fieldset>
 </template>
+
+<style scoped>
+.outputPanel {
+  max-width: var(--carrier-preview-width);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+  margin: 0;
+  background: rgba(140,200,255,.035);
+}
+
+.outputPanel legend {
+  color: #9ff0d4;
+  font-weight: 900;
+  padding: 0 4px;
+}
+
+.outputPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.outputPanelHeader h2 {
+  margin: 0;
+  color: #9ff0d4;
+  font-size: 13px;
+}
+
+.customTemplateTypeBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.55rem;
+  border: 1px solid rgba(245,194,75,.55);
+  border-radius: 999px;
+  background: rgba(245,194,75,.14);
+  color: #ffe1a0;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 0 9px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.customAnnouncementOutput {
+  display: grid;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(159,240,212,.22);
+  border-radius: 4px;
+  background: #0e1217;
+}
+
+.editTemplateButton {
+  margin-top: 8px;
+}
+</style>

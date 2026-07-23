@@ -107,3 +107,80 @@ watch(() => props.imageUrl, () => nextTick(updateStageSize))
     </div>
   </section>
 </template>
+
+<style scoped>
+.carrierSection {
+  min-width: 0;
+}
+
+.carrierSection h2 {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 15px;
+}
+
+.carrierImageStage {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  width: min(100%, var(--carrier-preview-width));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #05080d;
+  box-shadow: 0 18px 55px rgba(0,0,0,.32);
+  user-select: none;
+  touch-action: none;
+}
+
+.carrierImageStage img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.imageDownloadButtons {
+  position: absolute;
+  z-index: 3;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+}
+
+.imageDownloadButtons button {
+  height: 2.25rem;
+  padding: 0;
+  min-width: 4.2rem;
+  font-size: 12px;
+  font-weight: 900;
+  border-color: rgba(255,255,255,.42);
+  background: rgba(8,12,18,.72);
+}
+
+.carrierTextLayer {
+  position: absolute;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  max-width: 92%;
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1.05;
+  letter-spacing: .02em;
+  text-shadow: 0 2px 10px rgba(0,0,0,.9), 0 0 24px rgba(0,0,0,.75);
+  cursor: move;
+}
+
+.carrierLayer-commodity,
+.carrierLayer-carrier {
+  text-transform: uppercase;
+}
+
+@media (max-width: 1100px) {
+  .carrierImageStage {
+    width: 100%;
+    max-width: none;
+  }
+}
+</style>

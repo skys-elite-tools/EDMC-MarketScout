@@ -627,3 +627,26 @@ onMounted(refreshStoredAnnouncementData)
     />
   </div>
 </template>
+
+<style scoped>
+.carrierTradeAlert {
+  --carrier-preview-width: 36rem;
+  padding: 12px 16px 18px;
+  display: grid;
+  grid-template-columns: minmax(24rem, var(--carrier-preview-width)) minmax(22rem, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.carrierLeftPane {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .carrierTradeAlert {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
