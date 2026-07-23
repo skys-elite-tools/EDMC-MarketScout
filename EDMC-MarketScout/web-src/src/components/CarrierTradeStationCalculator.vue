@@ -78,7 +78,7 @@ function setHaulerSplit(value) {
     <div class="calculatorOutputs">
       <MetricCard label="Loading Haulers Profit" :value="money(loadingHaulerProfit)" unit="Cr/t" />
       <MetricCard label="Unloading Haulers Profit" :value="money(unloadingHaulerProfit)" unit="Cr/t" />
-      <MetricCard label="Carrier Profit" :value="money(carrierProfit)" unit="Cr/t" carrier />
+      <MetricCard label="Carrier Profit" :value="money(carrierProfit)" unit="Cr/t" carrier wide />
       <MetricCard label="Carrier Buy Price" :value="money(carrierBuyPrice)" unit="Cr/t" />
       <MetricCard label="Carrier Sell Price" :value="money(carrierSellPrice)" unit="Cr/t" />
       <MetricCard :label="`Total Carrier Profit at ${money(tonnes)} tonnes sold`" :value="money(totalCarrierProfit)" unit="Cr" wide />
