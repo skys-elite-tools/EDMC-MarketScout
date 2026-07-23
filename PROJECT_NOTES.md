@@ -163,6 +163,12 @@ Current views:
 
 The Python local web server provides JSON endpoints; Vue should not know about SQLite directly.
 
+### Web UI style ownership
+
+`web-src/src/style.css` should stay focused on shared app-level styling: app shell, navigation/status/footer, common controls, tables, modals, and global/vendor overlays. Feature-specific layouts and visual details should live in scoped `<style>` blocks on the owning view/component. Current examples include Trip Planner styles in `TripRouteBar.vue`, Carrier Trade Announcements styles in its announcement/editor components, Carrier Trade Calculator styles in its calculator components, and autocomplete styling in `AutocompleteDropdown.vue`.
+
+Keep styles global when the DOM is intentionally shared across multiple components or rendered outside Vue component scope. The Coloris picker overlay is one example because the picker popup is injected globally rather than inside the component subtree.
+
 ### Web UI data store
 
 Personal Web UI data is centralized through `web-src/src/services/dataStoreService.js`. The service is local-first: it reads/writes browser localStorage immediately for fast UI updates and standalone website compatibility, then synchronizes to the plugin SQLite `settings` table through `/api/user-data` when the MarketScout backend is available. Remote writes are timestamped, debounced for 30 seconds by default, and flushed on page hide where possible. Explicit saved layout changes can request an immediate flush.
