@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Improved table auto-refresh so existing Stations, Ledger, and other table rows stay visible while updated data is fetched in the background, avoiding the brief empty-table flicker on larger datasets.
+
 ## 0.3.0 Beta
 
 - Added a read-only top status bar indicator for EDMC's EDDN station-data setting.
