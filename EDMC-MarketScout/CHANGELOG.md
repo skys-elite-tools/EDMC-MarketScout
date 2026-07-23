@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.1
+## 0.3.1 Beta
 
 - Improved table auto-refresh so existing Stations, Ledger, and other table rows stay visible while updated data is fetched in the background, avoiding the brief empty-table flicker on larger datasets.
 
