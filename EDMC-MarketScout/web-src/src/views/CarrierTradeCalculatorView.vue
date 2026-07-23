@@ -83,3 +83,28 @@ watch([activeTab, stationInputs, rareInputs, rareStationInputs], saveDraft, { de
     <CarrierTradeRareStationCalculator v-else :inputs="rareStationInputs" />
   </div>
 </template>
+
+<style scoped>
+.carrierTradeCalculator {
+  padding: 12px 16px 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.calculatorTabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+
+.calculatorTabs button {
+  min-width: 10rem;
+}
+
+.calculatorTabs button.active {
+  border-color: var(--accent);
+  background: #263142;
+  color: white;
+}
+</style>

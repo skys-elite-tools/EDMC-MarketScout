@@ -86,3 +86,88 @@ function setHaulerSplit(value) {
     </div>
   </section>
 </template>
+
+<style scoped>
+.calculatorPanel {
+  display: grid;
+  grid-template-columns: minmax(24rem, .95fr) minmax(22rem, 1.05fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.calculatorInputs {
+  display: grid;
+  gap: 12px;
+}
+
+.calculatorInputs fieldset {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px;
+  margin: 0;
+  background: rgba(255,255,255,.025);
+}
+
+.calculatorInputs legend {
+  color: var(--accent2);
+  font-weight: 900;
+  padding: 0 4px;
+}
+
+.calculatorGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.calculatorGrid label,
+.calculatorSlider {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.calculatorGrid input {
+  width: 100%;
+}
+
+.calculatorSlider {
+  margin-top: 10px;
+}
+
+.calculatorSlider input[type="range"] {
+  width: 100%;
+}
+
+.sliderScale {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.calculatorHint {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.calculatorOutputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 1100px) {
+  .calculatorPanel,
+  .calculatorGrid,
+  .calculatorOutputs {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

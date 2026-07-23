@@ -330,3 +330,152 @@ onMounted(async () => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.calculatorWidePanel {
+  display: grid;
+  gap: 12px;
+  align-items: start;
+}
+
+.calculatorInputs {
+  display: grid;
+  gap: 12px;
+}
+
+fieldset.rareStationControls {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px;
+  margin: 0;
+  background: rgba(255,255,255,.025);
+}
+
+fieldset.rareStationControls legend {
+  color: var(--accent2);
+  font-weight: 900;
+  padding: 0 4px;
+}
+
+.calculatorGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.calculatorGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.calculatorGrid input,
+.calculatorGrid select {
+  width: 100%;
+}
+
+.rareStationGrid {
+  grid-template-columns: minmax(18rem, 1.4fr) minmax(10rem, .7fr) minmax(10rem, .7fr) minmax(10rem, .7fr) minmax(22rem, 1.4fr);
+}
+
+.rareStationGrid button {
+  min-height: 2rem;
+  align-self: end;
+  white-space: nowrap;
+}
+
+.supplyModeField {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.supplyModeButtons {
+  display: flex;
+  gap: 4px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.supplyModeButtons button {
+  flex: 1 1 0;
+  min-height: 2rem;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.supplyModeButtons button.active {
+  border-color: var(--accent);
+  background: #263142;
+  color: white;
+}
+
+.calculatorHint {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.inlineError {
+  color: var(--danger);
+}
+
+.inlineRetryButton {
+  margin-left: 8px;
+}
+
+.tableWrap {
+  overflow: auto;
+}
+
+.rareStationTradeTable th:nth-child(1) {
+  min-width: 16rem;
+}
+
+.rareStationTradeTable th:nth-child(4),
+.rareStationTradeTable th:nth-child(6),
+.rareStationTradeTable th:nth-child(7) {
+  min-width: 9rem;
+}
+
+.supplyCell {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+.compactButton {
+  min-height: 1.6rem;
+  padding: 3px 7px;
+  font-size: 11px;
+}
+
+.customSupplyEditor {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 1fr) auto auto;
+  gap: 5px;
+  align-items: center;
+}
+
+.customSupplyEditor input {
+  min-width: 0;
+}
+
+.customSupplyEditor button {
+  min-height: 1.6rem;
+  padding: 3px 7px;
+  font-size: 11px;
+}
+
+@media (max-width: 1100px) {
+  .calculatorGrid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

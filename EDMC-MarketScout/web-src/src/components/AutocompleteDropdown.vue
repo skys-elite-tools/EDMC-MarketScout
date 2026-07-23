@@ -141,3 +141,37 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
     </div>
   </div>
 </template>
+
+<style scoped>
+.autocompleteDropdown {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2rem;
+  min-width: 0;
+}
+
+.autocompleteDropdown input {
+  min-width: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.autocompleteDropdownMenu {
+  min-width: min(28rem, calc(100vw - 3rem));
+}
+
+.autocompleteDropdownOption {
+  display: grid;
+  gap: 2px;
+}
+
+.autocompleteDropdownOption small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.autocompleteDropdownOption:hover small,
+.autocompleteDropdownOption.active small {
+  color: #cfd8e3;
+}
+</style>
