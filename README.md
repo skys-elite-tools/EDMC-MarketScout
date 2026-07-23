@@ -27,17 +27,29 @@ If you are cloning the repository for development instead of installing a releas
 
 ## One-Click Updates
 
-MarketScout checks GitHub releases on startup. When a newer release is available, the Web UI shows a prominent update button in the top status bar.
-
-Clicking the button downloads the release zip, creates a backup of the currently installed plugin, applies the new files, and then asks you to restart EDMC. If the automatic update cannot complete, MarketScout shows the backup location so you can restore the previous version manually.
-
-![MarketScout top status bar showing the update available button](presentation-assets/update-available-cropped.png)
+<table>
+  <tr>
+    <td width="45%">
+      <img src="presentation-assets/update-available-cropped.png" alt="MarketScout top status bar showing the update available button">
+    </td>
+    <td>
+      <p>MarketScout checks GitHub releases on startup. When a newer release is available, the Web UI shows a prominent update button in the top status bar.</p>
+      <p>Clicking the button downloads the release zip, creates a backup of the currently installed plugin, applies the new files, and then asks you to restart EDMC. If the automatic update cannot complete, MarketScout shows the backup location so you can restore the previous version manually.</p>
+    </td>
+  </tr>
+</table>
 
 ## Usage
 
 ### Stations
 
 Shows station market data collected while EDMC and MarketScout were running. Use it to filter visited stations, review watched commodities, and find the current Best Buy opportunity for each station.
+
+#### Trip Planner
+
+Trip Planner lets you import Spansh Tourist Route JSON files and follow scouting routes directly above the Stations table. Stops can be clicked to filter the table, the current system is highlighted when known, and MarketScout shows visit context plus approximate jump information when coordinates are available.
+
+![Stations page showing the Trip Planner route bar above scouting filters](presentation-assets/trip-planner.png)
 
 #### Buy Scout
 
