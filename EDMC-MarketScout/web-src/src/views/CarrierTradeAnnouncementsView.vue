@@ -231,11 +231,19 @@ function tokenThousand(value) {
   return adValue(value).replace(/k/gi, '.000')
 }
 
+function inCarrierSystemIfNotSameAsMarket() {
+  const carrierSystem = adValue(form.value.carrierSystem)
+  const tradeSystem = adValue(form.value.system)
+  if (!carrierSystem || carrierSystem.toLowerCase() === tradeSystem.toLowerCase()) return ''
+  return `in ${carrierSystem}`
+}
+
 const customAnnouncementTokens = computed(() => ({
   commodity: form.value.commodity || 'Commodity',
   carrier_name: form.value.carrierName || 'Carrier Name',
   carrier_id: form.value.carrierId || 'Carrier ID',
   carrier_system: form.value.carrierSystem || 'Carrier System',
+  in_carrier_system_if_not_same_as_market: inCarrierSystemIfNotSameAsMarket(),
   buying_selling: tradeTypeLower.value === 'unloading' ? 'selling' : 'buying',
   loading_unloading: tradeTypeLower.value === 'unloading' ? 'unloading' : 'loading',
   from_to: tradeTypeLower.value === 'unloading' ? 'from' : 'to',
@@ -259,6 +267,7 @@ const customTokenList = [
   ['carrier_name', 'Fleet Carrier display name.'],
   ['carrier_id', 'Fleet Carrier callsign/id. Double brackets render one visible bracket pair, such as [[carrier_id]] -> [ABC-123].'],
   ['carrier_system', 'Carrier system entered in the Carrier section.'],
+  ['in_carrier_system_if_not_same_as_market', 'Shows "in [carrier system]" only when the carrier system is different from the trade market system. Otherwise blank.'],
   ['buying_selling', 'Shows selling for Unloading trades and buying for Loading trades.'],
   ['loading_unloading', 'Shows loading or unloading based on the selected trade type.'],
   ['from_to', 'Shows to for Loading trades and from for Unloading trades.'],
