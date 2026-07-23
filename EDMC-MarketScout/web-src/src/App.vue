@@ -4,6 +4,7 @@ import StatusStrip from './components/StatusStrip.vue'
 import TopBar from './components/TopBar.vue'
 import ViewControls from './components/ViewControls.vue'
 import CommoditySettings from './components/CommoditySettings.vue'
+import TripRouteBar from './components/TripRouteBar.vue'
 import StationsTable from './components/StationsTable.vue'
 import StationDetails from './components/StationDetails.vue'
 import JackpotHistory from './components/JackpotHistory.vue'
@@ -74,6 +75,10 @@ const updateModal = ref({
 const economyPresets = ref([])
 const economyPresetStatus = ref('')
 const stationFilterOptions = ref({ systems: [], stations: [] })
+const tripRoutes = ref([])
+const activeTripRoute = ref(null)
+const tripRouteBusy = ref(false)
+const tripRouteStatus = ref('')
 
 const DEFAULT_STATION_FILTERS = {
   system: '',
@@ -325,6 +330,79 @@ async function loadStationFilterOptions() {
   }
 }
 
+async function loadTripRoutes() {
+  const res = await fetch('/api/trip-routes', { cache: 'no-store' })
+  const data = await res.json()
+  tripRoutes.value = data.routes || []
+  activeTripRoute.value = data.active_route || null
+}
+
+async function importTripRoute(file) {
+  tripRouteBusy.value = true
+  tripRouteStatus.value = 'Importing route...'
+  try {
+    const res = await fetch('/api/trip-routes/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(file),
+    })
+    const data = await res.json()
+    if (!data.ok) throw new Error(data.error || 'Could not import route')
+    await loadTripRoutes()
+    tripRouteStatus.value = `Imported ${data.imported_stops || 0} route stops.`
+    setTimeout(() => { tripRouteStatus.value = '' }, 3200)
+  } catch (err) {
+    tripRouteStatus.value = err?.message || String(err)
+  } finally {
+    tripRouteBusy.value = false
+  }
+}
+
+async function startTripRoute(routeId) {
+  tripRouteBusy.value = true
+  try {
+    const res = await fetch('/api/trip-routes/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ route_id: routeId }),
+    })
+    const data = await res.json()
+    if (!data.ok) throw new Error(data.error || 'Could not start route')
+    tripRoutes.value = data.routes || []
+    activeTripRoute.value = data.active_route || null
+  } catch (err) {
+    tripRouteStatus.value = err?.message || String(err)
+  } finally {
+    tripRouteBusy.value = false
+  }
+}
+
+async function deleteTripRoute(routeId) {
+  tripRouteBusy.value = true
+  try {
+    const res = await fetch('/api/trip-routes/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ route_id: routeId }),
+    })
+    const data = await res.json()
+    if (!data.ok) throw new Error(data.error || 'Could not delete route')
+    tripRoutes.value = data.routes || []
+    activeTripRoute.value = data.active_route || null
+  } catch (err) {
+    tripRouteStatus.value = err?.message || String(err)
+  } finally {
+    tripRouteBusy.value = false
+  }
+}
+
+async function selectTripRouteStop(stop) {
+  const stopSystem = String(stop.system_name || '').trim()
+  const currentSystemFilter = String(filters.value.system || '').trim()
+  filters.value.system = currentSystemFilter.localeCompare(stopSystem, undefined, { sensitivity: 'accent' }) === 0 ? '' : stopSystem
+  await loadStations()
+}
+
 async function saveEconomyPreset() {
   const value = (filters.value.economy || '').trim()
   if (!value) {
@@ -502,7 +580,7 @@ onMounted(async () => {
     ...filters.value,
     ...stationThresholdsFrom(storedStationThresholds),
   }
-  await Promise.all([loadCommoditySettings(), loadEconomyPresets(), loadStationFilterOptions()])
+  await Promise.all([loadCommoditySettings(), loadEconomyPresets(), loadStationFilterOptions(), loadTripRoutes()])
   await pollStatus()
   await applyCurrentView()
   pollTimer = setInterval(pollStatus, 2000)
@@ -527,6 +605,21 @@ onUnmounted(() => {
     <TopBar
       v-model:current-view="currentView"
       @refresh="applyCurrentView"
+    />
+
+    <TripRouteBar
+      v-if="currentView === 'stations'"
+      :routes="tripRoutes"
+      :active-route="activeTripRoute"
+      :busy="tripRouteBusy"
+      :status="tripRouteStatus"
+      :current-system="latestJournalEvent?.system || ''"
+      :current-position="latestJournalEvent"
+      @import-route="importTripRoute"
+      @start-route="startTripRoute"
+      @delete-route="deleteTripRoute"
+      @select-stop="selectTripRouteStop"
+      @open-help="openHelp"
     />
 
     <ViewControls
@@ -587,22 +680,23 @@ onUnmounted(() => {
 
     <main :class="{ detailsOpen: selectedRow }">
       <section class="tablePanel">
-        <StationsTable
-          v-if="currentView === 'stations'"
-          :rows="rows"
-          :selected-index="selectedIndex"
-          :display-columns="stationModeDisplayColumns"
-          :watched-commodities="watchedCommodities"
-          :scout-mode="stationScoutMode"
-          :price-threshold="filters.priceThreshold"
-          :supply-threshold="filters.supplyThreshold"
-          :sell-price-threshold="filters.sellPriceThreshold"
-          :demand-threshold="filters.demandThreshold"
-          :minimum-potential-profit="minimumPotentialProfit"
-          :current-system="latestJournalEvent?.system || ''"
-          @select="setSelected"
-          @open-help="openHelp"
-        />
+        <template v-if="currentView === 'stations'">
+          <StationsTable
+            :rows="rows"
+            :selected-index="selectedIndex"
+            :display-columns="stationModeDisplayColumns"
+            :watched-commodities="watchedCommodities"
+            :scout-mode="stationScoutMode"
+            :price-threshold="filters.priceThreshold"
+            :supply-threshold="filters.supplyThreshold"
+            :sell-price-threshold="filters.sellPriceThreshold"
+            :demand-threshold="filters.demandThreshold"
+            :minimum-potential-profit="minimumPotentialProfit"
+            :current-system="latestJournalEvent?.system || ''"
+            @select="setSelected"
+            @open-help="openHelp"
+          />
+        </template>
         <JackpotHistory
           v-else-if="currentView === 'jackpots'"
           :rows="rows"

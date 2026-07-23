@@ -215,6 +215,17 @@ The repo's `.gitignore` should keep those files out of commits.
 
 Rawdata CSV files under `EDMC-MarketScout/rawdata/` are release inputs and should be included. Maintainer-only source data under `local-*` directories is local scratch/input material and should not be required by end users.
 
+## Trip route imports
+
+The Stations page can import Spansh Tourist Route JSON files through the local Web API:
+
+- `GET /api/trip-routes`
+- `POST /api/trip-routes/import`
+- `POST /api/trip-routes/start`
+- `POST /api/trip-routes/delete`
+
+Imported routes are stored in `trip_routes` / `trip_route_stops`. Each imported stop also upserts coordinates into `systems_data` so other MarketScout distance features can reuse them. Keep this import local-only; do not fetch route data directly from Spansh.
+
 ## Local release helper
 
 The repo includes a maintainer convenience script:

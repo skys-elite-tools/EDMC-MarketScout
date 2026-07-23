@@ -252,11 +252,12 @@ def journal_entry(cmdr: str, is_beta: bool, system: str, station: str, entry: Di
             return None
 
         name = entry.get("event")
-        update_web_latest_journal_event(name, system, station, entry, state)
         data_changed = False
 
         if name in ("Location", "FSDJump", "CarrierJump", "StartUp"):
             record_system_from_event(entry, state)
+
+        update_web_latest_journal_event(name, system, station, entry, state)
 
         if name in ("Location", "Docked", "StartUp"):
             # Location may include Docked:true. Docked has station details.
@@ -292,11 +293,18 @@ def update_web_latest_journal_event(name: Any, system: str, station: str, entry:
         event_time = str(entry.get("timestamp") or now_utc_iso())
         event_system = first_text(system, entry.get("StarSystem"), state.get("SystemName"), state.get("StarSystem"), LAST_CURRENT_SYSTEM)
         event_station = first_text(station, entry.get("StationName"), state.get("StationName"))
+        pos = entry.get("StarPos") or state.get("StarPos") or LAST_CURRENT_POS
+        x = y = z = None
+        if isinstance(pos, (list, tuple)) and len(pos) >= 3:
+            x, y, z = safe_float(pos[0]), safe_float(pos[1]), safe_float(pos[2])
         load_web_module().update_latest_journal_event({
             "event": event_name,
             "timestamp": event_time,
             "system": event_system,
             "station": event_station,
+            "x": x,
+            "y": y,
+            "z": z,
         })
     except Exception:
         # Status reporting should never interfere with Journal processing.

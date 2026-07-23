@@ -456,6 +456,333 @@ main.detailsOpen {
   background: rgba(123, 198, 255, .18);
   color: var(--accent);
 }
+.tripRouteBar {
+  border-bottom: 1px solid var(--line);
+  background: #101722;
+  padding: 5px 10px;
+  min-width: 0;
+}
+.tripRouteBarExpanded {
+  padding: 5px 10px 7px;
+}
+.tripRouteToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 1.45rem;
+  padding: 2px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-weight: 900;
+}
+.tripRouteToggle:hover {
+  color: var(--accent);
+  background: rgba(140, 200, 255, .07);
+}
+.tripRouteToggleArrow {
+  color: #ca84ff;
+  font-size: 11px;
+  line-height: 1;
+}
+.tripRouteLayout {
+  display: grid;
+  grid-template-columns: minmax(26rem, 27rem) minmax(22rem, 1fr);
+  gap: 16px;
+  align-items: stretch;
+  margin-top: 5px;
+}
+.tripRouteInfoPane {
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  min-width: 0;
+  padding-right: 16px;
+  border-right: 1px solid rgba(140, 200, 255, .22);
+}
+.tripRouteHeader {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.tripRouteTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-weight: 900;
+  white-space: nowrap;
+}
+.tripRouteActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+.tripRouteImportButton,
+.tripRouteMenuButton {
+  min-height: 1.75rem;
+  padding: 4px 8px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.hiddenFileInput {
+  display: none;
+}
+.tripRouteMenuWrap {
+  position: relative;
+}
+.tripRouteMenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  width: min(34rem, 86vw);
+  max-height: 22rem;
+  overflow: auto;
+  border: 1px solid rgba(140, 200, 255, .30);
+  border-radius: 6px;
+  background: #121923;
+  box-shadow: 0 18px 40px rgba(0,0,0,.42);
+  padding: 6px;
+}
+.tripRouteMenuItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2rem;
+  gap: 6px;
+  align-items: stretch;
+}
+.tripRouteMenuItem + .tripRouteMenuItem {
+  margin-top: 6px;
+}
+.tripRoutePickButton {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  text-align: left;
+}
+.tripRoutePickButton span:first-child {
+  color: var(--text);
+  font-weight: 850;
+}
+.tripRoutePickButton span:last-child,
+.tripRouteStatus,
+.tripRouteEmpty,
+.tripRouteActiveMeta span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.tripRouteDeleteButton {
+  padding: 0;
+  font-size: 18px;
+}
+.tripRouteStatus,
+.tripRouteEmpty {
+  margin: 0;
+}
+.tripRouteActive {
+  margin-top: 8px;
+}
+.tripRouteActiveMeta {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  min-width: 0;
+}
+.tripRouteActiveMeta strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tripStopsPane {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.tripStops {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  scrollbar-width: none;
+  min-width: 0;
+  padding: 0 0 2px 0;
+  scroll-padding-left: 0;
+}
+.tripStops::-webkit-scrollbar {
+  display: none;
+}
+.tripStopsPlaceholder {
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.tripStop {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: 1px;
+  min-width: 13rem;
+  max-width: 15rem;
+  flex: 0 0 auto;
+  margin-right: 7px;
+  padding: 7px 34px 7px 14px;
+  border: 1px solid rgba(202, 132, 255, .26);
+  border-radius: 0;
+  background: linear-gradient(90deg, rgba(25, 32, 43, .98), rgba(34, 42, 55, .98));
+  color: var(--text);
+  text-align: left;
+  clip-path: polygon(0 0, calc(100% - 19px) 0, 100% 50%, calc(100% - 19px) 100%, 0 100%);
+  box-shadow: 0 7px 16px rgba(0,0,0,.22);
+}
+.tripStopMarker {
+  width: max-content;
+  max-width: calc(100% - 10px);
+  margin-bottom: 1px;
+  padding: 1px 5px;
+  border: 1px solid rgba(202, 132, 255, .38);
+  border-radius: 999px;
+  background: rgba(202, 132, 255, .13);
+  color: #ecc9ff;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+.tripStop::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 13px;
+  bottom: 0;
+  width: 10px;
+  background: linear-gradient(180deg, #f0c8ff, #b36bff);
+  clip-path: polygon(0 0, 100% 50%, 0 100%, 44% 100%, 100% 50%, 44% 0);
+  opacity: .96;
+}
+.tripStop::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 2px;
+  bottom: 0;
+  width: 17px;
+  background: linear-gradient(180deg, rgba(202, 132, 255, .24), rgba(140, 200, 255, .12));
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+.tripStop:hover {
+  z-index: 2;
+  border-color: rgba(202, 132, 255, .48);
+  background: linear-gradient(90deg, rgba(32, 41, 56, .99), rgba(45, 55, 72, .99));
+  box-shadow: 0 9px 20px rgba(175, 92, 230, .18);
+}
+.tripStopCurrent {
+  border-color: rgba(180, 235, 255, .72);
+  background: linear-gradient(90deg, rgba(34, 55, 72, .99), rgba(59, 48, 82, .99));
+  box-shadow: 0 0 0 1px rgba(180, 235, 255, .24), 0 10px 22px rgba(175, 92, 230, .18);
+}
+.tripStopCurrent::before {
+  background: linear-gradient(180deg, #d8f6ff, #c783ff);
+}
+.tripStopName {
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tripStopMeta,
+.tripStopVisit {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tripStopApproxJumps {
+  cursor: help;
+  font-style: italic;
+  text-decoration: underline dashed rgba(202, 132, 255, .75);
+  text-underline-offset: 2px;
+}
+.tripStopPager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex-wrap: wrap;
+  min-height: 24px;
+}
+.tripStopPagerButton {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 24px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+}
+.tripStopPagerButton:hover {
+  color: var(--accent);
+  background: rgba(140, 200, 255, .10);
+}
+.tripStopDot {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+}
+.tripStopDot::before {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 8px;
+  margin: 6px;
+  border-radius: 999px;
+  background: rgba(140, 200, 255, .28);
+}
+.tripStopDot:hover,
+.tripStopDotCurrent {
+  background: rgba(140, 200, 255, .08);
+}
+.tripStopDot:hover::before,
+.tripStopDotCurrent::before {
+  background: #ca84ff;
+  box-shadow: 0 0 0 3px rgba(202, 132, 255, .18);
+}
+.tripStopDotDisabled {
+  cursor: default;
+}
+.tripStopDotDisabled:hover {
+  background: rgba(140, 200, 255, .08);
+}
+.tripStopDotCommander {
+  outline: 1px solid rgba(216, 246, 255, .72);
+  outline-offset: 2px;
+}
+@media (max-width: 980px) {
+  .tripRouteLayout {
+    grid-template-columns: 1fr;
+  }
+  .tripRouteInfoPane {
+    padding-right: 0;
+    padding-bottom: 7px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(140, 200, 255, .22);
+  }
+}
 table {
   width: 100%;
   border-collapse: separate;

@@ -436,10 +436,19 @@ This is based on latest known market data at the time of the trade, usually befo
 - Watched commodity columns are user-configurable by commodity. Buy/Sell display is controlled by the Stations `Buy Scout` / `Sell Scout` mode switch rather than separate per-commodity column checkboxes.
 - About and Help content lives in footer modals. The first Help article explains that MarketScout records data only while EDMC and the plugin are running; EDMC does not normally replay full historical data to plugins.
 
+## Trip routes
+
+- Spansh Tourist Route JSON imports are stored in `trip_routes` and `trip_route_stops`.
+- Route imports also upsert every stop's coordinates into `systems_data` with source `spansh_tourist_route`.
+- `systems_data` remains the reusable authoritative coordinate table; `trip_route_stops` stores route membership/order and route-specific leg metadata.
+- The Stations page shows the active route above the table. Clicking a route stop filters Stations to that system.
+- Recalculating imported routes for shortest overall travel distance has been discussed but is intentionally left for a later iteration.
+
 ## Possible future features
 
 Ideas discussed but not yet implemented:
 
+- Route recalculation based on current position and shortest overall travel distance.
 - Efficient scouting route planner based on stored/imported candidate stations and current position.
 - Overlay integration with EDMC-ModernOverlay/EDMCOverlay, likely optional and modular in `marketscout_overlay.py`.
 - Discord webhook jackpot notifications, optional and privacy-aware, likely modular in `marketscout_discord.py`.

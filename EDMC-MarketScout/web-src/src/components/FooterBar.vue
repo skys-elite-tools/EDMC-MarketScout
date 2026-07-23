@@ -92,5 +92,12 @@ watch(() => props.helpRequestId, () => {
       <p>The Carrier Trade Calculator estimates carrier prices and profit splits for station-to-station trades, rare commodity carrier sales, and Community Goal-style rare commodity hauling.</p>
       <p>For station-to-station trades, the price difference is divided between carrier profit, loading hauler profit, and unloading hauler profit. For rare commodity carrier sales, the sale price is capped by the maximum carrier sale price of 100x galactic average.</p>
     </article>
+    <article id="help-spansh-tourist-route" class="helpArticle">
+      <h3>Spansh Tourist Routes</h3>
+      <p>MarketScout can import a <code>.json</code> file downloaded from the Spansh Tourist Route planner at <a href="https://spansh.co.uk/tourist" target="_blank" rel="noreferrer">spansh.co.uk/tourist</a>.</p>
+      <p>You can also create this route on Spansh from a Systems or Stations search by using Spansh's option to create a tourist route from that search, then downloading the route result as JSON.</p>
+      <p>Imported route stops are shown above the Stations table. MarketScout also saves the route stop coordinates into its local systems data so distance features can reuse them later.</p>
+      <p>The number of jumps to the route start is approximate. It is calculated from straight-line distance divided by the route jump range, so the real plotted route may differ.</p>
+    </article>
   </ModalShell>
 </template>

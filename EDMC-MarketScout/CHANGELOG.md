@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added Spansh Tourist Route imports for the Stations page trip planner, including saved route stops, route start/delete controls, stop filtering, local visit-date context, and coordinate upserts into `systems_data`.
+
 ## 0.3.1 Beta
 
 - Improved table auto-refresh so existing Stations, Ledger, and other table rows stay visible while updated data is fetched in the background, avoiding the brief empty-table flicker on larger datasets.
