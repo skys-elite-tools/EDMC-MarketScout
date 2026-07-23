@@ -213,6 +213,17 @@ h1 { margin: 0; font-size: 20px; }
   align-items: end;
   min-width: 0;
 }
+.stationScoutModeField {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 13.5rem;
+}
+.fieldLabel {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
 .stationFilterActions {
   display: flex;
   flex-direction: column;
@@ -420,6 +431,31 @@ main.detailsOpen {
   grid-template-columns: minmax(680px, 1fr) 380px;
 }
 .tablePanel { overflow: auto; }
+.stationScoutModeButtons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid rgba(140, 200, 255, .28);
+  border-radius: 6px;
+  overflow: hidden;
+  width: 100%;
+}
+.stationScoutModeButtons button {
+  border: 0;
+  border-right: 1px solid rgba(140, 200, 255, .18);
+  border-radius: 0;
+  background: rgba(255,255,255,.045);
+  color: var(--text);
+  padding: 7px 8px;
+  font-weight: 800;
+  width: 100%;
+}
+.stationScoutModeButtons button:last-child {
+  border-right: 0;
+}
+.stationScoutModeButtons button.active {
+  background: rgba(123, 198, 255, .18);
+  color: var(--accent);
+}
 table {
   width: 100%;
   border-collapse: separate;

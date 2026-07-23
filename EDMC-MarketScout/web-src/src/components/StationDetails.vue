@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { fmt, localDateTime, money } from '../utils.js'
+import { fmt, localDateTime, money, num } from '../utils.js'
 
 const props = defineProps({
   row: { type: Object, default: null },
@@ -14,6 +14,10 @@ const detailCommodities = computed(() => Array.from(new Set([
   ...props.watchedCommodities,
   ...props.displayColumns.map(c => c.commodity),
 ])))
+
+function demandText(value) {
+  return num(value) === 0 ? '0/unlimited' : money(value)
+}
 
 const stationDetails = computed(() => {
   const row = props.row || {}
@@ -50,7 +54,7 @@ const stationDetails = computed(() => {
           <dt>Buy</dt><dd>{{ money(row[`${commodity}_buy`]) }}</dd>
           <dt>Supply</dt><dd>{{ money(row[`${commodity}_supply`]) }}</dd>
           <dt>Sell</dt><dd>{{ money(row[`${commodity}_sell`]) }}</dd>
-          <dt>Demand</dt><dd>{{ money(row[`${commodity}_demand`]) }}</dd>
+          <dt>Demand</dt><dd>{{ demandText(row[`${commodity}_demand`]) }}</dd>
         </dl>
       </div>
     </template>

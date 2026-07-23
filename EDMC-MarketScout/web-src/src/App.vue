@@ -15,7 +15,7 @@ import CarrierTradeAnnouncementsView from './views/CarrierTradeAnnouncementsView
 import CarrierTradeCalculatorView from './views/CarrierTradeCalculatorView.vue'
 import ConfigurationView from './views/ConfigurationView.vue'
 import FooterBar from './components/FooterBar.vue'
-import { columnKey, dedupeStationRows, query } from './utils.js'
+import { dedupeStationRows, query } from './utils.js'
 import { dataStore } from './services/dataStoreService.js'
 
 const rows = ref([])
@@ -25,7 +25,10 @@ const lastVersion = ref(null)
 let latestRowsRequestId = 0
 const ACTIVE_VIEW_STORAGE_KEY = 'ui.activeView'
 const LEGACY_ACTIVE_VIEW_STORAGE_KEY = 'marketscout.activeView'
+const STATION_SCOUT_MODE_STORAGE_KEY = 'stations.scoutMode'
+const STATION_SCOUT_THRESHOLDS_STORAGE_KEY = 'stations.scoutThresholds'
 const VALID_VIEWS = new Set(['stations', 'jackpots', 'ledger', 'commodities', 'rare', 'analyze', 'carrier', 'carrierCalc', 'config'])
+const VALID_STATION_SCOUT_MODES = new Set(['buy', 'sell'])
 
 function loadStoredView() {
   const stored = dataStore.cached(ACTIVE_VIEW_STORAGE_KEY, 'stations', {
@@ -42,6 +45,8 @@ function persistCurrentView() {
 const currentView = ref(loadStoredView())
 const displayColumns = ref([])
 const watchedCommodities = ref(['Palladium', 'Gold', 'Silver'])
+const cachedStationScoutMode = dataStore.cached(STATION_SCOUT_MODE_STORAGE_KEY, 'buy', { legacyJson: false })
+const stationScoutMode = ref(VALID_STATION_SCOUT_MODES.has(cachedStationScoutMode) ? cachedStationScoutMode : 'buy')
 const bestBuyIgnoreCommodities = ref([])
 const bestBuySupplyCap = ref(1000)
 const minimumPotentialProfit = ref(10000)
@@ -79,10 +84,27 @@ const DEFAULT_STATION_FILTERS = {
   includeFc: false,
   priceThreshold: 6000,
   supplyThreshold: 10000,
+  sellPriceThreshold: 40000,
+  demandThreshold: 10000,
   limit: 1000,
 }
 
-const filters = ref({ ...DEFAULT_STATION_FILTERS })
+function stationThresholdsFrom(value) {
+  const source = value && typeof value === 'object' ? value : {}
+  return {
+    priceThreshold: Number.isFinite(Number(source.priceThreshold)) ? Number(source.priceThreshold) : DEFAULT_STATION_FILTERS.priceThreshold,
+    supplyThreshold: Number.isFinite(Number(source.supplyThreshold)) ? Number(source.supplyThreshold) : DEFAULT_STATION_FILTERS.supplyThreshold,
+    sellPriceThreshold: Number.isFinite(Number(source.sellPriceThreshold)) ? Number(source.sellPriceThreshold) : DEFAULT_STATION_FILTERS.sellPriceThreshold,
+    demandThreshold: Number.isFinite(Number(source.demandThreshold)) ? Number(source.demandThreshold) : DEFAULT_STATION_FILTERS.demandThreshold,
+  }
+}
+
+function currentStationThresholds() {
+  return stationThresholdsFrom(filters.value)
+}
+
+const cachedStationThresholds = stationThresholdsFrom(dataStore.cached(STATION_SCOUT_THRESHOLDS_STORAGE_KEY, {}))
+const filters = ref({ ...DEFAULT_STATION_FILTERS, ...cachedStationThresholds })
 
 const ledgerFilters = ref({
   commodity: '',
@@ -99,6 +121,11 @@ const commodityFilters = ref({
   sort: 'commodity_asc',
 })
 const COMMODITY_SELECTOR_LIMIT = 500
+
+const stationModeDisplayColumns = computed(() => {
+  const side = stationScoutMode.value === 'sell' ? 'sell' : 'buy'
+  return watchedCommodities.value.map(commodity => ({ commodity, side }))
+})
 
 function stationParams() {
   return {
@@ -138,7 +165,10 @@ function isActiveRowsLoad(viewName, requestId) {
 }
 
 async function clearStationFilters() {
-  filters.value = { ...DEFAULT_STATION_FILTERS }
+  filters.value = {
+    ...DEFAULT_STATION_FILTERS,
+    ...currentStationThresholds(),
+  }
   await loadStations()
 }
 
@@ -239,6 +269,27 @@ watch(currentView, () => {
   applyCurrentView()
 })
 
+watch(stationScoutMode, (value) => {
+  const mode = VALID_STATION_SCOUT_MODES.has(value) ? value : 'buy'
+  if (mode !== value) {
+    stationScoutMode.value = mode
+    return
+  }
+  dataStore.set(STATION_SCOUT_MODE_STORAGE_KEY, mode)
+})
+
+watch(
+  () => [
+    filters.value.priceThreshold,
+    filters.value.supplyThreshold,
+    filters.value.sellPriceThreshold,
+    filters.value.demandThreshold,
+  ],
+  () => {
+    dataStore.set(STATION_SCOUT_THRESHOLDS_STORAGE_KEY, currentStationThresholds())
+  }
+)
+
 watch(
   () => [rareFilters.value.sort, rareFilters.value.engineeringOnly],
   () => {
@@ -291,7 +342,7 @@ async function loadCommoditySettings() {
   const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
   const settings = await settingsRes.json()
   watchedCommodities.value = settings.watched_commodities || ['Palladium', 'Gold', 'Silver']
-  displayColumns.value = settings.watched_columns || watchedCommodities.value.map(c => ({ commodity: c, side: 'buy' }))
+  displayColumns.value = watchedCommodities.value.map(c => ({ commodity: c, side: 'buy' }))
   bestBuyIgnoreCommodities.value = settings.best_buy_ignore_commodities || []
   bestBuySupplyCap.value = Number(settings.best_buy_supply_cap || 1000)
   minimumPotentialProfit.value = Number(settings.minimum_potential_profit || 10000)
@@ -334,12 +385,9 @@ function setBestBuyIgnoreCommodity(commodity, checked) {
   bestBuyIgnoreCommodities.value = Array.from(set)
 }
 
-function setDisplayColumn(commodity, side, checked) {
-  const key = `${commodity}::${side}`
-  const map = new Map(displayColumns.value.map(c => [columnKey(c), c]))
-  if (checked) map.set(key, { commodity, side })
-  else map.delete(key)
-  displayColumns.value = Array.from(map.values())
+function setStationScoutMode(mode) {
+  if (!VALID_STATION_SCOUT_MODES.has(mode)) return
+  stationScoutMode.value = mode
 }
 
 async function saveCommoditySettings() {
@@ -348,7 +396,6 @@ async function saveCommoditySettings() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       watched_commodities: watchedCommodities.value,
-      watched_columns: displayColumns.value,
     }),
   })
   settingsVisible.value = false
@@ -443,6 +490,13 @@ onMounted(async () => {
     legacyJson: false,
   })
   if (VALID_VIEWS.has(storedView)) currentView.value = storedView
+  const storedStationScoutMode = await dataStore.get(STATION_SCOUT_MODE_STORAGE_KEY, stationScoutMode.value, { legacyJson: false })
+  if (VALID_STATION_SCOUT_MODES.has(storedStationScoutMode)) stationScoutMode.value = storedStationScoutMode
+  const storedStationThresholds = await dataStore.get(STATION_SCOUT_THRESHOLDS_STORAGE_KEY, currentStationThresholds())
+  filters.value = {
+    ...filters.value,
+    ...stationThresholdsFrom(storedStationThresholds),
+  }
   await Promise.all([loadCommoditySettings(), loadEconomyPresets(), loadStationFilterOptions()])
   await pollStatus()
   await applyCurrentView()
@@ -478,6 +532,7 @@ onUnmounted(() => {
       :commodity-filters="commodityFilters"
       :watched-count="watchedCommodities.length"
       :best-buy-ignore-count="bestBuyIgnoreCommodities.length"
+      :station-scout-mode="stationScoutMode"
       :economy-presets="economyPresets"
       :economy-preset-status="economyPresetStatus"
       :system-suggestions="stationFilterOptions.systems"
@@ -488,23 +543,21 @@ onUnmounted(() => {
       @save-economy-preset="saveEconomyPreset"
       @open-help="openHelp"
       @clear-station-filters="clearStationFilters"
+      @set-station-scout-mode="setStationScoutMode"
     />
 
     <CommoditySettings
       :visible="settingsVisible"
       title="Watched commodities"
-      description="Watched commodities drive highlighting/details. Select Buy/Sell columns separately for the table."
+      description="Watched commodities drive highlighting, details, and the Buy Scout / Sell Scout columns."
       save-label="Save commodity settings"
       :commodities="filteredCommodities"
       :selected-commodities="watchedCommodities"
-      :display-columns="displayColumns"
       :search="commoditySearch"
-      :show-display-columns="true"
       @close="settingsVisible = false"
       @save="saveCommoditySettings"
       @update:search="commoditySearch = $event"
       @toggle-selected="setWatchedCommodity"
-      @toggle-display-column="setDisplayColumn"
     />
 
     <CommoditySettings
@@ -514,9 +567,7 @@ onUnmounted(() => {
       save-label="Save Best Buy settings"
       :commodities="filteredBestBuyIgnoreCommodities"
       :selected-commodities="bestBuyIgnoreCommodities"
-      :display-columns="[]"
       :search="bestBuyIgnoreSearch"
-      :show-display-columns="false"
       :show-best-buy-settings="true"
       help-article="best-buy"
       help-title="How Best Buy works"
@@ -535,10 +586,13 @@ onUnmounted(() => {
           v-if="currentView === 'stations'"
           :rows="rows"
           :selected-index="selectedIndex"
-          :display-columns="displayColumns"
+          :display-columns="stationModeDisplayColumns"
           :watched-commodities="watchedCommodities"
+          :scout-mode="stationScoutMode"
           :price-threshold="filters.priceThreshold"
           :supply-threshold="filters.supplyThreshold"
+          :sell-price-threshold="filters.sellPriceThreshold"
+          :demand-threshold="filters.demandThreshold"
           :minimum-potential-profit="minimumPotentialProfit"
           :current-system="latestJournalEvent?.system || ''"
           @select="setSelected"
@@ -585,7 +639,7 @@ onUnmounted(() => {
         :row="selectedRow"
         :current-view="currentView"
         :watched-commodities="watchedCommodities"
-        :display-columns="displayColumns"
+        :display-columns="currentView === 'stations' ? stationModeDisplayColumns : displayColumns"
         @close="closeDetails"
       />
     </main>

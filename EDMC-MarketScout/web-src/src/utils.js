@@ -100,15 +100,26 @@ export function commodityCellParts(row, commodity, side, minimumPotentialProfit 
   const hiddenBuyPrice = side === 'buy' && (num(priceValue) === null || num(priceValue) <= 0)
   const buyAvailable = side === 'buy' && !hiddenBuyPrice && num(qtyValue) !== null && num(qtyValue) > 0
   const potentialProfit = side === 'buy' ? row[`${commodity}_potential_profit`] : null
+  const sellProfit = side === 'sell' ? row[`${commodity}_sell_profit`] : null
+  const sellProfitN = num(sellProfit)
+  const latestBuyPrice = row[`${commodity}_latest_buy_price`]
+  const minBuy = row[`${commodity}_min_buy`]
+  const sellProfitBasis = num(latestBuyPrice) !== null ? 'latest buy event' : (num(minBuy) !== null ? 'imported minimum buy' : '')
+  const qtyN = num(qtyValue)
+  const qty = side === 'sell' && qtyN === 0 ? '0/unlimited' : money(qtyValue)
   return {
     price: hiddenBuyPrice ? '—' : money(priceValue),
     qtyName,
-    qty: money(qtyValue),
+    qty,
     qtyClass: quantityClass(qtyValue, qtyName),
     showQuantity: !hiddenBuyPrice,
     potentialProfit: money(potentialProfit),
     potentialProfitClass: potentialProfitClass(potentialProfit),
     hasPotentialProfit: (side !== 'buy' || buyAvailable) && shouldDisplayPotentialProfit(potentialProfit, minimumPotentialProfit),
+    sellProfit: money(sellProfit),
+    sellProfitClass: potentialProfitClass(sellProfit),
+    hasSellProfit: side === 'sell' && sellProfitN !== null,
+    sellProfitBasis,
     inaraId: row[`${commodity}_inara_id`],
     maxSell: row[`${commodity}_max_sell`],
   }
@@ -170,10 +181,19 @@ export function dedupeStationRows(inputRows) {
   return Array.from(byKey.values())
 }
 
-export function rowFlag(row, watchedCommodities, priceThreshold, supplyThreshold) {
+export function rowFlag(row, watchedCommodities, priceThreshold, supplyThreshold, scoutMode = 'buy', sellPriceThreshold = 40000, demandThreshold = 10000) {
   const cheap = []
   const strong = []
   for (const commodity of watchedCommodities || []) {
+    if (scoutMode === 'sell') {
+      const sell = num(row[`${commodity}_sell`])
+      const demand = num(row[`${commodity}_demand`])
+      if (sell !== null && sell > 0 && sell >= sellPriceThreshold) {
+        cheap.push(commodity)
+        if (demand === 0 || (demand !== null && demand >= demandThreshold)) strong.push(commodity)
+      }
+      continue
+    }
     const buy = num(row[`${commodity}_buy`])
     const supply = num(row[`${commodity}_supply`])
     if (buy !== null && buy > 0 && buy <= priceThreshold) {

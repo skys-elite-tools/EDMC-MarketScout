@@ -7,15 +7,18 @@ const props = defineProps({
   selectedIndex: { type: Number, default: -1 },
   displayColumns: { type: Array, default: () => [] },
   watchedCommodities: { type: Array, default: () => [] },
+  scoutMode: { type: String, default: 'buy' },
   priceThreshold: { type: Number, default: 6000 },
   supplyThreshold: { type: Number, default: 10000 },
+  sellPriceThreshold: { type: Number, default: 40000 },
+  demandThreshold: { type: Number, default: 10000 },
   minimumPotentialProfit: { type: Number, default: 10000 },
   currentSystem: { type: String, default: '' },
 })
 const emit = defineEmits(['select', 'open-help'])
 
 function flag(row) {
-  return rowFlag(row, props.watchedCommodities, props.priceThreshold, props.supplyThreshold)
+  return rowFlag(row, props.watchedCommodities, props.priceThreshold, props.supplyThreshold, props.scoutMode, props.sellPriceThreshold, props.demandThreshold)
 }
 
 function searchSystem(row) {
@@ -57,7 +60,19 @@ function cellParts(row, col) {
           <div v-else class="price"><span>—</span></div>
         </td>
         <td v-for="col in displayColumns" :key="columnKey(col)">
-          <div class="price"><div class="cellMain">{{ cellParts(row, col).price }}</div><div v-if="cellParts(row, col).showQuantity" class="cellSub">{{ cellParts(row, col).qtyName }}: <span :class="cellParts(row, col).qtyClass">{{ cellParts(row, col).qty }}</span></div><div v-if="cellParts(row, col).hasPotentialProfit" class="cellSub"><a class="potentialLink" :href="inaraCommoditySellUrl(searchSystem(row), cellParts(row, col).inaraId)" :title="potentialProfitTooltip(cellParts(row, col).maxSell)" target="_blank" rel="noopener noreferrer" @click.stop>Potential Profit: <span :class="cellParts(row, col).potentialProfitClass">{{ cellParts(row, col).potentialProfit }}</span> Cr/t</a></div></div>
+          <div class="price">
+            <div class="cellMain">{{ cellParts(row, col).price }}</div>
+            <div v-if="cellParts(row, col).showQuantity" class="cellSub">
+              {{ cellParts(row, col).qtyName }}:
+              <span :class="cellParts(row, col).qtyClass">{{ cellParts(row, col).qty }}</span>
+            </div>
+            <div v-if="cellParts(row, col).hasPotentialProfit" class="cellSub">
+              <a class="potentialLink" :href="inaraCommoditySellUrl(searchSystem(row), cellParts(row, col).inaraId)" :title="potentialProfitTooltip(cellParts(row, col).maxSell)" target="_blank" rel="noopener noreferrer" @click.stop>Potential Profit: <span :class="cellParts(row, col).potentialProfitClass">{{ cellParts(row, col).potentialProfit }}</span> Cr/t</a>
+            </div>
+            <div v-if="cellParts(row, col).hasSellProfit" class="cellSub" :title="cellParts(row, col).sellProfitBasis ? `Based on ${cellParts(row, col).sellProfitBasis}.` : ''">
+              Profit: <span :class="cellParts(row, col).sellProfitClass">{{ cellParts(row, col).sellProfit }}</span> Cr/t
+            </div>
+          </div>
         </td>
         <td><div :title="localDateTime(row.market_updated)">{{ compactDateTime(row.market_updated) }}</div><div class="cellSub" :title="localDateTime(row.station_visit)">Visit: {{ compactDateTime(row.station_visit) }}</div></td>
       </tr>

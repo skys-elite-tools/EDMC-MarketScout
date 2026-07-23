@@ -4,6 +4,8 @@
 
 EDMC-MarketScout is a plugin for Elite Dangerous Market Connector (EDMC) built for commanders who enjoy the trading play-style in Elite Dangerous.
 
+MarketScout turns visited market data into a fast, glanceable trading dashboard, so you can **spot useful prices without scrolling through endless in-game market lists or maintaining your own spreadsheet**.
+
 It helps find jackpot trade opportunities, such as Palladium, Gold, and Silver around 6k credits, plus other strong market opportunities like low-price Agronomic Treatment. It also includes commodity reference tools, rare commodity information, engineer unlock data, a trade ledger, and local station scouting views.
 
 MarketScout is especially helpful for commanders who trade with a Fleet Carrier. It includes carrier-focused tools such as Carrier Trade Announcements, which can generate trade text for Reddit or Discord and, importantly, an amazingly fast way to generate a poster image to go with the announcement.
@@ -37,6 +39,18 @@ Clicking the button downloads the release zip, creates a backup of the currently
 
 Shows station market data collected while EDMC and MarketScout were running. Use it to filter visited stations, review watched commodities, and find the current Best Buy opportunity for each station.
 
+#### Buy Scout
+
+Buy Scout is the default Stations mode. It focuses watched commodity columns on station buy opportunities, showing station buy price, supply, and potential profit context for commodities you may want to load onto a ship or Fleet Carrier.
+
+![Stations page in Buy Scout mode showing watched commodity buy prices, supply, and best buy scouting data](presentation-assets/stations-buy-scout.png)
+
+#### Sell Scout
+
+Sell Scout switches watched commodity columns to selling opportunities, showing station sell price, demand, and profit against your most recent known buy price when available.
+
+![Stations page in Sell Scout mode showing watched commodity sell prices, demand, and sell profit context](presentation-assets/stations-sell-scout.png)
+
 #### Watched Commodities
 
 Watched Commodities control which commodity-specific columns are shown in the Stations table. For the best experience, using up to 3 watched commodities is recommended, but you can add more depending on your screen size or if you do not mind horizontal scrolling. The table gets wider as more commodities are added.
@@ -44,8 +58,6 @@ Watched Commodities control which commodity-specific columns are shown in the St
 #### Best Buy Ignore List
 
 The Best Buy ignore list excludes selected commodities from Best Buy calculations. This is useful for commodities that may look good mathematically but are not practical for your trading style, such as commodities that are difficult to sell near their galactic maximum.
-
-![Stations page showing station filters, watched commodities, and best buy scouting data](presentation-assets/stations.png)
 
 ### Jackpots
 

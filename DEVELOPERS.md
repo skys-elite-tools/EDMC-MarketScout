@@ -146,7 +146,7 @@ This creates the next numbered file in `EDMC-MarketScout/migrations/` with match
 Useful Web API areas:
 
 - `/api/status`: status strip data, latest Journal metadata, and database version.
-- `/api/stations`: Stations table data, watched columns, Best Buy calculations, and filters.
+- `/api/stations`: Stations table data, watched commodity buy/sell fields for Scout modes, Best Buy calculations, and filters.
 - `/api/station-filter-options`: visited system/station suggestions for Stations filters.
 - `/api/jackpots`, `/api/ledger`, `/api/rare-commodities`, `/api/commodity-stats`: view data.
 - `/api/analyze-commodities`: splits pasted commodity lists into regular and rare matches.

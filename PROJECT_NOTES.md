@@ -245,7 +245,9 @@ The Stations controls are intentionally direct and reversible:
 - Station suggestions come from visited stations in the `stations` table.
 - Economic State and Economy are text inputs with dropdown menus. Clicking the dropdown should show the full option catalog even if the input already contains text.
 - Clear restores the default station filter values and reloads the Stations table.
-- Watched Commodities controls table columns/highlighting and is persisted in SQLite `settings`.
+- Watched Commodities controls highlighting/details and the commodity columns used by the Stations Scout modes. It is persisted in SQLite `settings`.
+- `Buy Scout` is the default Stations mode and shows watched commodity buy prices plus supply. Its row highlighting uses `Highlight price <=` and `Strong supply >=`.
+- `Sell Scout` shows watched commodity sell prices plus demand. Its row highlighting uses `Highlight price >=` and `Strong demand >=`; demand `0` is displayed as `0/unlimited` and treated as favorable. Best Buy remains visible in both modes.
 - Best Buy Ignore List excludes selected commodities from Best Buy calculations and is persisted in SQLite `settings`.
 
 ### Stations default ordering
@@ -334,7 +336,7 @@ Current design intent:
 
 - Store all commodity data from market captures.
 - Use `commodity_global_stats`/`rawdata/commodities.csv` as the authoritative catalog for the Web UI commodity selector.
-- Watched commodities control which commodity-specific columns are shown.
+- Watched commodities control which commodity-specific columns are shown. The active Stations Scout mode chooses whether those columns show buy/supply or sell/demand.
 - Best Buy calculation is independent of watched commodities and should consider all commodities with `max_sell` in `commodity_global_stats` that are present at a station.
 - Best Buy ignore list is user-configurable in the Stations controls. It is persisted in SQLite `settings` under `best_buy_ignore_commodities` and excludes selected commodities from Best Buy calculation.
 
@@ -431,7 +433,7 @@ This is based on latest known market data at the time of the trade, usually befo
 - Source column is hidden by default but available in details/optional contexts.
 - Station name should stand out visually from system name, because multiple stations in the same system are common.
 - The Web UI should favor compact tables plus details panes rather than extremely wide tables.
-- Watched commodity columns are user-configurable. Users may choose Buy and Sell columns separately.
+- Watched commodity columns are user-configurable by commodity. Buy/Sell display is controlled by the Stations `Buy Scout` / `Sell Scout` mode switch rather than separate per-commodity column checkboxes.
 - About and Help content lives in footer modals. The first Help article explains that MarketScout records data only while EDMC and the plugin are running; EDMC does not normally replay full historical data to plugins.
 
 ## Possible future features

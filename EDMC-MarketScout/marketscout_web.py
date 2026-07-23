@@ -1110,8 +1110,8 @@ def api_options() -> Dict[str, Any]:
 
 def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
     with connect() as conn:
-        display_cols = watched_columns(conn)
         watched = watched_commodities(conn)
+        display_cols = [{"commodity": c, "side": "buy"} for c in watched]
         ignored_best_buy = best_buy_ignore_commodities(conn)
         supply_cap = best_buy_supply_cap(conn)
         min_profit = minimum_potential_profit(conn)
@@ -1123,11 +1123,12 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
         ignored_sql = f" AND mp.commodity NOT IN ({ignored_names})"
         ignored_sql_mp2 = f" AND mp2.commodity NOT IN ({ignored_names})"
 
-    # Need all displayed commodities plus all stats commodities for Best Buy scoring.
+    # Need all watched commodities in both buy/sell form so the Web UI can
+    # switch between Buy Scout and Sell Scout without changing user settings.
     display_commodities = []
-    for col in display_cols:
-        if col["commodity"] not in display_commodities:
-            display_commodities.append(col["commodity"])
+    for commodity in watched:
+        if commodity not in display_commodities:
+            display_commodities.append(commodity)
 
     select_cols = [
         "st.market_id AS market_id",
@@ -1201,6 +1202,11 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
     )
     for c in display_commodities:
         safe = c.replace("'", "''")
+        latest_buy_sql = (
+            f"(SELECT te.unit_price FROM trade_events te "
+            f"WHERE te.commodity='{safe}' AND te.event_type='buy' AND te.unit_price IS NOT NULL AND te.unit_price > 0 "
+            f"ORDER BY te.event_datetime DESC, te.trade_id DESC LIMIT 1)"
+        )
         select_cols.extend([
             f"MAX(CASE WHEN mp.commodity='{safe}' THEN mp.buy_price END) AS '{c}_buy'",
             f"MAX(CASE WHEN mp.commodity='{safe}' THEN mp.sell_price END) AS '{c}_sell'",
@@ -1208,6 +1214,11 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
             f"MAX(CASE WHEN mp.commodity='{safe}' THEN mp.demand END) AS '{c}_demand'",
             f"MAX(CASE WHEN mp.commodity='{safe}' THEN cgs.inara_id END) AS '{c}_inara_id'",
             f"MAX(CASE WHEN mp.commodity='{safe}' THEN cgs.max_sell END) AS '{c}_max_sell'",
+            f"MAX(CASE WHEN mp.commodity='{safe}' THEN cgs.min_buy END) AS '{c}_min_buy'",
+            f"MAX(CASE WHEN mp.commodity='{safe}' THEN {latest_buy_sql} END) AS '{c}_latest_buy_price'",
+            f"MAX(CASE WHEN mp.commodity='{safe}' AND mp.sell_price IS NOT NULL AND mp.sell_price > 0 "
+            f"AND COALESCE({latest_buy_sql}, cgs.min_buy) IS NOT NULL "
+            f"THEN mp.sell_price - COALESCE({latest_buy_sql}, cgs.min_buy) END) AS '{c}_sell_profit'",
             f"MAX(CASE WHEN mp.commodity='{safe}' AND mp.buy_price IS NOT NULL AND mp.buy_price > 0 AND COALESCE(mp.supply, 0) > 0 AND cgs.max_sell IS NOT NULL AND (cgs.max_sell - mp.buy_price) >= {min_profit} THEN cgs.max_sell - mp.buy_price END) AS '{c}_potential_profit'",
         ])
     sql = "SELECT " + ", ".join(select_cols) + " FROM stations st LEFT JOIN systems s ON s.system_address=st.system_address LEFT JOIN market_prices mp ON mp.market_id=st.market_id LEFT JOIN commodity_global_stats cgs ON cgs.commodity=mp.commodity"

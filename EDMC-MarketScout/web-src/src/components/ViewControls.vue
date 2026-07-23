@@ -11,12 +11,13 @@ const props = defineProps({
   commodityFilters: { type: Object, required: true },
   watchedCount: { type: Number, default: 0 },
   bestBuyIgnoreCount: { type: Number, default: 0 },
+  stationScoutMode: { type: String, default: 'buy' },
   economyPresets: { type: Array, default: () => [] },
   economyPresetStatus: { type: String, default: '' },
   systemSuggestions: { type: Array, default: () => [] },
   stationSuggestions: { type: Array, default: () => [] },
 })
-const emit = defineEmits(['apply', 'clear-station-filters', 'open-commodities', 'open-best-buy-ignore-list', 'save-economy-preset', 'open-help'])
+const emit = defineEmits(['apply', 'clear-station-filters', 'open-commodities', 'open-best-buy-ignore-list', 'save-economy-preset', 'open-help', 'set-station-scout-mode'])
 
 const pageMetaByView = {
   stations: {
@@ -112,8 +113,17 @@ const hasControls = computed(() => !['analyze', 'carrier', 'carrierCalc', 'confi
               <option>imported</option>
             </select>
           </label>
-          <label>Highlight price ≤ <input v-model.number="filters.priceThreshold" type="number" /></label>
-          <label>Strong supply ≥ <input v-model.number="filters.supplyThreshold" type="number" /></label>
+          <div class="stationScoutModeField">
+            <span class="fieldLabel">Scout Mode</span>
+            <div class="stationScoutModeButtons" aria-label="Stations scouting mode">
+              <button type="button" :class="{ active: stationScoutMode === 'buy' }" @click="emit('set-station-scout-mode', 'buy')">Buy Scout</button>
+              <button type="button" :class="{ active: stationScoutMode === 'sell' }" @click="emit('set-station-scout-mode', 'sell')">Sell Scout</button>
+            </div>
+          </div>
+          <label v-if="stationScoutMode === 'sell'">Highlight price ≥ <input v-model.number="filters.sellPriceThreshold" type="number" /></label>
+          <label v-else>Highlight price ≤ <input v-model.number="filters.priceThreshold" type="number" /></label>
+          <label v-if="stationScoutMode === 'sell'">Strong demand ≥ <input v-model.number="filters.demandThreshold" type="number" /></label>
+          <label v-else>Strong supply ≥ <input v-model.number="filters.supplyThreshold" type="number" /></label>
           <label>Limit <input v-model.number="filters.limit" type="number" min="1" max="2000" /></label>
           <label class="check includeFleetCarriers"><input v-model="filters.includeFc" type="checkbox" /> Include fleet carriers</label>
         </div>
