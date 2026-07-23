@@ -152,10 +152,15 @@ function openHelp(article = '') {
   helpRequestId.value += 1
 }
 
-function beginRowsLoad(viewName) {
+function beginRowsLoad(viewName, options = {}) {
+  const preserveRows = options.preserveRows === true
   currentView.value = viewName
-  selectedIndex.value = -1
-  rows.value = []
+  if (!preserveRows) {
+    selectedIndex.value = -1
+    rows.value = []
+  } else if (statusText.value && !statusText.value.endsWith(' · Refreshing...')) {
+    statusText.value = `${statusText.value} · Refreshing...`
+  }
   latestRowsRequestId += 1
   return latestRowsRequestId
 }
@@ -172,8 +177,8 @@ async function clearStationFilters() {
   await loadStations()
 }
 
-async function loadStations() {
-  const requestId = beginRowsLoad('stations')
+async function loadStations(options = {}) {
+  const requestId = beginRowsLoad('stations', options)
   const res = await fetch(`/api/stations?${query(stationParams())}`, { cache: 'no-store' })
   const data = await res.json()
   if (!isActiveRowsLoad('stations', requestId)) return
@@ -183,8 +188,8 @@ async function loadStations() {
   statusText.value = `${rows.value.length} rows · ${new Date().toLocaleTimeString()}`
 }
 
-async function loadJackpots() {
-  const requestId = beginRowsLoad('jackpots')
+async function loadJackpots(options = {}) {
+  const requestId = beginRowsLoad('jackpots', options)
   const res = await fetch(`/api/jackpots?limit=${encodeURIComponent(filters.value.limit || '500')}`, { cache: 'no-store' })
   const data = await res.json()
   if (!isActiveRowsLoad('jackpots', requestId)) return
@@ -192,8 +197,8 @@ async function loadJackpots() {
   statusText.value = `${rows.value.length} jackpot samples · ${new Date().toLocaleTimeString()}`
 }
 
-async function loadLedger() {
-  const requestId = beginRowsLoad('ledger')
+async function loadLedger(options = {}) {
+  const requestId = beginRowsLoad('ledger', options)
   const params = {
     commodity: ledgerFilters.value.commodity || '',
     event_type: ledgerFilters.value.eventType || 'Any',
@@ -206,8 +211,8 @@ async function loadLedger() {
   statusText.value = `${rows.value.length} trades · ${new Date().toLocaleTimeString()}`
 }
 
-async function loadRareCommodities() {
-  const requestId = beginRowsLoad('rare')
+async function loadRareCommodities(options = {}) {
+  const requestId = beginRowsLoad('rare', options)
   const params = {
     sort: rareFilters.value.sort || 'profit_desc',
     engineering_only: rareFilters.value.engineeringOnly ? '1' : '0',
@@ -220,8 +225,8 @@ async function loadRareCommodities() {
   statusText.value = `${rows.value.length} rare commodities · ${new Date().toLocaleTimeString()}`
 }
 
-async function loadCommodityStats() {
-  const requestId = beginRowsLoad('commodities')
+async function loadCommodityStats(options = {}) {
+  const requestId = beginRowsLoad('commodities', options)
   const params = {
     sort: commodityFilters.value.sort || 'commodity_asc',
   }
@@ -252,16 +257,16 @@ async function loadConfiguration() {
   statusText.value = `Configuration · ${new Date().toLocaleTimeString()}`
 }
 
-function applyCurrentView() {
+function applyCurrentView(options = {}) {
   if (currentView.value === 'config') return loadConfiguration()
   if (currentView.value === 'carrierCalc') return loadCarrierTradeCalculator()
   if (currentView.value === 'carrier') return loadCarrierTradeAlert()
   if (currentView.value === 'analyze') return loadAnalyzeCommodities()
-  if (currentView.value === 'commodities') return loadCommodityStats()
-  if (currentView.value === 'rare') return loadRareCommodities()
-  if (currentView.value === 'ledger') return loadLedger()
-  if (currentView.value === 'jackpots') return loadJackpots()
-  return loadStations()
+  if (currentView.value === 'commodities') return loadCommodityStats(options)
+  if (currentView.value === 'rare') return loadRareCommodities(options)
+  if (currentView.value === 'ledger') return loadLedger(options)
+  if (currentView.value === 'jackpots') return loadJackpots(options)
+  return loadStations(options)
 }
 
 watch(currentView, () => {
@@ -439,7 +444,7 @@ async function pollStatus() {
     return
   }
   if (lastVersion.value !== null && data.data_version !== lastVersion.value) {
-    await Promise.all([applyCurrentView(), loadStationFilterOptions()])
+    await Promise.all([applyCurrentView({ preserveRows: true }), loadStationFilterOptions()])
   }
   lastVersion.value = data.data_version
 }
