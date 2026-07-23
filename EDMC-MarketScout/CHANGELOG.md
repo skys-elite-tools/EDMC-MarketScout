@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 Beta
 
 - Added the Stations Trip Planner, a collapsible route bar for imported scouting routes with clickable stops, current-system highlighting, approximate jump context, and remembered open/closed state.
 - Added Spansh Tourist Route imports for the Stations page trip planner, including saved route stops, route start/delete controls, stop filtering, local visit-date context, and coordinate upserts into `systems_data`.
