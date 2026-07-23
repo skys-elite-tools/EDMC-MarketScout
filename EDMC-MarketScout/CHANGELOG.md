@@ -2,7 +2,11 @@
 
 ## Unreleased
 
+- Added the Stations Trip Planner, a collapsible route bar for imported scouting routes with clickable stops, current-system highlighting, approximate jump context, and remembered open/closed state.
 - Added Spansh Tourist Route imports for the Stations page trip planner, including saved route stops, route start/delete controls, stop filtering, local visit-date context, and coordinate upserts into `systems_data`.
+- Improved Carrier Trade Announcements short text with optional station type and reusable saved announcement prefixes.
+- Added the `[in_carrier_system_if_not_same_as_market]` custom announcement token.
+- Refactored Web UI styles so feature-specific CSS lives with its owning Vue components, keeping the global stylesheet focused on shared app styles.
 
 ## 0.3.1 Beta
 
