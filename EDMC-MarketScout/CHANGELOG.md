@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 Beta
 
 - Added a read-only top status bar indicator for EDMC's EDDN station-data setting.
 - Added Stations Best Buy settings for the supply scoring cap and minimum potential profit threshold.
