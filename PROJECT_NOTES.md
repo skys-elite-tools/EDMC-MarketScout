@@ -59,7 +59,7 @@ app.lan_enabled=0
 app.lan_bind_address=
 ```
 
-MarketScout always starts a local listener on a loopback address. The fixed default port is intentional so browser localStorage state remains available across restarts. Users can edit the config and restart EDMC to use a different loopback address, a different port, or an additional LAN listener.
+MarketScout always starts a local listener on a loopback address. The fixed default port is intentional so browser-side state and same-origin behavior remain stable across restarts. Users can edit the config and restart EDMC to use a different loopback address, a different port, or an additional LAN listener.
 
 The Web UI exposes these values in the top-menu `Config` page. Local address quick-fill options include only loopback addresses such as `127.0.0.1`, `localhost`, and detected loopback aliases. LAN suggestions are kept separate, and QR sharing is shown only for enabled non-loopback IPv4 LAN addresses. Changing the listen port or LAN settings requires restarting EDMC because the HTTP server socket is already bound. mDNS advertising as `marketscout.local` is not enabled for beta; doing it reliably should use a real Zeroconf/mDNS implementation rather than a hand-rolled shortcut.
 
@@ -156,25 +156,27 @@ Current views:
 - `Ledger`: ledger table/filters.
 - `Commodities`: commodity global stats from `commodity_global_stats`, sortable by commodity/category/max profit.
 - `Rare Commodities`: rare commodity reference table with engineering-only filtering, usual supply sorting, current-position distance, engineer unlock labels, and carrier-sale profit estimates based on 100x galactic average.
-- `Analyze Commodities`: paste a comma-separated commodity list and split matches into regular and rare commodity tables. The last pasted list is stored in browser localStorage.
+- `Analyze Commodities`: paste a comma-separated commodity list and split matches into regular and rare commodity tables. The last pasted list is stored through the Web UI data store.
 - `Carrier Trade Announcements`: Fleet Carrier trade advertisement builder with editable form data, image upload, draggable text layers, downloadable PNG/JPG output, and copyable Discord/Reddit announcement text.
-- `Carrier Trade Calculator`: Fleet Carrier trade profit splitter for station-to-station, rare commodity carrier sales, and rare commodity station-to-station/Community Goal style trades. Inputs are stored in browser localStorage.
+- `Carrier Trade Calculator`: Fleet Carrier trade profit splitter for station-to-station, rare commodity carrier sales, and rare commodity station-to-station/Community Goal style trades. Inputs are stored through the Web UI data store.
 - `Config`: runtime-local address/port/LAN configuration, LAN quick-fill, and QR-code sharing when LAN access is enabled.
 
 The Python local web server provides JSON endpoints; Vue should not know about SQLite directly.
 
-### Browser-local UI state
+### Web UI data store
 
-Several purely personal UI preferences are stored in browser localStorage, not SQLite:
+Personal Web UI data is centralized through `web-src/src/services/dataStoreService.js`. The service is local-first: it reads/writes browser localStorage immediately for fast UI updates and standalone website compatibility, then synchronizes to the plugin SQLite `settings` table through `/api/user-data` when the MarketScout backend is available. Remote writes are timestamped, debounced for 30 seconds by default, and flushed on page hide where possible. Explicit saved layout changes can request an immediate flush.
 
-- `marketscout.activeView`: currently selected top-level Web UI view, restored after browser refresh.
-- `marketscout.analyzeCommodities.text`: last Analyze Commodities pasted list.
-- `marketscout.carrierTradeAlert.draft`: Carrier Trade Announcements form values, text color, active layout, text positions/font sizes, and uploaded image data URL.
-- `marketscout.carrierTradeAlert.layouts`: user-saved Carrier Trade Announcements text layouts.
-- `marketscout.carrierTradeCalculator.draft`: Carrier Trade Calculator active tab and input values.
-- `marketscout.rareCommodityCustomSupply`: per-commodity custom rare supply overrides used by rare commodity tooling.
+Current shared keys:
 
-These values are local browser convenience state only. They should not be uploaded or treated as shared project data.
+- `ui.activeView`: currently selected top-level Web UI view, restored after browser refresh.
+- `analyzeCommodities.text`: last Analyze Commodities pasted list.
+- `carrierTradeAnnouncements.draft`: Carrier Trade Announcements form values, text color, active layout, text positions/font sizes, custom announcement templates, and uploaded image data URL when storage quota allows.
+- `carrierTradeAnnouncements.layouts`: user-saved Carrier Trade Announcements text layouts.
+- `carrierTradeCalculator.draft`: Carrier Trade Calculator active tab and input values.
+- `rareCommodities.customSupply`: per-commodity custom rare supply overrides used by rare commodity tooling.
+
+Legacy browser-only keys such as `marketscout.activeView`, `marketscout.carrierTradeAlert.draft`, and `marketscout.carrierTradeCalculator.draft` are read once and migrated automatically. These values remain local/user preferences; they must not be uploaded to third-party services.
 
 ### Carrier Trade Calculator details
 
@@ -186,7 +188,7 @@ The Carrier Trade Calculator has three tabs:
 
 The calculator view is intentionally split into focused components:
 
-- `CarrierTradeCalculatorView.vue`: tab shell and localStorage draft persistence.
+- `CarrierTradeCalculatorView.vue`: tab shell and Web UI data-store draft persistence.
 - `CarrierTradeStationCalculator.vue`: Station to Station calculations and controls.
 - `CarrierTradeRareCalculator.vue`: rare commodity carrier-sale calculations and rare commodity loading.
 - `CarrierTradeRareStationCalculator.vue`: rare commodity station-to-station table, target station loading, and custom supply handling.
@@ -196,7 +198,7 @@ Rare station-to-station supply selection is intentionally explicit:
 
 - `Usual`: use `rare_commodities.usual_supply`.
 - `Most Recent`: use the latest `rare_commodities_history.supply` for that commodity, falling back to usual supply.
-- `Custom`: use browser-local custom supply where set, falling back to usual supply.
+- `Custom`: use custom supply from the Web UI data store where set, falling back to usual supply.
 
 `rare_commodities_history` should contain rare supply observations only from the rare commodity origin station/system. Zero supply can be legitimate there and must not be filtered out just because it is zero. Market data from non-origin stations may still contain rare commodity sell prices and should remain in `market_prices`, but it should not create rare supply history rows.
 
@@ -211,14 +213,14 @@ profit_per_ship_trip = profit_per_carrier / (loads_per_carrier + unloads_per_car
 
 If cargo capacity, ship capacity, or origin supply make a trip count impossible, the UI reports zero rather than dividing by zero.
 
-`Ship Cargo Capacity` defaults to 1000 and is stored in `marketscout.carrierTradeCalculator.draft`.
+`Ship Cargo Capacity` defaults to 1000 and is stored in `carrierTradeCalculator.draft`.
 
 ### Carrier Trade Announcements details
 
-Carrier Trade Announcements intentionally has no backend persistence and no network integration. It is a local image/text generator:
+Carrier Trade Announcements intentionally has no third-party network integration. It is a local image/text generator, with draft/layout state persisted through the Web UI data store when available:
 
 - The preview uses a 4:3 / 1200x900 target ratio for Reddit-friendly image output.
-- Users can upload a custom image; the uploaded image is stored in localStorage as a data URL as part of the draft when browser quota allows.
+- Users can upload a custom image; the uploaded image is stored as a data URL as part of the draft when browser/database quota allows.
 - Text layers are draggable. Built-in layouts are `Classic` and `Free Floating`; custom saved layouts are managed from the Text Layout menu.
 - Built-in layout names are protected from overwrite. Saving a custom layout with an existing custom name updates that layout instead of creating duplicates.
 - Profit/quantity form fields are text, not numeric, so values such as `16k` or localized punctuation are allowed.

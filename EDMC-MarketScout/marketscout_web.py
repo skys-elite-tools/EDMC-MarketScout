@@ -561,6 +561,8 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
                 return self.send_json(api_station_filter_options())
             if path == "/api/settings":
                 return self.send_json(api_settings())
+            if path == "/api/user-data":
+                return self.send_json(api_user_data(parse_qs(parsed.query)))
             if path == "/api/config":
                 return self.send_json(api_config())
             return self.serve_static(path)
@@ -579,6 +581,8 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
             payload = json.loads(body or "{}")
             if parsed.path == "/api/settings":
                 return self.send_json(api_save_settings(payload))
+            if parsed.path == "/api/user-data":
+                return self.send_json(api_save_user_data(payload))
             if parsed.path == "/api/economy-presets":
                 return self.send_json(api_save_economy_preset(payload))
             if parsed.path == "/api/analyze-commodities":
@@ -678,11 +682,81 @@ def setting_get(conn: sqlite3.Connection, key: str, default: Any = None) -> Any:
             return default
     return default
 
-def setting_set(conn: sqlite3.Connection, key: str, value: Any) -> None:
-    conn.execute(
-        "INSERT INTO settings(key, value_json) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json",
-        (key, json.dumps(value, ensure_ascii=False)),
-    )
+def setting_set(
+    conn: sqlite3.Connection,
+    key: str,
+    value: Any,
+    *,
+    updated_datetime: Optional[str] = None,
+    only_if_newer: bool = False,
+) -> None:
+    payload = json.dumps(value, ensure_ascii=False)
+    stamp = updated_datetime or now_utc()
+    stale_guard = ""
+    if only_if_newer:
+        stale_guard = """
+            WHERE settings.updated_datetime IS NULL
+                OR settings.updated_datetime = ''
+                OR settings.updated_datetime <= excluded.updated_datetime
+        """
+    try:
+        conn.execute(
+            f"""
+            INSERT INTO settings(key, value_json, updated_datetime, schema_version)
+            VALUES (?, ?, ?, 1)
+            ON CONFLICT(key) DO UPDATE SET
+                value_json=excluded.value_json,
+                updated_datetime=excluded.updated_datetime,
+                schema_version=excluded.schema_version
+            {stale_guard}
+            """,
+            (key, payload, stamp),
+        )
+    except sqlite3.OperationalError:
+        conn.execute(
+            "INSERT INTO settings(key, value_json) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json",
+            (key, payload),
+        )
+
+
+def settings_has_metadata(conn: sqlite3.Connection) -> bool:
+    try:
+        rows = conn.execute("PRAGMA table_info(settings)").fetchall()
+        columns = {str(row[1]) for row in rows}
+        return "updated_datetime" in columns and "schema_version" in columns
+    except sqlite3.Error:
+        return False
+
+
+def user_data_keys_from_query(qs: Dict[str, List[str]]) -> List[str]:
+    raw_values = []
+    for value in qs.get("keys", []):
+        raw_values.extend(str(value or "").split(","))
+    return [value.strip() for value in raw_values if value.strip()]
+
+
+def read_user_data_entries(conn: sqlite3.Connection, keys: Optional[List[str]] = None) -> Dict[str, Dict[str, Any]]:
+    has_metadata = settings_has_metadata(conn)
+    columns = "key, value_json, updated_datetime, schema_version" if has_metadata else "key, value_json"
+    params: List[Any] = []
+    where = ""
+    if keys:
+        placeholders = ",".join("?" for _ in keys)
+        where = f"WHERE key IN ({placeholders})"
+        params = list(keys)
+    rows = conn.execute(f"SELECT {columns} FROM settings {where} ORDER BY key", params).fetchall()
+    values: Dict[str, Dict[str, Any]] = {}
+    for row in rows:
+        try:
+            value = json.loads(row["value_json"]) if row["value_json"] is not None else None
+        except Exception:
+            value = None
+        values[str(row["key"])] = {
+            "value": value,
+            "updated_datetime": row["updated_datetime"] if has_metadata else "",
+            "schema_version": row["schema_version"] if has_metadata else 1,
+        }
+    return values
 
 def watched_commodities(conn: sqlite3.Connection) -> List[str]:
     val = setting_get(conn, "watched_commodities", _CONTEXT.get("primary_metals", ["Palladium", "Gold", "Silver"]))
@@ -820,6 +894,13 @@ def api_settings() -> Dict[str, Any]:
         }
 
 
+def api_user_data(qs: Dict[str, List[str]]) -> Dict[str, Any]:
+    keys = user_data_keys_from_query(qs)
+    with connect() as conn:
+        values = read_user_data_entries(conn, keys or None)
+    return {"ok": True, "values": values}
+
+
 def api_config() -> Dict[str, Any]:
     plugin_dir = _CONTEXT.get("plugin_dir") or os.getcwd()
     config = load_web_config(plugin_dir)
@@ -921,6 +1002,47 @@ def api_save_settings(payload: Dict[str, Any]) -> Dict[str, Any]:
             setting_set(conn, "minimum_potential_profit", value)
         conn.commit()
     return {"ok": True}
+
+
+def api_save_user_data(payload: Dict[str, Any]) -> Dict[str, Any]:
+    raw_entries = payload.get("entries")
+    raw_values = payload.get("values")
+    if raw_entries is None and raw_values is None and payload.get("key"):
+        raw_values = {str(payload.get("key")): payload.get("value")}
+    if raw_entries is None:
+        if not isinstance(raw_values, dict):
+            return {"ok": False, "error": "Expected entries or values object"}
+        raw_entries = {
+            key: {"value": value, "updated_datetime": now_utc()}
+            for key, value in raw_values.items()
+        }
+    if not isinstance(raw_entries, dict):
+        return {"ok": False, "error": "Expected entries or values object"}
+
+    clean_entries: Dict[str, Tuple[Any, str]] = {}
+    for key, entry in raw_entries.items():
+        clean_key = str(key or "").strip()
+        if not clean_key:
+            continue
+        if len(clean_key) > 160:
+            return {"ok": False, "error": f"Data key is too long: {clean_key[:40]}..."}
+        if isinstance(entry, dict) and "value" in entry:
+            value = entry.get("value")
+            updated_datetime = str(entry.get("updated_datetime") or now_utc())
+        else:
+            value = entry
+            updated_datetime = now_utc()
+        clean_entries[clean_key] = (value, updated_datetime)
+
+    if not clean_entries:
+        return {"ok": True, "values": {}}
+
+    with connect() as conn:
+        for key, (value, updated_datetime) in clean_entries.items():
+            setting_set(conn, key, value, updated_datetime=updated_datetime, only_if_newer=True)
+        conn.commit()
+        values = read_user_data_entries(conn, list(clean_entries.keys()))
+    return {"ok": True, "values": values}
 
 
 def economy_presets_path() -> Path:

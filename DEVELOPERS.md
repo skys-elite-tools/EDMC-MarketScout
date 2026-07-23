@@ -75,7 +75,7 @@ Current top-level Web UI views are:
 - Carrier Trade Calculator
 - Config
 
-Browser-only personal state uses localStorage for convenience, including the active view, Analyze Commodities pasted input, Carrier Trade Announcements drafts/custom text layouts, Carrier Trade Calculator inputs, and custom rare commodity supply overrides.
+Personal Web UI state should go through `web-src/src/services/dataStoreService.js`. The service uses browser localStorage immediately for standalone/public-tool compatibility and synchronizes timestamped values with the plugin backend through `/api/user-data` when available. This keeps custom values available across browsers/devices on the same MarketScout instance without making public website builds require accounts or a database.
 
 The Web UI has a responsive top navigation. Commodities, Rare Commodities, and Analyze Commodities are grouped under the Commodities menu on wider layouts; the navigation collapses to a hamburger menu on narrower windows. The footer provides About and Help modals.
 
@@ -83,20 +83,20 @@ Page-level Web UI screens live in `EDMC-MarketScout/web-src/src/views/`. Reusabl
 
 Carrier Trade Calculator is split into a view shell and one component per calculator tab:
 
-- `views/CarrierTradeCalculatorView.vue`: owns active tab and `marketscout.carrierTradeCalculator.draft` persistence.
+- `views/CarrierTradeCalculatorView.vue`: owns active tab and `carrierTradeCalculator.draft` persistence through the Web UI data store.
 - `components/CarrierTradeStationCalculator.vue`
 - `components/CarrierTradeRareCalculator.vue`
 - `components/CarrierTradeRareStationCalculator.vue`
 
 Carrier Trade Announcements is split into a view shell plus focused UI components:
 
-- `views/CarrierTradeAnnouncementsView.vue`: owns announcement state, saved layout persistence, text/token computation, and image export.
+- `views/CarrierTradeAnnouncementsView.vue`: owns announcement state, saved layout persistence through the Web UI data store, text/token computation, and image export.
 - `components/CarrierTradeForm.vue`: image options, layout selector, color picker, and trade/carrier/market inputs.
 - `components/TradePosterEditor.vue`: poster preview, draggable text layers, and PNG/JPG download buttons.
 - `components/AnnouncementOutputs.vue`: generated announcement display and copy actions.
 - `components/AnnouncementTemplateEditor.vue`: custom announcement template modal.
 
-The localStorage keys still use `marketscout.carrierTradeAlert.*` for backwards compatibility with saved user drafts and layouts.
+Legacy localStorage keys such as `marketscout.carrierTradeAlert.*` are still read by the data-store service for backwards compatibility, but new code should use canonical keys such as `carrierTradeAnnouncements.draft`.
 
 Use `AutocompleteDropdown.vue` for future text-input controls that also need an explicit dropdown menu. It is currently used by the Rare Station-to-Station Target Station control.
 
@@ -152,7 +152,7 @@ Useful Web API areas:
 - `/api/analyze-commodities`: splits pasted commodity lists into regular and rare matches.
 - `/api/rare-station-trade-options`: visited target stations for Rare Commodities station-to-station planning. It lists stations with at least one positive `market_prices.sell_price`, ordered newest station visit first.
 - `/api/rare-station-trade`: rare commodity origin buy prices compared against a selected target station's sell prices.
-- `/api/commodities`, `/api/settings`, `/api/economy-presets`, `/api/config`: catalogs/settings/config helpers.
+- `/api/commodities`, `/api/settings`, `/api/user-data`, `/api/economy-presets`, `/api/config`: catalogs/settings/user-preference/config helpers.
 
 SQLite web connections use `PRAGMA temp_store=MEMORY` to avoid temporary-file I/O issues in EDMC runtime environments. Keep small dropdown/result sorting in Python when it avoids brittle SQLite temp sorting and does not materially affect performance.
 

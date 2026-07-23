@@ -5,6 +5,7 @@
 - Added a read-only top status bar indicator for EDMC's EDDN station-data setting.
 - Added Stations Best Buy settings for the supply scoring cap and minimum potential profit threshold.
 - Added visible help buttons and Help articles for Best Buy scoring, EDDN station data, rare commodity supply, and Carrier Trade Calculator formulas.
+- Added a centralized Web UI data store that keeps supported user preferences in browser storage and syncs them to the local MarketScout database for cross-browser/LAN use.
 
 ## 0.2.8 Beta
 

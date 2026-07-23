@@ -1,34 +1,35 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import placeholderImage from '../assets/trade-placeholder.png'
 import AnnouncementOutputs from '../components/AnnouncementOutputs.vue'
 import AnnouncementTemplateEditor from '../components/AnnouncementTemplateEditor.vue'
 import CarrierTradeForm from '../components/CarrierTradeForm.vue'
 import TradePosterEditor from '../components/TradePosterEditor.vue'
+import { dataStore } from '../services/dataStoreService'
 
-const LAYOUT_STORAGE_KEY = 'marketscout.carrierTradeAlert.layouts'
-const DRAFT_STORAGE_KEY = 'marketscout.carrierTradeAlert.draft'
+const LAYOUT_STORAGE_KEY = 'carrierTradeAnnouncements.layouts'
+const DRAFT_STORAGE_KEY = 'carrierTradeAnnouncements.draft'
+const LEGACY_LAYOUT_STORAGE_KEY = 'marketscout.carrierTradeAlert.layouts'
+const LEGACY_DRAFT_STORAGE_KEY = 'marketscout.carrierTradeAlert.draft'
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value))
 }
 
 function loadSavedLayouts() {
-  try {
-    const layouts = JSON.parse(window.localStorage.getItem(LAYOUT_STORAGE_KEY) || '[]')
-    return Array.isArray(layouts) ? layouts.filter(item => item?.id && item?.name && item?.mode) : []
-  } catch (err) {
-    return []
-  }
+  return normalizeSavedLayouts(dataStore.cached(LAYOUT_STORAGE_KEY, [], { legacyKey: LEGACY_LAYOUT_STORAGE_KEY }))
 }
 
 function loadDraft() {
-  try {
-    const draft = JSON.parse(window.localStorage.getItem(DRAFT_STORAGE_KEY) || '{}')
-    return draft && typeof draft === 'object' ? draft : {}
-  } catch (err) {
-    return {}
-  }
+  return normalizeDraft(dataStore.cached(DRAFT_STORAGE_KEY, {}, { legacyKey: LEGACY_DRAFT_STORAGE_KEY }))
+}
+
+function normalizeSavedLayouts(layouts) {
+  return Array.isArray(layouts) ? layouts.filter(item => item?.id && item?.name && item?.mode) : []
+}
+
+function normalizeDraft(draft) {
+  return draft && typeof draft === 'object' && !Array.isArray(draft) ? draft : {}
 }
 
 const savedDraft = loadDraft()
@@ -335,11 +336,7 @@ const currentLayoutLabel = computed(() => {
 })
 
 function persistSavedLayouts() {
-  try {
-    window.localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(savedLayouts.value))
-  } catch (err) {
-    // Ignore private browsing or storage quota failures.
-  }
+  dataStore.set(LAYOUT_STORAGE_KEY, savedLayouts.value, { debounceMs: 0 })
 }
 
 function applyTextLayout(value) {
@@ -451,11 +448,34 @@ function persistDraft() {
     customAnnouncementTitleTemplate: customAnnouncementTitleTemplate.value,
     customAnnouncementTemplate: customAnnouncementTemplate.value,
   }
-  try {
-    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft))
-  } catch (err) {
-    // Large uploaded images can exceed browser storage quota.
+  dataStore.set(DRAFT_STORAGE_KEY, draft)
+}
+
+function applyDraft(draft) {
+  const normalized = normalizeDraft(draft)
+  form.value = { ...defaultForm, ...(normalized.form || {}) }
+  textColor.value = normalized.textColor || '#f6fbff'
+  textStyle.value = normalized.textStyle || 'classic'
+  textLayout.value = normalized.textLayout || normalized.textStyle || 'classic'
+  uploadedImageUrl.value = normalized.uploadedImageUrl || ''
+  customAnnouncementTemplates.value = normalizeCustomTemplateSet(normalized)
+  layerPositions.value = {
+    ...clone(defaultLayerPositions),
+    ...(normalized.layerPositions || {}),
   }
+  fontSizes.value = {
+    ...defaultFontSizes,
+    ...(normalized.fontSizes || {}),
+  }
+}
+
+async function refreshStoredAnnouncementData() {
+  const [draft, layouts] = await Promise.all([
+    dataStore.get(DRAFT_STORAGE_KEY, savedDraft, { legacyKey: LEGACY_DRAFT_STORAGE_KEY }),
+    dataStore.get(LAYOUT_STORAGE_KEY, savedLayouts.value, { legacyKey: LEGACY_LAYOUT_STORAGE_KEY }),
+  ])
+  savedLayouts.value = normalizeSavedLayouts(layouts)
+  applyDraft(draft)
 }
 
 function sizeKeyFor(field) {
@@ -553,6 +573,7 @@ async function downloadImage(format = 'png') {
 
 watch(textLayout, value => applyTextLayout(value))
 watch([form, textColor, textStyle, textLayout, layerPositions, fontSizes, uploadedImageUrl, customAnnouncementTemplates], persistDraft, { deep: true })
+onMounted(refreshStoredAnnouncementData)
 </script>
 
 <template>

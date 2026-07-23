@@ -2,12 +2,14 @@
 import { computed, onMounted, ref } from 'vue'
 import { fmt, money, query } from '../utils.js'
 import AutocompleteDropdown from './AutocompleteDropdown.vue'
+import { dataStore } from '../services/dataStoreService.js'
 
 const props = defineProps({
   inputs: { type: Object, required: true },
 })
 
-const CUSTOM_SUPPLY_STORAGE_KEY = 'marketscout.rareCommodityCustomSupply'
+const CUSTOM_SUPPLY_STORAGE_KEY = 'rareCommodities.customSupply'
+const LEGACY_CUSTOM_SUPPLY_STORAGE_KEY = 'marketscout.rareCommodityCustomSupply'
 const TRIP_PROFIT_TITLE = 'Aggregated Profit/Ship Trip = (carrier_capacity * profit) / (ceil(carrier_capacity / min(ship_cargo_capacity, origin_station_supply)) + ceil(carrier_capacity / ship_cargo_capacity)).'
 
 const rareStationOptions = ref([])
@@ -43,26 +45,30 @@ function syncTargetQuery() {
 }
 
 function loadCustomSupplies() {
-  try {
-    const raw = JSON.parse(window.localStorage.getItem(CUSTOM_SUPPLY_STORAGE_KEY) || '{}')
-    if (raw && typeof raw === 'object') {
-      const next = {}
-      for (const [commodity, value] of Object.entries(raw)) {
-        const n = Number(value)
-        if (commodity && Number.isFinite(n) && n >= 0) next[commodity] = Math.floor(n)
-      }
-      customSupplies.value = next
+  const raw = dataStore.cached(CUSTOM_SUPPLY_STORAGE_KEY, {}, { legacyKey: LEGACY_CUSTOM_SUPPLY_STORAGE_KEY })
+  if (raw && typeof raw === 'object') {
+    const next = {}
+    for (const [commodity, value] of Object.entries(raw)) {
+      const n = Number(value)
+      if (commodity && Number.isFinite(n) && n >= 0) next[commodity] = Math.floor(n)
     }
-  } catch (err) {
-    customSupplies.value = {}
+    customSupplies.value = next
   }
 }
 
 function saveCustomSupplies() {
-  try {
-    window.localStorage.setItem(CUSTOM_SUPPLY_STORAGE_KEY, JSON.stringify(customSupplies.value))
-  } catch (err) {
-    // Ignore private browsing or storage quota failures.
+  dataStore.set(CUSTOM_SUPPLY_STORAGE_KEY, customSupplies.value)
+}
+
+async function refreshCustomSupplies() {
+  const raw = await dataStore.get(CUSTOM_SUPPLY_STORAGE_KEY, customSupplies.value, { legacyKey: LEGACY_CUSTOM_SUPPLY_STORAGE_KEY })
+  if (raw && typeof raw === 'object') {
+    const next = {}
+    for (const [commodity, value] of Object.entries(raw)) {
+      const n = Number(value)
+      if (commodity && Number.isFinite(n) && n >= 0) next[commodity] = Math.floor(n)
+    }
+    customSupplies.value = next
   }
 }
 
@@ -218,7 +224,9 @@ async function loadRows() {
 }
 
 loadCustomSupplies()
-onMounted(loadOptions)
+onMounted(async () => {
+  await Promise.all([refreshCustomSupplies(), loadOptions()])
+})
 </script>
 
 <template>

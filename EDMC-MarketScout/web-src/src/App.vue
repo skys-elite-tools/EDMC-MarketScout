@@ -16,30 +16,27 @@ import CarrierTradeCalculatorView from './views/CarrierTradeCalculatorView.vue'
 import ConfigurationView from './views/ConfigurationView.vue'
 import FooterBar from './components/FooterBar.vue'
 import { columnKey, dedupeStationRows, query } from './utils.js'
+import { dataStore } from './services/dataStoreService.js'
 
 const rows = ref([])
 const selectedIndex = ref(-1)
 const selectedRow = computed(() => selectedIndex.value >= 0 ? rows.value[selectedIndex.value] : null)
 const lastVersion = ref(null)
 let latestRowsRequestId = 0
-const ACTIVE_VIEW_STORAGE_KEY = 'marketscout.activeView'
+const ACTIVE_VIEW_STORAGE_KEY = 'ui.activeView'
+const LEGACY_ACTIVE_VIEW_STORAGE_KEY = 'marketscout.activeView'
 const VALID_VIEWS = new Set(['stations', 'jackpots', 'ledger', 'commodities', 'rare', 'analyze', 'carrier', 'carrierCalc', 'config'])
 
 function loadStoredView() {
-  try {
-    const stored = window.localStorage.getItem(ACTIVE_VIEW_STORAGE_KEY)
-    return VALID_VIEWS.has(stored) ? stored : 'stations'
-  } catch (err) {
-    return 'stations'
-  }
+  const stored = dataStore.cached(ACTIVE_VIEW_STORAGE_KEY, 'stations', {
+    legacyKey: LEGACY_ACTIVE_VIEW_STORAGE_KEY,
+    legacyJson: false,
+  })
+  return VALID_VIEWS.has(stored) ? stored : 'stations'
 }
 
 function persistCurrentView() {
-  try {
-    window.localStorage.setItem(ACTIVE_VIEW_STORAGE_KEY, currentView.value)
-  } catch (err) {
-    // Ignore private browsing or storage quota failures.
-  }
+  dataStore.set(ACTIVE_VIEW_STORAGE_KEY, currentView.value)
 }
 
 const currentView = ref(loadStoredView())
@@ -441,6 +438,11 @@ async function handleUpdateAction() {
 
 let pollTimer = null
 onMounted(async () => {
+  const storedView = await dataStore.get(ACTIVE_VIEW_STORAGE_KEY, currentView.value, {
+    legacyKey: LEGACY_ACTIVE_VIEW_STORAGE_KEY,
+    legacyJson: false,
+  })
+  if (VALID_VIEWS.has(storedView)) currentView.value = storedView
   await Promise.all([loadCommoditySettings(), loadEconomyPresets(), loadStationFilterOptions()])
   await pollStatus()
   await applyCurrentView()

@@ -527,10 +527,24 @@ def setting_get(conn: sqlite3.Connection, key: str, default: Any = None) -> Any:
     return default
 
 def setting_set(conn: sqlite3.Connection, key: str, value: Any) -> None:
-    conn.execute(
-        "INSERT INTO settings(key, value_json) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json",
-        (key, json.dumps(value, ensure_ascii=False)),
-    )
+    payload = json.dumps(value, ensure_ascii=False)
+    try:
+        conn.execute(
+            """
+            INSERT INTO settings(key, value_json, updated_datetime, schema_version)
+            VALUES (?, ?, ?, 1)
+            ON CONFLICT(key) DO UPDATE SET
+                value_json=excluded.value_json,
+                updated_datetime=excluded.updated_datetime,
+                schema_version=excluded.schema_version
+            """,
+            (key, payload, now_utc_iso()),
+        )
+    except sqlite3.OperationalError:
+        conn.execute(
+            "INSERT INTO settings(key, value_json) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json",
+            (key, payload),
+        )
 
 def ensure_default_settings(conn: sqlite3.Connection) -> None:
     if setting_get(conn, "watched_commodities") is None:

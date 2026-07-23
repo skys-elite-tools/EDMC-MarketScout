@@ -43,7 +43,7 @@ app.lan_enabled=0
 app.lan_bind_address=
 ```
 
-MarketScout always uses a loopback address for same-computer access. The fixed default port keeps browser localStorage state, such as Carrier Trade Announcements layouts, available across EDMC/browser restarts. Users may edit this file if they need a different loopback address, a different port, or an additional LAN listener. Restart EDMC after changing it.
+MarketScout always uses a loopback address for same-computer access. The fixed default port keeps browser-side UI state stable across EDMC/browser restarts, and current builds also synchronize supported UI preferences to the local MarketScout database. Users may edit this file if they need a different loopback address, a different port, or an additional LAN listener. Restart EDMC after changing it.
 
 The Web UI also has a `Config` page at the end of the top navigation. It can edit the local loopback address, the shared port, and the optional LAN listener. Local quick-fill options only include loopback addresses such as `127.0.0.1`, `localhost`, and `127.0.1.1` when detected. It shows a QR code only when LAN access is enabled with a shareable IPv4 address, so another same-network device can open the UI more easily. Restart EDMC after saving listening changes.
 

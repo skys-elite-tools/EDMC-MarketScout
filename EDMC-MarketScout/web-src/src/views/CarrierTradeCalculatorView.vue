@@ -1,10 +1,12 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import CarrierTradeRareCalculator from '../components/CarrierTradeRareCalculator.vue'
 import CarrierTradeRareStationCalculator from '../components/CarrierTradeRareStationCalculator.vue'
 import CarrierTradeStationCalculator from '../components/CarrierTradeStationCalculator.vue'
+import { dataStore } from '../services/dataStoreService.js'
 
-const STORAGE_KEY = 'marketscout.carrierTradeCalculator.draft'
+const STORAGE_KEY = 'carrierTradeCalculator.draft'
+const LEGACY_STORAGE_KEY = 'marketscout.carrierTradeCalculator.draft'
 
 const DEFAULT_STATION_INPUTS = {
   buyStationPrice: 6000,
@@ -35,42 +37,36 @@ const rareInputs = ref({ ...DEFAULT_RARE_INPUTS })
 const rareStationInputs = ref({ ...DEFAULT_RARE_STATION_INPUTS })
 const activeTab = ref('station')
 
-function loadDraft() {
-  try {
-    const draft = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '{}')
-    if (draft && typeof draft === 'object') {
-      if (draft.stationInputs && typeof draft.stationInputs === 'object') {
-        stationInputs.value = { ...DEFAULT_STATION_INPUTS, ...draft.stationInputs }
-      }
-      if (draft.rareInputs && typeof draft.rareInputs === 'object') {
-        rareInputs.value = { ...DEFAULT_RARE_INPUTS, ...draft.rareInputs }
-      }
-      if (draft.rareStationInputs && typeof draft.rareStationInputs === 'object') {
-        rareStationInputs.value = { ...DEFAULT_RARE_STATION_INPUTS, ...draft.rareStationInputs }
-      }
-      if (draft.activeTab === 'station' || draft.activeTab === 'rare' || draft.activeTab === 'rare-station') {
-        activeTab.value = draft.activeTab
-      }
+function applyDraft(draft) {
+  if (draft && typeof draft === 'object') {
+    if (draft.stationInputs && typeof draft.stationInputs === 'object') {
+      stationInputs.value = { ...DEFAULT_STATION_INPUTS, ...draft.stationInputs }
     }
-  } catch (err) {
-    // Ignore broken localStorage drafts.
+    if (draft.rareInputs && typeof draft.rareInputs === 'object') {
+      rareInputs.value = { ...DEFAULT_RARE_INPUTS, ...draft.rareInputs }
+    }
+    if (draft.rareStationInputs && typeof draft.rareStationInputs === 'object') {
+      rareStationInputs.value = { ...DEFAULT_RARE_STATION_INPUTS, ...draft.rareStationInputs }
+    }
+    if (draft.activeTab === 'station' || draft.activeTab === 'rare' || draft.activeTab === 'rare-station') {
+      activeTab.value = draft.activeTab
+    }
   }
 }
 
 function saveDraft() {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      activeTab: activeTab.value,
-      stationInputs: stationInputs.value,
-      rareInputs: rareInputs.value,
-      rareStationInputs: rareStationInputs.value,
-    }))
-  } catch (err) {
-    // Ignore private browsing or storage quota failures.
-  }
+  dataStore.set(STORAGE_KEY, {
+    activeTab: activeTab.value,
+    stationInputs: stationInputs.value,
+    rareInputs: rareInputs.value,
+    rareStationInputs: rareStationInputs.value,
+  })
 }
 
-loadDraft()
+applyDraft(dataStore.cached(STORAGE_KEY, {}, { legacyKey: LEGACY_STORAGE_KEY }))
+onMounted(async () => {
+  applyDraft(await dataStore.get(STORAGE_KEY, {}, { legacyKey: LEGACY_STORAGE_KEY }))
+})
 watch([activeTab, stationInputs, rareInputs, rareStationInputs], saveDraft, { deep: true })
 </script>
 

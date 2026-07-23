@@ -1,18 +1,12 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { fmt, ly, money, num } from '../utils.js'
+import { dataStore } from '../services/dataStoreService.js'
 
-const STORAGE_KEY = 'marketscout.analyzeCommodities.text'
+const STORAGE_KEY = 'analyzeCommodities.text'
+const LEGACY_STORAGE_KEY = 'marketscout.analyzeCommodities.text'
 
-function storedText() {
-  try {
-    return window.localStorage.getItem(STORAGE_KEY) || ''
-  } catch (err) {
-    return ''
-  }
-}
-
-const text = ref(storedText())
+const text = ref(dataStore.cached(STORAGE_KEY, '', { legacyKey: LEGACY_STORAGE_KEY, legacyJson: false }))
 const loading = ref(false)
 const regularRows = ref([])
 const rareRows = ref([])
@@ -54,11 +48,11 @@ const sortedRare = computed(() => {
 })
 
 watch(text, (value) => {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, value)
-  } catch (err) {
-    // Ignore private browsing or storage quota failures.
-  }
+  dataStore.set(STORAGE_KEY, value)
+})
+
+onMounted(async () => {
+  text.value = await dataStore.get(STORAGE_KEY, text.value, { legacyKey: LEGACY_STORAGE_KEY, legacyJson: false })
 })
 
 async function analyze() {
