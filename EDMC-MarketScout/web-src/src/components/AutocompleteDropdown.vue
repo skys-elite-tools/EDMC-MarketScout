@@ -118,18 +118,18 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
     />
     <button
       type="button"
-      class="economyComboToggle"
+      class="autocompleteDropdownToggle"
       :title="buttonTitle"
       :aria-label="buttonTitle"
       @mousedown.prevent
       @click="openFullMenu"
     >▾</button>
-    <div v-if="menuOpen" class="economyComboMenu autocompleteDropdownMenu" role="listbox">
+    <div v-if="menuOpen" class="autocompleteDropdownMenu" role="listbox">
       <button
         v-for="(option, index) in filteredOptions"
         :key="option?.market_id ?? option?.commodity ?? optionLabel(option)"
         type="button"
-        class="economyComboOption autocompleteDropdownOption"
+        class="autocompleteDropdownOption"
         :class="{ active: index === highlightedIndex }"
         @mousedown.prevent="chooseOption(option)"
       >
@@ -137,7 +137,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
           {{ optionLabel(option) }}
         </slot>
       </button>
-      <div v-if="!filteredOptions.length" class="economyComboEmpty">{{ emptyText }}</div>
+      <div v-if="!filteredOptions.length" class="autocompleteDropdownEmpty">{{ emptyText }}</div>
     </div>
   </div>
 </template>
@@ -156,13 +156,44 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
   border-bottom-right-radius: 0;
 }
 
+.autocompleteDropdownToggle {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
 .autocompleteDropdownMenu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 16rem;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0b1016;
+  box-shadow: 0 12px 30px rgba(0,0,0,.35);
+  padding: 4px;
   min-width: min(28rem, calc(100vw - 3rem));
 }
 
 .autocompleteDropdownOption {
   display: grid;
   gap: 2px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.autocompleteDropdownOption:hover,
+.autocompleteDropdownOption.active {
+  background: #263142;
+  color: white;
 }
 
 .autocompleteDropdownOption small {
@@ -173,5 +204,11 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
 .autocompleteDropdownOption:hover small,
 .autocompleteDropdownOption.active small {
   color: #cfd8e3;
+}
+
+.autocompleteDropdownEmpty {
+  color: var(--muted);
+  padding: 7px 8px;
+  font-size: 12px;
 }
 </style>
