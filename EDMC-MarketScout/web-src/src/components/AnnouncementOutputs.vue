@@ -6,9 +6,10 @@ defineProps({
   customAnnouncementTitle: { type: String, required: true },
   customAnnouncement: { type: String, required: true },
   activeCustomTemplateTypeLabel: { type: String, required: true },
+  includeShortStationType: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['edit-template'])
+const emit = defineEmits(['edit-template', 'update:include-short-station-type'])
 </script>
 
 <template>
@@ -17,7 +18,18 @@ const emit = defineEmits(['edit-template'])
     legend="Announcement"
     :value="announcement"
     copy-title="Copy announcement"
-  />
+  >
+    <template #header-extra>
+      <label class="shortAnnouncementToggle">
+        <input
+          :checked="includeShortStationType"
+          type="checkbox"
+          @change="emit('update:include-short-station-type', $event.target.checked)"
+        />
+        Station type
+      </label>
+    </template>
+  </CopyablePanel>
 
   <fieldset class="outputPanel">
     <legend>Custom Announcement</legend>
@@ -88,6 +100,20 @@ const emit = defineEmits(['edit-template'])
   padding: 0 9px;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.shortAnnouncementToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.shortAnnouncementToggle input {
+  width: auto;
 }
 
 .customAnnouncementOutput {

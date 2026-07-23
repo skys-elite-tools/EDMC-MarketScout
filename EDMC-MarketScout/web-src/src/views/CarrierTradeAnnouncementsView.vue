@@ -38,6 +38,7 @@ const defaultForm = {
   commodity: 'Gold',
   profit: '12,000',
   includeProfitLabelInImage: true,
+  includeStationTypeInShortAnnouncement: false,
   quantity: '16k',
   type: 'Loading',
   carrierName: 'Fleet Carrier',
@@ -283,10 +284,13 @@ const previewLayerText = computed(() => {
 
 const announcement = computed(() => {
   const direction = tradeTypeLower.value === 'unloading' ? 'to' : 'from'
-  const padText = tradeTypeLower.value === 'unloading' ? `${padLetter.value} pads` : `${padLetter.value}-pads`
-  const profitUnit = tradeTypeLower.value === 'unloading' ? 'unit' : 'ton'
-  const quantityUnit = tradeTypeLower.value === 'unloading' ? 'units' : 'tons'
-  return `**${form.value.carrierName || 'Carrier Name'} (${form.value.carrierId || 'Carrier ID'})** is ${tradeTypeLower.value} **${form.value.commodity || 'Commodity'}** ${direction} **${form.value.station || 'Station'}** (${padText}) in **${form.value.system || 'System'}**. **${adValue(form.value.profit)}**/${profitUnit} profit, **${adValue(form.value.quantity)}** ${quantityUnit}.`
+  const padText = `${padLetter.value}-pads`
+  const stationInfo = form.value.includeStationTypeInShortAnnouncement
+    ? `(${padText}) (${form.value.stationType || 'Station Type'})`
+    : `(${padText})`
+  const profitUnit = 'ton'
+  const quantityUnit = 'tons'
+  return `**${form.value.carrierName || 'Carrier Name'} (${form.value.carrierId || 'Carrier ID'})** is ${tradeTypeLower.value} **${form.value.commodity || 'Commodity'}** ${direction} **${form.value.station || 'Station'}** ${stationInfo} in **${form.value.system || 'System'}**. **${adValue(form.value.profit)}**/${profitUnit} profit, **${adValue(form.value.quantity)}** ${quantityUnit}.`
 })
 
 function renderCustomTemplate(template) {
@@ -594,6 +598,8 @@ onMounted(refreshStoredAnnouncementData)
         :custom-announcement-title="customAnnouncementTitle"
         :custom-announcement="customAnnouncement"
         :active-custom-template-type-label="activeCustomTemplateTypeLabel"
+        :include-short-station-type="form.includeStationTypeInShortAnnouncement"
+        @update:include-short-station-type="form.includeStationTypeInShortAnnouncement = $event"
         @edit-template="customTemplateModalOpen = true"
       />
     </div>
