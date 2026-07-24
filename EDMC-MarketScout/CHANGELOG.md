@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Updated the Carrier Trade Calculator to subtract estimated tritium and hull maintenance costs from carrier net profit, with a Fleet Carrier / Squadron Carrier cost toggle and compact cost breakdown.
+
 ## 0.4.0 Beta
 
 - Added the Stations Trip Planner, a collapsible route bar for imported scouting routes with clickable stops, current-system highlighting, approximate jump context, and remembered open/closed state.
