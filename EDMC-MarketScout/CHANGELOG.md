@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.1 Beta
 
 - Added Trip Planner station hints from Spansh CSV exports, plus a viewport-clamped Routes menu so the route list no longer opens partially off-screen.
 - Updated the Carrier Trade Calculator to subtract estimated tritium and hull maintenance costs from carrier net profit, with a Fleet Carrier / Squadron Carrier cost toggle and compact cost breakdown.
