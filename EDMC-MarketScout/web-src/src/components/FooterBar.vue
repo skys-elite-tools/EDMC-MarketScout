@@ -91,6 +91,8 @@ watch(() => props.helpRequestId, () => {
       <h3>Carrier Trade Calculator Formulas</h3>
       <p>The Carrier Trade Calculator estimates carrier prices and profit splits for station-to-station trades, rare commodity carrier sales, and Community Goal-style rare commodity hauling.</p>
       <p>For station-to-station trades, the price difference is divided between carrier profit, loading hauler profit, and unloading hauler profit. For rare commodity carrier sales, the sale price is capped by the maximum carrier sale price of 100x galactic average.</p>
+      <p>Carrier net profit subtracts a simple two-jump operating cost: one 500 LY empty jump and one 500 LY laden jump. Tritium is estimated at 70,000 Cr/t, and hull maintenance is estimated at 100,000 Cr per jump.</p>
+      <p>Fleet Carrier tritium assumptions are 68t empty and 133t laden. Squadron Carrier assumptions are 43t empty and 195t laden.</p>
     </article>
     <article id="help-spansh-tourist-route" class="helpArticle">
       <h3>Spansh Tourist Routes</h3>

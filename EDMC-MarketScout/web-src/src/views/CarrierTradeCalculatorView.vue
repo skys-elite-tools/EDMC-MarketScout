@@ -32,9 +32,14 @@ const DEFAULT_RARE_STATION_INPUTS = {
   sort: 'profit_trip_desc',
 }
 
+const DEFAULT_COST_INPUTS = {
+  squadronCarrier: false,
+}
+
 const stationInputs = ref({ ...DEFAULT_STATION_INPUTS })
 const rareInputs = ref({ ...DEFAULT_RARE_INPUTS })
 const rareStationInputs = ref({ ...DEFAULT_RARE_STATION_INPUTS })
+const costInputs = ref({ ...DEFAULT_COST_INPUTS })
 const activeTab = ref('station')
 
 function applyDraft(draft) {
@@ -48,6 +53,9 @@ function applyDraft(draft) {
     if (draft.rareStationInputs && typeof draft.rareStationInputs === 'object') {
       rareStationInputs.value = { ...DEFAULT_RARE_STATION_INPUTS, ...draft.rareStationInputs }
     }
+    if (draft.costInputs && typeof draft.costInputs === 'object') {
+      costInputs.value = { ...DEFAULT_COST_INPUTS, ...draft.costInputs }
+    }
     if (draft.activeTab === 'station' || draft.activeTab === 'rare' || draft.activeTab === 'rare-station') {
       activeTab.value = draft.activeTab
     }
@@ -60,6 +68,7 @@ function saveDraft() {
     stationInputs: stationInputs.value,
     rareInputs: rareInputs.value,
     rareStationInputs: rareStationInputs.value,
+    costInputs: costInputs.value,
   })
 }
 
@@ -67,7 +76,7 @@ applyDraft(dataStore.cached(STORAGE_KEY, {}, { legacyKey: LEGACY_STORAGE_KEY }))
 onMounted(async () => {
   applyDraft(await dataStore.get(STORAGE_KEY, {}, { legacyKey: LEGACY_STORAGE_KEY }))
 })
-watch([activeTab, stationInputs, rareInputs, rareStationInputs], saveDraft, { deep: true })
+watch([activeTab, stationInputs, rareInputs, rareStationInputs, costInputs], saveDraft, { deep: true })
 </script>
 
 <template>
@@ -78,8 +87,8 @@ watch([activeTab, stationInputs, rareInputs, rareStationInputs], saveDraft, { de
       <button type="button" :class="{ active: activeTab === 'rare-station' }" title="This is mostly for Community Goals" @click="activeTab = 'rare-station'">Rare Commodities: Station to Station</button>
     </div>
 
-    <CarrierTradeStationCalculator v-if="activeTab === 'station'" :inputs="stationInputs" />
-    <CarrierTradeRareCalculator v-else-if="activeTab === 'rare'" :inputs="rareInputs" />
+    <CarrierTradeStationCalculator v-if="activeTab === 'station'" :inputs="stationInputs" :cost-inputs="costInputs" />
+    <CarrierTradeRareCalculator v-else-if="activeTab === 'rare'" :inputs="rareInputs" :cost-inputs="costInputs" />
     <CarrierTradeRareStationCalculator v-else :inputs="rareStationInputs" />
   </div>
 </template>

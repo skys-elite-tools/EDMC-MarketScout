@@ -1,10 +1,12 @@
 <script setup>
 import { computed } from 'vue'
+import { carrierTradeCosts, CARRIER_TRADE_COST_TOOLTIP } from '../carrierTradeCosts.js'
 import { money } from '../utils.js'
 import MetricCard from './MetricCard.vue'
 
 const props = defineProps({
   inputs: { type: Object, required: true },
+  costInputs: { type: Object, required: true },
 })
 
 function asNumber(value) {
@@ -36,6 +38,8 @@ const carrierBuyPrice = computed(() => ceilCr(asNumber(props.inputs.buyStationPr
 const carrierSellPrice = computed(() => floorCr(asNumber(props.inputs.sellStationPrice) - unloadingHaulerProfit.value))
 const tonnes = computed(() => Math.max(0, floorCr(props.inputs.numTonnes)))
 const totalCarrierProfit = computed(() => carrierProfit.value * tonnes.value)
+const tradeCosts = computed(() => carrierTradeCosts(Boolean(props.costInputs.squadronCarrier)))
+const carrierNetProfit = computed(() => totalCarrierProfit.value - tradeCosts.value.totalCost)
 const totalHaulersProfit = computed(() => (loadingHaulerProfit.value + unloadingHaulerProfit.value) * tonnes.value)
 const haulerPoolPercentage = computed(() => Math.max(0, 100 - asNumber(props.inputs.carrierProfitPercentage)))
 
@@ -45,6 +49,10 @@ function setCarrierProfitPercentage(value) {
 
 function setHaulerSplit(value) {
   props.inputs.haulerSplit = clamp(value, 0, 100)
+}
+
+function setSquadronCarrier(value) {
+  props.costInputs.squadronCarrier = Boolean(value)
 }
 </script>
 
@@ -81,8 +89,20 @@ function setHaulerSplit(value) {
       <MetricCard label="Carrier Profit" :value="money(carrierProfit)" unit="Cr/t" carrier wide />
       <MetricCard label="Carrier Buy Price" :value="money(carrierBuyPrice)" unit="Cr/t" />
       <MetricCard label="Carrier Sell Price" :value="money(carrierSellPrice)" unit="Cr/t" />
-      <MetricCard :label="`Total Carrier Profit at ${money(tonnes)} tonnes sold`" :value="money(totalCarrierProfit)" unit="Cr" wide />
-      <MetricCard :label="`Total Haulers Profit at ${money(tonnes)} tonnes sold`" :value="money(totalHaulersProfit)" unit="Cr" wide />
+      <MetricCard label="Carrier Net Profit, after trit and hull maint." :value="money(carrierNetProfit)" unit="Cr" carrier />
+      <MetricCard label="Costs" :value="money(tradeCosts.totalCost)" unit="Cr" :title="CARRIER_TRADE_COST_TOOLTIP" inline-details>
+        <template #headerRight>
+          <label class="squadronToggle">
+            <input :checked="costInputs.squadronCarrier" type="checkbox" @change="setSquadronCarrier($event.target.checked)" />
+            Squadron Carrier
+          </label>
+        </template>
+        <div class="costLines">
+          <div><span>Tritium ({{ money(tradeCosts.tritiumTonnes) }}t)</span><strong>{{ money(tradeCosts.tritiumCost) }} Cr</strong></div>
+          <div><span>Hull</span><strong>{{ money(tradeCosts.hullCost) }} Cr</strong></div>
+        </div>
+      </MetricCard>
+      <MetricCard label="Total Haulers Profit" :value="money(totalHaulersProfit)" unit="Cr" wide />
     </div>
   </section>
 </template>
@@ -161,6 +181,39 @@ function setHaulerSplit(value) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.costLines {
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  min-width: 9.25rem;
+}
+
+.costLines div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.costLines strong {
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.squadronToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.squadronToggle input {
+  margin: 0;
 }
 
 @media (max-width: 1100px) {

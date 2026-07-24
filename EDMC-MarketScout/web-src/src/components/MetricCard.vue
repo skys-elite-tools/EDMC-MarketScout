@@ -3,16 +3,26 @@ defineProps({
   label: { type: String, required: true },
   value: { type: [String, Number], required: true },
   unit: { type: String, default: '' },
+  title: { type: String, default: '' },
   wide: { type: Boolean, default: false },
   carrier: { type: Boolean, default: false },
+  inlineDetails: { type: Boolean, default: false },
 })
 </script>
 
 <template>
-  <div class="metricCard" :class="{ wide, carrierMetric: carrier }">
-    <span>{{ label }}</span>
+  <div class="metricCard" :class="{ wide, carrierMetric: carrier, inlineDetails }" :title="title || undefined">
+    <span class="metricLabel">
+      <span>{{ label }}</span>
+      <span v-if="$slots.headerRight" class="metricHeaderRight">
+        <slot name="headerRight"></slot>
+      </span>
+    </span>
     <strong>{{ value }}</strong>
     <small v-if="unit">{{ unit }}</small>
+    <div v-if="$slots.default" class="metricDetails">
+      <slot></slot>
+    </div>
   </div>
 </template>
 
@@ -28,9 +38,22 @@ defineProps({
   background: rgba(255,255,255,.025);
 }
 
-.metricCard span {
+.metricLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
   color: var(--muted);
   font-size: 12px;
+}
+
+.metricLabel > span:first-child {
+  min-width: 0;
+}
+
+.metricHeaderRight {
+  flex: 0 0 auto;
 }
 
 .metricCard strong {
@@ -42,6 +65,39 @@ defineProps({
 .metricCard small {
   color: var(--accent);
   font-size: 12px;
+}
+
+.metricDetails {
+  min-width: 0;
+}
+
+.metricCard.inlineDetails {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "label label"
+    "value details"
+    "unit details";
+  column-gap: 12px;
+  row-gap: 2px;
+  align-items: start;
+  min-height: 0;
+}
+
+.metricCard.inlineDetails > .metricLabel {
+  grid-area: label;
+}
+
+.metricCard.inlineDetails > strong {
+  grid-area: value;
+}
+
+.metricCard.inlineDetails > small {
+  grid-area: unit;
+}
+
+.metricCard.inlineDetails > .metricDetails {
+  grid-area: details;
+  align-self: start;
 }
 
 .metricCard.wide {
