@@ -14,17 +14,20 @@ const props = defineProps({
   currentSystem: { type: String, default: '' },
   currentPosition: { type: Object, default: null },
 })
-const emit = defineEmits(['import-route', 'start-route', 'delete-route', 'select-stop', 'open-help'])
+const emit = defineEmits(['import-route', 'import-station-hints', 'start-route', 'delete-route', 'select-stop', 'open-help'])
 
 const fileInput = ref(null)
+const hintFileInput = ref(null)
 const menuOpen = ref(false)
 const menuEl = ref(null)
+const menuStyle = ref({})
 const stopsEl = ref(null)
 const stopEls = ref([])
 const expanded = ref(Boolean(dataStore.cached(EXPANDED_STORAGE_KEY, false)))
 const focusedStopIndex = ref(0)
 const visibleStopIndexes = ref([])
 
+const hasActiveRoute = computed(() => props.activeRoute?.route_id != null)
 const stops = computed(() => props.activeRoute?.stops || [])
 const currentStopIndex = computed(() => {
   const current = props.currentSystem.trim().toLocaleLowerCase()
@@ -59,12 +62,43 @@ function chooseFile() {
   fileInput.value?.click()
 }
 
+function chooseHintFile() {
+  if (!hasActiveRoute.value) return
+  hintFileInput.value?.click()
+}
+
 async function importFile(event) {
   const file = event.target.files?.[0]
   event.target.value = ''
   if (!file) return
   const content = await file.text()
   emit('import-route', { filename: file.name, content })
+}
+
+async function importHintFile(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file || !hasActiveRoute.value) return
+  const content = await file.text()
+  emit('import-station-hints', { filename: file.name, content, route_id: props.activeRoute?.route_id })
+}
+
+function toggleMenu(event) {
+  if (menuOpen.value) {
+    menuOpen.value = false
+    return
+  }
+  const rect = event.currentTarget.getBoundingClientRect()
+  const width = Math.min(544, window.innerWidth - 24)
+  const left = Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12))
+  const maxHeight = Math.max(160, Math.min(352, window.innerHeight - rect.bottom - 18))
+  menuStyle.value = {
+    width: `${width}px`,
+    left: `${left}px`,
+    top: `${rect.bottom + 6}px`,
+    maxHeight: `${maxHeight}px`,
+  }
+  menuOpen.value = true
 }
 
 function stopVisitLabel(stop) {
@@ -87,6 +121,15 @@ function stopTitle(stop) {
     lines.push('Not visited yet')
   }
   return lines.join('\n')
+}
+
+function stationHintLabel(stop) {
+  const name = String(stop.station_hint_name || '').trim()
+  if (!name) return ''
+  const parts = [name]
+  if (stop.station_hint_large_pads != null) parts.push(`${Number(stop.station_hint_large_pads || 0)} L`)
+  if (stop.station_hint_distance_to_arrival_ls != null) parts.push(`${Number(stop.station_hint_distance_to_arrival_ls).toLocaleString()} Ls`)
+  return parts.join(' · ')
 }
 
 function stopLegLabel(stop, index) {
@@ -230,19 +273,21 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="tripRouteBar" :class="{ tripRouteBarExpanded: expanded }" aria-label="Trip route planner">
-    <button type="button" class="tripRouteToggle" :aria-expanded="expanded" @click="toggleExpanded">
-      <span class="tripRouteToggleArrow">{{ expanded ? '▲' : '▼' }}</span>
-      <span>Trip Planner</span>
-      <span class="tripRouteToggleArrow">{{ expanded ? '▲' : '▼' }}</span>
-    </button>
+    <div class="tripRouteToggleRow">
+      <button type="button" class="tripRouteToggle" :aria-expanded="expanded" @click="toggleExpanded">
+        <span class="tripRouteToggleArrow">{{ expanded ? '▲' : '▼' }}</span>
+        <span>Trip Planner</span>
+        <span class="tripRouteToggleArrow">{{ expanded ? '▲' : '▼' }}</span>
+      </button>
+      <div v-if="expanded" class="tripRouteTopTitle">
+        <span>Trip Route</span>
+        <InfoButton title="Spansh Tourist Route imports" @open="emit('open-help', 'spansh-tourist-route')" />
+      </div>
+    </div>
 
     <div v-if="expanded" class="tripRouteLayout">
       <div class="tripRouteInfoPane">
         <div class="tripRouteHeader">
-          <div class="tripRouteTitle">
-            <span>Trip Route</span>
-            <InfoButton title="Spansh Tourist Route imports" @open="emit('open-help', 'spansh-tourist-route')" />
-          </div>
           <div class="tripRouteActions">
             <button
               type="button"
@@ -251,15 +296,25 @@ onBeforeUnmount(() => {
               title="Import a .json file downloaded from the Spansh Tourist Route planner."
               @click="chooseFile"
             >
-              Add Spansh Tourist Route
+              Add Tourist Route
             </button>
             <input ref="fileInput" class="hiddenFileInput" type="file" accept="application/json,.json" @change="importFile" />
+            <button
+              type="button"
+              class="tripRouteImportButton"
+              :disabled="busy || !hasActiveRoute"
+              title="Import a Spansh station/search CSV to add station hints to the active route."
+              @click="chooseHintFile"
+            >
+              Add Stations
+            </button>
+            <input ref="hintFileInput" class="hiddenFileInput" type="file" accept="text/csv,.csv" @change="importHintFile" />
             <div ref="menuEl" class="tripRouteMenuWrap">
-              <button type="button" class="tripRouteMenuButton" :disabled="busy || !routes.length" @click.stop="menuOpen = !menuOpen">
+              <button type="button" class="tripRouteMenuButton" :disabled="busy || !routes.length" @click.stop="toggleMenu">
                 Routes
                 <span class="buttonCount">{{ routes.length }}</span>
               </button>
-              <div v-if="menuOpen" class="tripRouteMenu">
+              <div v-if="menuOpen" class="tripRouteMenu" :style="menuStyle">
                 <div v-for="route in routes" :key="route.route_id" class="tripRouteMenuItem">
                   <button type="button" class="tripRoutePickButton" :title="routeTitle(route)" @click="emit('start-route', route.route_id); menuOpen = false">
                     <span>{{ route.route_name }}</span>
@@ -298,6 +353,7 @@ onBeforeUnmount(() => {
             <span v-if="index === 0" class="tripStopMarker">Start</span>
             <span v-else-if="index === stops.length - 1" class="tripStopMarker">End</span>
             <span class="tripStopName">{{ stop.system_name }}</span>
+            <span v-if="stationHintLabel(stop)" class="tripStopStationHint">{{ stationHintLabel(stop) }}</span>
             <span v-if="firstStopEstimateParts(stop, index)" class="tripStopMeta">
               <span
                 class="tripStopApproxJumps"
@@ -347,6 +403,12 @@ onBeforeUnmount(() => {
 .tripRouteBarExpanded {
   padding: 5px 10px 7px;
 }
+.tripRouteToggleRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+}
 .tripRouteToggle {
   display: flex;
   align-items: center;
@@ -369,9 +431,21 @@ onBeforeUnmount(() => {
   font-size: 11px;
   line-height: 1;
 }
+.tripRouteTopTitle {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-weight: 900;
+  white-space: nowrap;
+  transform: translateY(-50%);
+}
 .tripRouteLayout {
   display: grid;
-  grid-template-columns: minmax(26rem, 27rem) minmax(22rem, 1fr);
+  grid-template-columns: minmax(17rem, 19rem) minmax(22rem, 1fr);
   gap: 16px;
   align-items: stretch;
   margin-top: 5px;
@@ -385,26 +459,14 @@ onBeforeUnmount(() => {
   border-right: 1px solid rgba(140, 200, 255, .22);
 }
 .tripRouteHeader {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
   min-width: 0;
 }
-.tripRouteTitle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--accent);
-  font-weight: 900;
-  white-space: nowrap;
-}
 .tripRouteActions {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  flex-wrap: wrap;
   gap: 6px;
+  width: 100%;
   min-width: 0;
 }
 .tripRouteImportButton,
@@ -414,18 +476,26 @@ onBeforeUnmount(() => {
   font-weight: 800;
   white-space: nowrap;
 }
+.tripRouteImportButton {
+  grid-column: 1;
+  min-width: 0;
+  width: 100%;
+}
+.tripRouteMenuWrap {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: stretch;
+  position: relative;
+}
+.tripRouteMenuButton {
+  height: 100%;
+}
 .hiddenFileInput {
   display: none;
 }
-.tripRouteMenuWrap {
-  position: relative;
-}
 .tripRouteMenu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
+  position: fixed;
   z-index: 20;
-  width: min(34rem, 86vw);
   max-height: 22rem;
   overflow: auto;
   border: 1px solid rgba(140, 200, 255, .30);
@@ -474,12 +544,16 @@ onBeforeUnmount(() => {
   margin-top: 8px;
 }
 .tripRouteActiveMeta {
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
+  display: grid;
+  gap: 2px;
   min-width: 0;
 }
 .tripRouteActiveMeta strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tripRouteActiveMeta span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -575,6 +649,14 @@ onBeforeUnmount(() => {
 }
 .tripStopName {
   font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tripStopStationHint {
+  color: #ecc9ff;
+  font-size: 11px;
+  font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

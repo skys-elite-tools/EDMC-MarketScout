@@ -8,6 +8,8 @@ journal, route, station, or market data is uploaded.
 from __future__ import annotations
 
 import datetime
+import csv
+import io
 import json
 import math
 import mimetypes
@@ -587,6 +589,8 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
                 return self.send_json(api_save_user_data(payload))
             if parsed.path == "/api/trip-routes/import":
                 return self.send_json(api_import_trip_route(payload))
+            if parsed.path == "/api/trip-routes/import-station-hints":
+                return self.send_json(api_import_trip_route_station_hints(payload))
             if parsed.path == "/api/trip-routes/start":
                 return self.send_json(api_start_trip_route(payload))
             if parsed.path == "/api/trip-routes/delete":
@@ -1147,6 +1151,91 @@ def parse_spansh_tourist_route(payload: Dict[str, Any]) -> Tuple[Dict[str, Any],
     return route, stops
 
 
+def csv_get(row: Dict[str, Any], *names: str) -> str:
+    lower = {str(key or "").strip().casefold(): key for key in row.keys()}
+    for name in names:
+        key = lower.get(name.strip().casefold())
+        if key is not None:
+            return clean_text(row.get(key))
+    return ""
+
+
+def station_hint_score(hint: Dict[str, Any]) -> Tuple[int, int, float, str]:
+    has_market = 1 if hint.get("has_market") else 0
+    large_pads = coerce_int(hint.get("large_pads")) or 0
+    distance = coerce_float(hint.get("distance_to_arrival_ls"))
+    return (has_market, 1 if large_pads > 0 else 0, -(distance if distance is not None else 10**12), clean_text(hint.get("station_name")).casefold())
+
+
+def parse_spansh_station_hints(payload: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    raw_content = payload.get("content")
+    if not isinstance(raw_content, str) or not raw_content.strip():
+        raise ValueError("Expected a Spansh CSV file")
+
+    reader = csv.DictReader(io.StringIO(raw_content))
+    headers = {str(header or "").strip().casefold() for header in (reader.fieldnames or [])}
+    if not headers:
+        raise ValueError("The station hints CSV has no header row")
+
+    candidates: Dict[str, List[Dict[str, Any]]] = {}
+    for row in reader:
+        if "system name" in headers:
+            system_name = csv_get(row, "System Name")
+            station_name = csv_get(row, "Name", "Station Name")
+            if not system_name or not station_name:
+                continue
+            candidates.setdefault(system_name.casefold(), []).append(
+                {
+                    "system_name": system_name,
+                    "station_name": station_name,
+                    "station_type": csv_get(row, "Type", "Station Type"),
+                    "distance_to_arrival_ls": coerce_float(csv_get(row, "Distance to Arrival (LS)", "Distance to Arrival")),
+                    "large_pads": coerce_int(csv_get(row, "Large Pads")),
+                    "market_id": coerce_int(csv_get(row, "Market ID", "Market Id")),
+                    "has_market": True,
+                }
+            )
+            continue
+
+        if "stations" in headers:
+            system_name = csv_get(row, "Name", "System")
+            stations_raw = csv_get(row, "Stations")
+            if not system_name or not stations_raw:
+                continue
+            try:
+                stations = json.loads(stations_raw)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(stations, list):
+                continue
+            for station in stations:
+                if not isinstance(station, dict):
+                    continue
+                station_name = clean_text(station.get("name"))
+                if not station_name:
+                    continue
+                candidates.setdefault(system_name.casefold(), []).append(
+                    {
+                        "system_name": system_name,
+                        "station_name": station_name,
+                        "station_type": clean_text(station.get("type")),
+                        "distance_to_arrival_ls": coerce_float(station.get("distance_to_arrival")),
+                        "large_pads": coerce_int(station.get("large_pads")),
+                        "market_id": coerce_int(station.get("market_id")),
+                        "has_market": bool(station.get("has_market")),
+                    }
+                )
+
+    hints: Dict[str, Dict[str, Any]] = {}
+    for system_key, rows in candidates.items():
+        if rows:
+            hints[system_key] = sorted(rows, key=station_hint_score, reverse=True)[0]
+
+    if not hints:
+        raise ValueError("No station hints were found. Use a Spansh Stations Search CSV or a Systems Search CSV with a Stations column.")
+    return hints
+
+
 def upsert_route_stop_system_data(conn: sqlite3.Connection, stop: Dict[str, Any], imported_at: str) -> None:
     conn.execute(
         """
@@ -1212,6 +1301,11 @@ def trip_route_stop_rows(conn: sqlite3.Connection, route_id: int) -> List[Dict[s
             trs.x,
             trs.y,
             trs.z,
+            trs.station_hint_name,
+            trs.station_hint_type,
+            trs.station_hint_distance_to_arrival_ls,
+            trs.station_hint_large_pads,
+            trs.station_hint_market_id,
             s.last_visit_datetime AS last_system_visit_datetime,
             (
                 SELECT st.station_name
@@ -1331,6 +1425,68 @@ def api_import_trip_route(payload: Dict[str, Any]) -> Dict[str, Any]:
         active = active_trip_route(conn)
     notify_data_changed()
     return {"ok": True, "route_id": route_id, "imported_stops": len(stops), "active_route": active}
+
+
+def api_import_trip_route_station_hints(payload: Dict[str, Any]) -> Dict[str, Any]:
+    hints = parse_spansh_station_hints(payload)
+    route_id = coerce_int(payload.get("route_id"))
+    imported_at = now_utc()
+    with connect() as conn:
+        if route_id is None:
+            active_row = conn.execute(
+                """
+                SELECT route_id
+                FROM trip_routes
+                WHERE active = 1
+                ORDER BY imported_datetime DESC, route_id DESC
+                LIMIT 1
+                """
+            ).fetchone()
+            if not active_row:
+                return {"ok": False, "error": "Import a Tourist Route first, then add station hints to the active route."}
+            route_id = int(active_row["route_id"])
+        else:
+            exists = conn.execute("SELECT 1 FROM trip_routes WHERE route_id=?", (route_id,)).fetchone()
+            if not exists:
+                return {"ok": False, "error": "Route not found"}
+
+        updated = 0
+        for system_key, hint in hints.items():
+            cur = conn.execute(
+                """
+                UPDATE trip_route_stops
+                SET station_hint_name=?,
+                    station_hint_type=?,
+                    station_hint_distance_to_arrival_ls=?,
+                    station_hint_large_pads=?,
+                    station_hint_market_id=?
+                WHERE route_id=?
+                  AND lower(system_name_snapshot)=lower(?)
+                """,
+                (
+                    hint["station_name"],
+                    hint.get("station_type") or None,
+                    hint.get("distance_to_arrival_ls"),
+                    hint.get("large_pads"),
+                    hint.get("market_id"),
+                    route_id,
+                    hint["system_name"],
+                ),
+            )
+            updated += int(cur.rowcount or 0)
+        conn.commit()
+        active = active_trip_route(conn)
+        routes = trip_route_rows(conn)
+    notify_data_changed()
+    return {
+        "ok": True,
+        "route_id": route_id,
+        "matched_stops": updated,
+        "hinted_systems": len(hints),
+        "imported_datetime": imported_at,
+        "routes": routes,
+        "active_route": active,
+    }
 
 
 def api_start_trip_route(payload: Dict[str, Any]) -> Dict[str, Any]:

@@ -358,6 +358,28 @@ async function importTripRoute(file) {
   }
 }
 
+async function importTripRouteStationHints(file) {
+  tripRouteBusy.value = true
+  tripRouteStatus.value = 'Importing station hints...'
+  try {
+    const res = await fetch('/api/trip-routes/import-station-hints', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(file),
+    })
+    const data = await res.json()
+    if (!data.ok) throw new Error(data.error || 'Could not import station hints')
+    tripRoutes.value = data.routes || []
+    activeTripRoute.value = data.active_route || null
+    tripRouteStatus.value = `Added station hints to ${data.matched_stops || 0} route stops.`
+    setTimeout(() => { tripRouteStatus.value = '' }, 3200)
+  } catch (err) {
+    tripRouteStatus.value = err?.message || String(err)
+  } finally {
+    tripRouteBusy.value = false
+  }
+}
+
 async function startTripRoute(routeId) {
   tripRouteBusy.value = true
   try {
@@ -398,8 +420,18 @@ async function deleteTripRoute(routeId) {
 
 async function selectTripRouteStop(stop) {
   const stopSystem = String(stop.system_name || '').trim()
+  const stopStation = String(stop.station_hint_name || '').trim()
   const currentSystemFilter = String(filters.value.system || '').trim()
-  filters.value.system = currentSystemFilter.localeCompare(stopSystem, undefined, { sensitivity: 'accent' }) === 0 ? '' : stopSystem
+  const currentStationFilter = String(filters.value.station || '').trim()
+  const sameSystem = currentSystemFilter.localeCompare(stopSystem, undefined, { sensitivity: 'accent' }) === 0
+  const sameStation = !stopStation || currentStationFilter.localeCompare(stopStation, undefined, { sensitivity: 'accent' }) === 0
+  if (sameSystem && sameStation) {
+    filters.value.system = ''
+    if (stopStation) filters.value.station = ''
+  } else {
+    filters.value.system = stopSystem
+    if (stopStation) filters.value.station = stopStation
+  }
   await loadStations()
 }
 
@@ -616,6 +648,7 @@ onUnmounted(() => {
       :current-system="latestJournalEvent?.system || ''"
       :current-position="latestJournalEvent"
       @import-route="importTripRoute"
+      @import-station-hints="importTripRouteStationHints"
       @start-route="startTripRoute"
       @delete-route="deleteTripRoute"
       @select-stop="selectTripRouteStop"

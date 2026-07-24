@@ -98,6 +98,16 @@ watch(() => props.helpRequestId, () => {
       <h3>Spansh Tourist Routes</h3>
       <p>MarketScout can import a <code>.json</code> file downloaded from the Spansh Tourist Route planner at <a href="https://spansh.co.uk/tourist" target="_blank" rel="noreferrer">spansh.co.uk/tourist</a>.</p>
       <p>You can also create this route on Spansh from a Systems or Stations search by using Spansh's option to create a tourist route from that search, then downloading the route result as JSON.</p>
+      <p>After importing a route, you can add station hints from a Spansh Stations Search CSV, or from a Spansh Systems Search CSV that includes the Stations column. MarketScout matches those hints to route stops by system name.</p>
+      <p>The recommended workflow is:
+        <li>On Spansh, run a <a href="https://spansh.co.uk/stations">Stations search</a> or a <a href="https://spansh.co.uk/systems">Systems search</a>; Optionally enable the Stations Filter if you do the Systems Search.</li>
+        <li>Download the Search Results CSV</li>
+        <li>Click on <b>Create a tourist route from this search</b> on the results page</li>
+        <li>Input Start & End systems, and your ship's range and click on <b>Calculate</b></li>
+        <li>Download the resulting route as Json</li>
+        <li>Import the JSON by clicking the <b>Import Tourist Route</b> button in MarketScout's Trip Planner</li>
+        <li>Optionally, import the csv that you got earlier from the Spansh search results page by clicking on <b>Add Stations</b></li>
+      </p>
       <p>Imported route stops are shown above the Stations table. MarketScout also saves the route stop coordinates into its local systems data so distance features can reuse them later.</p>
       <p>The number of jumps to the route start is approximate. It is calculated from straight-line distance divided by the route jump range, so the real plotted route may differ.</p>
     </article>

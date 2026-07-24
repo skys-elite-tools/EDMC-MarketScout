@@ -62,6 +62,7 @@ jobs:
             EDMC-MarketScout/migrations/0003_seed_rare_commodity_initial_supply.py \
             EDMC-MarketScout/migrations/0004_settings_metadata.py \
             EDMC-MarketScout/migrations/0005_trip_routes.py \
+            EDMC-MarketScout/migrations/0006_trip_route_station_hints.py \
             EDMC-MarketScout/marketscout_web.py \
             EDMC-MarketScout/marketscout_ledger.py \
             EDMC-MarketScout/marketscout_importer.py \
