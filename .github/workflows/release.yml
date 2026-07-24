@@ -56,6 +56,7 @@ jobs:
           python3 -m py_compile \
             EDMC-MarketScout/load.py \
             EDMC-MarketScout/marketscout_app.py \
+            EDMC-MarketScout/marketscout_data.py \
             EDMC-MarketScout/marketscout_migrations.py \
             EDMC-MarketScout/migrations/0001_baseline.py \
             EDMC-MarketScout/migrations/0002_rare_commodity_history.py \
