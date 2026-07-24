@@ -45,12 +45,6 @@ If you are cloning the repository for development instead of installing a releas
 
 Shows station market data collected while EDMC and MarketScout were running. Use it to filter visited stations, review watched commodities, and find the current Best Buy opportunity for each station.
 
-#### Trip Planner
-
-Trip Planner lets you import Spansh Tourist Route JSON files and follow scouting routes directly above the Stations table. Stops can be clicked to filter the table, the current system is highlighted when known, and MarketScout shows visit context plus approximate jump information when coordinates are available.
-
-![Stations page showing the Trip Planner route bar above scouting filters](presentation-assets/trip-planner.png)
-
 #### Buy Scout
 
 Buy Scout is the default Stations mode. It focuses watched commodity columns on station buy opportunities, showing station buy price, supply, and potential profit context for commodities you may want to load onto a ship or Fleet Carrier.
@@ -70,6 +64,14 @@ Watched Commodities control which commodity-specific columns are shown in the St
 #### Best Buy Ignore List
 
 The Best Buy ignore list excludes selected commodities from Best Buy calculations. This is useful for commodities that may look good mathematically but are not practical for your trading style, such as commodities that are difficult to sell near their galactic maximum.
+
+#### Trip Planner
+
+Trip Planner lets you import Spansh Tourist Route JSON files and follow scouting routes directly above the Stations table. Stops can be clicked to filter the table, the current system is highlighted when known, and MarketScout shows visit context plus approximate jump information when coordinates are available.
+
+Using Trip Planner is completely optional. Commanders can ignore it and simply free-fly to random systems while scouting.
+
+![Stations page showing the Trip Planner route bar above scouting filters](presentation-assets/trip-planner.png)
 
 ### Jackpots
 
