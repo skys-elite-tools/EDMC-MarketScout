@@ -139,6 +139,12 @@ Controls the local web address, port, optional LAN access, and QR code sharing f
 
 ![Config page showing local address, LAN access, and QR code sharing settings](presentation-assets/config.png)
 
+## Support
+
+MarketScout is free and open source. If you find it useful and would like to support development, you can do so here:
+
+[Support MarketScout on Gumroad](https://oriondreams.gumroad.com/l/MarketScout/)
+
 ## Inspiration and Thanks
 
 The projects below are not affiliated with MarketScout in any way, but they were very helpful and inspirational in the creation of MarketScout:
