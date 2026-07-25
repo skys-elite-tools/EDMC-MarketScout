@@ -1088,6 +1088,17 @@ def clean_text(value: Any) -> str:
     return " ".join(str(value or "").replace("\xa0", " ").strip().split())
 
 
+def station_state_filter_terms(value: str) -> List[str]:
+    text = clean_text(value)
+    if not text:
+        return []
+    compact = re.sub(r"[\s_-]+", "", text)
+    terms = [text]
+    if compact and compact != text:
+        terms.append(compact)
+    return terms
+
+
 def api_trip_routes() -> Dict[str, Any]:
     with connect() as conn:
         return data_trip_routes_response(conn)
@@ -1323,8 +1334,9 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
         where.append("st.station_name LIKE ?")
         params.append(f"%{station}%")
     if state:
-        where.append("st.station_faction_state LIKE ?")
-        params.append(f"%{state}%")
+        state_terms = station_state_filter_terms(state)
+        where.append("(" + " OR ".join("st.station_faction_state LIKE ?" for _ in state_terms) + ")")
+        params.extend(f"%{term}%" for term in state_terms)
     if economies:
         parts = []
         for term in economies:
