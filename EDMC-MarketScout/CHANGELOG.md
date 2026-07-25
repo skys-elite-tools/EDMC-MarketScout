@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.3 Beta
+
+- Added a modest Support modal and links in the footer and top status bar for commanders who want to support MarketScout development.
+
 ## 0.4.2 Beta
 
 - Improved Trip Planner navigation for large Spansh Tourist Routes by replacing huge dot lists with compact range controls and rendering only a nearby window of route stops.
