@@ -5,6 +5,8 @@ import { compactDateTime, localDateTime } from '../utils.js'
 import { dataStore } from '../services/dataStoreService.js'
 
 const EXPANDED_STORAGE_KEY = 'tripPlanner.expanded'
+const LARGE_ROUTE_STOP_THRESHOLD = 120
+const LARGE_ROUTE_WINDOW_SIZE = 8
 
 const props = defineProps({
   routes: { type: Array, default: () => [] },
@@ -36,6 +38,28 @@ const currentStopIndex = computed(() => {
 })
 const activeDotIndex = computed(() => Math.max(0, Math.min(stops.value.length - 1, focusedStopIndex.value)))
 const currentCoords = computed(() => coordsFrom(props.currentPosition))
+const isLargeRoute = computed(() => stops.value.length > LARGE_ROUTE_STOP_THRESHOLD)
+const routeWindowStart = computed(() => {
+  if (!isLargeRoute.value) return 0
+  const maxStart = Math.max(0, stops.value.length - LARGE_ROUTE_WINDOW_SIZE)
+  return Math.max(0, Math.min(activeDotIndex.value - 1, maxStart))
+})
+const routeWindowStops = computed(() => {
+  const source = stops.value
+  if (!isLargeRoute.value) {
+    return source.map((stop, index) => ({ stop, index }))
+  }
+  return source
+    .slice(routeWindowStart.value, routeWindowStart.value + LARGE_ROUTE_WINDOW_SIZE)
+    .map((stop, offset) => ({ stop, index: routeWindowStart.value + offset }))
+})
+const routeWindowLabel = computed(() => {
+  if (!stops.value.length) return ''
+  if (!isLargeRoute.value) return ''
+  const start = routeWindowStart.value + 1
+  const end = Math.min(stops.value.length, routeWindowStart.value + LARGE_ROUTE_WINDOW_SIZE)
+  return `Showing stops ${start.toLocaleString()}-${end.toLocaleString()} of ${stops.value.length.toLocaleString()}`
+})
 const routeSummary = computed(() => {
   const route = props.activeRoute
   if (!route) return ''
@@ -166,15 +190,22 @@ function routeTitle(route) {
 }
 
 function setStopRef(el, index) {
+  if (isLargeRoute.value) return
   if (el) stopEls.value[index] = el
 }
 
 function scrollToStop(index) {
-  if (!stopsEl.value || index < 0) return
-  const target = stopEls.value[index]
+  if (index < 0) return
+  const nextIndex = Math.max(0, Math.min(stops.value.length - 1, index))
+  focusedStopIndex.value = nextIndex
+  if (isLargeRoute.value) {
+    visibleStopIndexes.value = routeWindowStops.value.map(item => item.index)
+    return
+  }
+  if (!stopsEl.value) return
+  const target = stopEls.value[nextIndex]
   if (!target) return
-  focusedStopIndex.value = index
-  const anchor = stopEls.value[Math.max(0, index - 1)] || target
+  const anchor = stopEls.value[Math.max(0, nextIndex - 1)] || target
   const left = anchor.offsetLeft - stopsEl.value.offsetLeft
   stopsEl.value.scrollTo({
     left: Math.max(0, left - 8),
@@ -189,7 +220,14 @@ function stepRoute(direction) {
   scrollToStop(Math.max(0, Math.min(stops.value.length - 1, baseIndex + direction)))
 }
 
+function jumpRoute(direction) {
+  if (!stops.value.length) return
+  const baseIndex = activeDotIndex.value
+  scrollToStop(Math.max(0, Math.min(stops.value.length - 1, baseIndex + direction)))
+}
+
 function syncFocusedStopFromScroll() {
+  if (isLargeRoute.value) return
   if (!stopsEl.value || !stopEls.value.length) return
   syncVisibleStops()
   if (stopsEl.value.scrollLeft < 12) {
@@ -212,6 +250,10 @@ function syncFocusedStopFromScroll() {
 }
 
 function syncVisibleStops() {
+  if (isLargeRoute.value) {
+    visibleStopIndexes.value = routeWindowStops.value.map(item => item.index)
+    return
+  }
   if (!stopsEl.value || !stopEls.value.length) {
     visibleStopIndexes.value = []
     return
@@ -241,6 +283,12 @@ watch(() => props.activeRoute?.route_id, () => {
   stopEls.value = []
   focusedStopIndex.value = 0
   visibleStopIndexes.value = []
+})
+
+watch(routeWindowStops, () => {
+  if (isLargeRoute.value) {
+    visibleStopIndexes.value = routeWindowStops.value.map(item => item.index)
+  }
 })
 
 watch([currentStopIndex, stops], async ([index]) => {
@@ -338,9 +386,15 @@ onBeforeUnmount(() => {
       </div>
 
       <div v-if="activeRoute" class="tripStopsPane">
-        <div ref="stopsEl" class="tripStops" role="list" @scroll.passive="syncFocusedStopFromScroll">
+        <div
+          ref="stopsEl"
+          class="tripStops"
+          :class="{ tripStopsWindowed: isLargeRoute }"
+          role="list"
+          @scroll.passive="syncFocusedStopFromScroll"
+        >
           <button
-            v-for="(stop, index) in stops"
+            v-for="{ stop, index } in routeWindowStops"
             :key="`${stop.route_id}-${stop.stop_index}-${stop.system_address}`"
             :ref="el => setStopRef(el, index)"
             type="button"
@@ -367,8 +421,8 @@ onBeforeUnmount(() => {
             <span class="tripStopVisit">{{ index === currentStopIndex ? 'Current system' : stopVisitLabel(stop) }}</span>
           </button>
         </div>
-        <div v-if="stops.length > 1" class="tripStopPager" aria-label="Route stop navigation">
-          <button type="button" class="tripStopPagerButton" title="Previous stops" @click="stepRoute(-1)">‹</button>
+        <div v-if="stops.length > 1 && !isLargeRoute" class="tripStopPager" aria-label="Route stop navigation">
+          <button type="button" class="tripStopPagerButton" title="Previous stop" @click="stepRoute(-1)">‹</button>
           <button
             v-for="(stop, index) in stops"
             :key="`dot-${stop.route_id}-${stop.stop_index}-${stop.system_address}`"
@@ -383,7 +437,28 @@ onBeforeUnmount(() => {
             :title="stop.system_name"
             @click="scrollToStop(index)"
           />
-          <button type="button" class="tripStopPagerButton" title="Next stops" @click="stepRoute(1)">›</button>
+          <button type="button" class="tripStopPagerButton" title="Next stop" @click="stepRoute(1)">›</button>
+        </div>
+        <div v-else-if="stops.length > 1" class="tripStopCompactPager" aria-label="Large route stop navigation">
+          <button type="button" class="tripStopPagerButton" title="First stop" @click="scrollToStop(0)">‹‹</button>
+          <button type="button" class="tripStopPagerButton" title="Previous 10 stops" @click="jumpRoute(-10)">‹10</button>
+          <button type="button" class="tripStopPagerButton" title="Previous stop" @click="stepRoute(-1)">‹</button>
+          <input
+            class="tripStopRange"
+            type="range"
+            min="1"
+            :max="stops.length"
+            :value="activeDotIndex + 1"
+            :aria-label="`Route stop ${activeDotIndex + 1} of ${stops.length}`"
+            @input="scrollToStop(Number($event.target.value) - 1)"
+          />
+          <span class="tripStopCompactLabel">
+            Stop {{ (activeDotIndex + 1).toLocaleString() }} / {{ stops.length.toLocaleString() }}
+            <span v-if="routeWindowLabel">{{ routeWindowLabel }}</span>
+          </span>
+          <button type="button" class="tripStopPagerButton" title="Next stop" @click="stepRoute(1)">›</button>
+          <button type="button" class="tripStopPagerButton" title="Next 10 stops" @click="jumpRoute(10)">10›</button>
+          <button type="button" class="tripStopPagerButton" title="Last stop" @click="scrollToStop(stops.length - 1)">››</button>
         </div>
       </div>
       <div v-else class="tripStops tripStopsPlaceholder">
@@ -575,6 +650,9 @@ onBeforeUnmount(() => {
 .tripStops::-webkit-scrollbar {
   display: none;
 }
+.tripStopsWindowed {
+  overflow-x: hidden;
+}
 .tripStopsPlaceholder {
   align-items: center;
   color: var(--muted);
@@ -736,6 +814,39 @@ onBeforeUnmount(() => {
   outline: 1px solid rgba(216, 246, 255, .72);
   outline-offset: 2px;
 }
+.tripStopCompactPager {
+  display: grid;
+  grid-template-columns: auto auto auto minmax(12rem, 1fr) minmax(13rem, auto) auto auto auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+}
+.tripStopCompactPager .tripStopPagerButton {
+  width: 38px;
+  height: 26px;
+  font-size: 13px;
+  font-weight: 900;
+}
+.tripStopRange {
+  width: 100%;
+  min-width: 0;
+  accent-color: #ca84ff;
+  cursor: pointer;
+}
+.tripStopCompactLabel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.1;
+  text-align: right;
+  white-space: nowrap;
+}
+.tripStopCompactLabel > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 @media (max-width: 980px) {
   .tripRouteLayout {
     grid-template-columns: 1fr;
@@ -745,6 +856,13 @@ onBeforeUnmount(() => {
     padding-bottom: 7px;
     border-right: 0;
     border-bottom: 1px solid rgba(140, 200, 255, .22);
+  }
+  .tripStopCompactPager {
+    grid-template-columns: auto auto auto minmax(8rem, 1fr) auto auto auto;
+  }
+  .tripStopCompactLabel {
+    grid-column: 1 / -1;
+    text-align: center;
   }
 }
 </style>
