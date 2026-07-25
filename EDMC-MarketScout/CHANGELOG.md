@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.4 Beta
+
+- Fixed the Stations Economic State filter so human-readable state names such as `Infrastructure Failure` also match compact journal values such as `InfrastructureFailure`.
+
 ## 0.4.3 Beta
 
 - Added a modest Support modal and links in the footer and top status bar for commanders who want to support MarketScout development.
