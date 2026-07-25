@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2 Beta
+
+- Improved Trip Planner navigation for large Spansh Tourist Routes by replacing huge dot lists with compact range controls and rendering only a nearby window of route stops.
+- Improved Trip Planner station matching guidance for Spansh CSV exports, especially when pairing a Tourist Route JSON with a higher page-size Stations/Search CSV export.
+
 ## 0.4.1 Beta
 
 - Added Trip Planner station hints from Spansh CSV exports, plus a viewport-clamped Routes menu so the route list no longer opens partially off-screen.
