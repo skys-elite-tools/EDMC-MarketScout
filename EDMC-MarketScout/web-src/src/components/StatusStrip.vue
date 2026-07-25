@@ -10,7 +10,7 @@ const props = defineProps({
   updateStatus: { type: Object, default: null },
   updateBusy: { type: Boolean, default: false },
 })
-const emit = defineEmits(['update:autoRefresh', 'run-update'])
+const emit = defineEmits(['update:autoRefresh', 'run-update', 'open-support'])
 
 const journalLabel = computed(() => {
   const event = props.latestJournalEvent || null
@@ -62,6 +62,14 @@ const updateLabel = computed(() => {
         />
         Auto-refresh
       </label>
+      <button
+        type="button"
+        class="statusSupportLink"
+        title="Support MarketScout development"
+        @click="emit('open-support')"
+      >
+        Support
+      </button>
     </div>
   </section>
 </template>

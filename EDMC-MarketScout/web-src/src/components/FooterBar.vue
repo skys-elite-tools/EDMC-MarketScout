@@ -6,10 +6,10 @@ const props = defineProps({
   helpArticle: { type: String, default: '' },
   helpRequestId: { type: Number, default: 0 },
 })
+const emit = defineEmits(['open-support'])
 
 const aboutOpen = ref(false)
 const helpOpen = ref(false)
-const supportOpen = ref(false)
 
 const thanks = [
   ['Elite:Dangerous Market Connector (EDMC)', 'https://github.com/EDCD/EDMarketConnector'],
@@ -38,7 +38,7 @@ watch(() => props.helpRequestId, () => {
     <span class="footerLinks">
       <button type="button" class="linkButton" @click="aboutOpen = true">About</button>
       <button type="button" class="linkButton" @click="openHelp()">Help</button>
-      <button type="button" class="linkButton" @click="supportOpen = true">Support</button>
+      <button type="button" class="linkButton" @click="emit('open-support')">Support</button>
     </span>
   </footer>
 
@@ -64,14 +64,6 @@ watch(() => props.helpRequestId, () => {
         <a :href="href" target="_blank" rel="noreferrer">{{ label }}</a>
       </li>
     </ul>
-  </ModalShell>
-
-  <ModalShell v-if="supportOpen" title="Support MarketScout" title-id="supportTitle" panel-class="aboutModal" @close="supportOpen = false">
-    <p>MarketScout is free and open source. If you find it useful and would like to support development, you can do so here:</p>
-    <p>
-      <a href="https://oriondreams.gumroad.com/l/MarketScout/" target="_blank" rel="noreferrer">Support MarketScout on Gumroad</a>
-    </p>
-    <p>Thank you for helping keep MarketScout moving forward. o7 commanders.</p>
   </ModalShell>
 
   <ModalShell v-if="helpOpen" title="Help" title-id="helpTitle" panel-class="aboutModal helpModal" @close="helpOpen = false">

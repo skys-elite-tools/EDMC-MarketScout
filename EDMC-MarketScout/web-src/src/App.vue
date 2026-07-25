@@ -16,6 +16,7 @@ import CarrierTradeAnnouncementsView from './views/CarrierTradeAnnouncementsView
 import CarrierTradeCalculatorView from './views/CarrierTradeCalculatorView.vue'
 import ConfigurationView from './views/ConfigurationView.vue'
 import FooterBar from './components/FooterBar.vue'
+import ModalShell from './components/ModalShell.vue'
 import { dedupeStationRows, query } from './utils.js'
 import { dataStore } from './services/dataStoreService.js'
 
@@ -57,6 +58,7 @@ const settingsVisible = ref(false)
 const bestBuyIgnoreVisible = ref(false)
 const helpArticle = ref('')
 const helpRequestId = ref(0)
+const supportOpen = ref(false)
 const commoditySearch = ref('')
 const bestBuyIgnoreSearch = ref('')
 const statusText = ref('Loading…')
@@ -632,6 +634,7 @@ onUnmounted(() => {
       :update-status="updateStatus"
       :update-busy="updateBusy"
       @run-update="handleUpdateAction"
+      @open-support="supportOpen = true"
     />
 
     <TopBar
@@ -779,7 +782,16 @@ onUnmounted(() => {
     <FooterBar
       :help-article="helpArticle"
       :help-request-id="helpRequestId"
+      @open-support="supportOpen = true"
     />
+
+    <ModalShell v-if="supportOpen" title="Support MarketScout" title-id="supportTitle" panel-class="aboutModal" @close="supportOpen = false">
+      <p>MarketScout is free and open source. If you find it useful and would like to support development, you can do so here:</p>
+      <p>
+        <a href="https://oriondreams.gumroad.com/l/MarketScout/" target="_blank" rel="noreferrer">Support MarketScout on Gumroad</a>
+      </p>
+      <p>Thank you for helping keep MarketScout moving forward. o7 commanders.</p>
+    </ModalShell>
 
     <div v-if="updateModal.visible" class="modalBackdrop" @click.self="updateModal.visible = false">
       <section class="aboutModal updateModal" role="dialog" aria-modal="true" aria-labelledby="update-modal-title">

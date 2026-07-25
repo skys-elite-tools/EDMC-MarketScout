@@ -1008,3 +1008,17 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.statusSupportLink {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #d9b2ff;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: none;
+}
+.statusSupportLink:hover {
+  color: #ecc9ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
