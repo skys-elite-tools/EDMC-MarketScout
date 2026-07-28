@@ -11,6 +11,7 @@ import json
 import math
 import os
 import sqlite3
+import sys
 import traceback
 import importlib.util
 import webbrowser
@@ -221,12 +222,25 @@ def edmc_eddn_status() -> Dict[str, Any]:
             output = default_output
         station_flag = int(getattr(EDMC_CONFIG, "OUT_EDDN_SEND_STATION_DATA", 1))
         enabled = bool(output & station_flag)
+        delay_seconds = max(0, EDMC_CONFIG.get_int("eddn_station_delay_seconds", 0))
+        send_control = edmc_eddn_send_control_status()
+        delayed = enabled and delay_seconds > 0
         return {
             "available": True,
             "station_data_enabled": enabled,
-            "label": f"EDDN Station: {'On' if enabled else 'Off'}",
+            "station_data_delay_seconds": delay_seconds,
+            "delayed_station_messages_pending": send_control["pending_count"],
+            "delayed_station_messages": send_control["delayed_messages"],
+            "can_discard_delayed_station_messages": send_control["can_discard"],
+            "label": (
+                f"EDDN Station: Delayed {delay_seconds} seconds"
+                if delayed
+                else f"EDDN Station: {'On' if enabled else 'Off'}"
+            ),
             "detail": (
-                "EDMC is configured to send station data to EDDN."
+                f"EDMC is configured to send station data to EDDN after a {delay_seconds} second delay."
+                if delayed
+                else "EDMC is configured to send station data to EDDN."
                 if enabled
                 else "EDMC is configured not to send station data to EDDN."
             ),
@@ -238,6 +252,88 @@ def edmc_eddn_status() -> Dict[str, Any]:
             "label": "EDDN Station: Unknown",
             "detail": f"Could not read EDMC EDDN station-data setting: {exc}",
         }
+
+
+def find_edmc_eddn_module() -> Any:
+    for module_name in ("plugins.eddn", "eddn"):
+        module = sys.modules.get(module_name)
+        if module is not None and (
+            callable(getattr(module, "discard_delayed_station_messages", None))
+            or callable(getattr(module, "delayed_station_messages_count", None))
+            or callable(getattr(module, "delayed_station_messages_snapshot", None))
+        ):
+            return module
+    for module_name, module in list(sys.modules.items()):
+        if module_name.endswith("eddn") and (
+            callable(getattr(module, "discard_delayed_station_messages", None))
+            or callable(getattr(module, "delayed_station_messages_count", None))
+            or callable(getattr(module, "delayed_station_messages_snapshot", None))
+        ):
+            return module
+    return None
+
+
+def edmc_eddn_send_control_status() -> Dict[str, Any]:
+    module = find_edmc_eddn_module()
+    if module is None:
+        return {"available": False, "can_discard": False, "pending_count": 0, "delayed_messages": []}
+    delayed_messages = []
+    snapshot_fn = getattr(module, "delayed_station_messages_snapshot", None)
+    if callable(snapshot_fn):
+        try:
+            raw_messages = snapshot_fn()
+        except Exception:
+            raw_messages = []
+        if isinstance(raw_messages, list):
+            for item in raw_messages:
+                if not isinstance(item, dict):
+                    continue
+                try:
+                    seconds_remaining = max(0, int(item.get("seconds_remaining") or 0))
+                except (TypeError, ValueError):
+                    seconds_remaining = 0
+                delayed_messages.append(
+                    {
+                        "station_name": str(item.get("station_name") or ""),
+                        "system_name": str(item.get("system_name") or ""),
+                        "seconds_remaining": seconds_remaining,
+                    }
+                )
+    count_fn = getattr(module, "delayed_station_messages_count", None)
+    pending_count = len(delayed_messages)
+    if pending_count < 1 and callable(count_fn):
+        try:
+            pending_count = int(count_fn())
+        except Exception:
+            pending_count = 0
+    return {
+        "available": True,
+        "can_discard": callable(getattr(module, "discard_delayed_station_messages", None)),
+        "pending_count": max(0, pending_count),
+        "delayed_messages": delayed_messages,
+    }
+
+
+def discard_edmc_delayed_station_messages() -> Dict[str, Any]:
+    module = find_edmc_eddn_module()
+    if module is None:
+        return {
+            "ok": False,
+            "discarded": 0,
+            "error": "This EDMC build does not expose delayed EDDN station-message controls.",
+        }
+    discard_fn = getattr(module, "discard_delayed_station_messages", None)
+    if not callable(discard_fn):
+        return {
+            "ok": False,
+            "discarded": 0,
+            "error": "Delayed EDDN station-message discard is not available.",
+        }
+    try:
+        discarded = int(discard_fn())
+        return {"ok": True, "discarded": max(0, discarded)}
+    except Exception as exc:
+        return {"ok": False, "discarded": 0, "error": str(exc)}
 
 
 def plugin_stop() -> None:
@@ -1709,7 +1805,14 @@ def open_modern_ui() -> None:
             log_exception("open_modern_ui_not_initialized")
             return
         web = load_web_module()
-        web.start_server(PLUGIN_DIR, DB_PATH, TARGET_COMMODITIES, PRIMARY_METALS, edmc_eddn_status)
+        web.start_server(
+            PLUGIN_DIR,
+            DB_PATH,
+            TARGET_COMMODITIES,
+            PRIMARY_METALS,
+            edmc_eddn_status,
+            discard_edmc_delayed_station_messages,
+        )
         url = web.server_url() or "http://127.0.0.1:40595/"
         webbrowser.open(url)
     except Exception:

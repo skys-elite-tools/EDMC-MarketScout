@@ -975,6 +975,40 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   background: rgba(175, 92, 230, .10);
   font-weight: 800;
 }
+.edmcDelayQueueStatus {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.35rem;
+  max-width: min(30vw, 260px);
+  padding: 1px 7px;
+  border: 1px solid rgba(202, 132, 255, .28);
+  border-radius: 999px;
+  color: #e5c9ff;
+  background: rgba(202, 132, 255, .07);
+  font-size: 12px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.edmcDiscardButton {
+  min-height: 1.45rem;
+  padding: 1px 7px;
+  border-color: rgba(202, 132, 255, .36);
+  border-radius: 999px;
+  background: rgba(202, 132, 255, .12);
+  color: #ecc9ff;
+  font-size: 12px;
+  font-weight: 800;
+}
+.edmcDiscardButton:hover:not(:disabled) {
+  border-color: rgba(202, 132, 255, .62);
+  background: rgba(202, 132, 255, .20);
+}
+.edmcDiscardButton:disabled {
+  opacity: .70;
+  cursor: progress;
+}
 .updateStatusSlot {
   justify-self: center;
 }

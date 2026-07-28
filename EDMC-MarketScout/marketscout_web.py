@@ -237,6 +237,7 @@ def start_server(
     target_commodities: List[str],
     primary_metals: List[str],
     edmc_status_provider: Optional[Callable[[], Dict[str, Any]]] = None,
+    edmc_discard_delayed_station_messages_provider: Optional[Callable[[], Dict[str, Any]]] = None,
 ) -> int:
     """Start the local web server if needed and return its port."""
     global _SERVERS, _THREADS, _PORT, _BIND_ADDRESS, _LAN_BIND_ADDRESS, _LAN_PORT, _LAN_ENABLED, _CONTEXT
@@ -256,6 +257,7 @@ def start_server(
         "web_config": dict(web_config),
         "lan_error": "",
         "edmc_status_provider": edmc_status_provider,
+        "edmc_discard_delayed_station_messages_provider": edmc_discard_delayed_station_messages_provider,
     }
 
     bind_port = int(web_config["bind_port"])
@@ -594,6 +596,8 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
                 return self.send_json(api_save_settings(payload))
             if parsed.path == "/api/user-data":
                 return self.send_json(api_save_user_data(payload))
+            if parsed.path == "/api/edmc/eddn/discard-delayed-station-messages":
+                return self.send_json(api_discard_edmc_delayed_station_messages())
             if parsed.path == "/api/trip-routes/import":
                 return self.send_json(api_import_trip_route(payload))
             if parsed.path == "/api/trip-routes/import-station-hints":
@@ -688,6 +692,20 @@ def api_status() -> Dict[str, Any]:
         "edmc": edmc_status,
         "update": update_status_snapshot(),
     }
+
+
+def api_discard_edmc_delayed_station_messages() -> Dict[str, Any]:
+    provider = _CONTEXT.get("edmc_discard_delayed_station_messages_provider")
+    if not callable(provider):
+        return {
+            "ok": False,
+            "discarded": 0,
+            "error": "This EDMC build does not expose delayed EDDN station-message controls.",
+        }
+    try:
+        return provider()
+    except Exception as exc:
+        return {"ok": False, "discarded": 0, "error": str(exc)}
 
 
 def row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:

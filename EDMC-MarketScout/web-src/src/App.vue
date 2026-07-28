@@ -67,6 +67,7 @@ const edmcStatus = ref(null)
 const autoRefresh = ref(true)
 const updateStatus = ref(null)
 const updateBusy = ref(false)
+const edmcDiscardBusy = ref(false)
 const updateModal = ref({
   visible: false,
   title: '',
@@ -621,6 +622,25 @@ async function handleUpdateAction() {
   }
 }
 
+async function discardEdmcDelayedStationMessages() {
+  edmcDiscardBusy.value = true
+  try {
+    const res = await fetch('/api/edmc/eddn/discard-delayed-station-messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    const data = await res.json()
+    if (!data.ok) throw new Error(data.error || 'Could not clear delayed EDDN station messages')
+    statusText.value = `Cleared ${Number(data.discarded || 0)} delayed EDDN station message(s) · ${new Date().toLocaleTimeString()}`
+    await pollStatus()
+  } catch (err) {
+    statusText.value = `${err?.message || err} · ${new Date().toLocaleTimeString()}`
+  } finally {
+    edmcDiscardBusy.value = false
+  }
+}
+
 let pollTimer = null
 onMounted(async () => {
   const storedView = await dataStore.get(ACTIVE_VIEW_STORAGE_KEY, currentView.value, {
@@ -654,7 +674,9 @@ onUnmounted(() => {
       :edmc-status="edmcStatus"
       :update-status="updateStatus"
       :update-busy="updateBusy"
+      :edmc-discard-busy="edmcDiscardBusy"
       @run-update="handleUpdateAction"
+      @discard-edmc-delayed="discardEdmcDelayedStationMessages"
       @open-support="supportOpen = true"
     />
 
