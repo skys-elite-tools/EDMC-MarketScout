@@ -4,6 +4,7 @@
 
 - Added right-click copy actions for Trip Planner stops so system and station names can be copied quickly.
 - Added soft-skipped Trip Planner stops so broken or unwanted route systems can be bypassed without deleting them from the trip.
+- Added MarketScout controls for compatible EDMC forks to view message types and discard delayed, not-yet-sent EDDN station messages.
 
 ## 0.4.5 Beta
 
