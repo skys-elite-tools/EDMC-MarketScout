@@ -159,7 +159,7 @@ function stationHintLabel(stop) {
   if (!name) return ''
   const parts = [name]
   if (stop.station_hint_large_pads != null) parts.push(`${Number(stop.station_hint_large_pads || 0)} L`)
-  if (stop.station_hint_distance_to_arrival_ls != null) parts.push(`${Number(stop.station_hint_distance_to_arrival_ls).toLocaleString()} Ls`)
+  if (stop.station_hint_distance_to_arrival_ls != null) parts.push(`${Math.round(Number(stop.station_hint_distance_to_arrival_ls)).toLocaleString()} Ls`)
   return parts.join(' · ')
 }
 
