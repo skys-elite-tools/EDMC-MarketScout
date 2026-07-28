@@ -1,8 +1,9 @@
 # Changelog
 
 ## Unreleased
-- Added right-click copy actions for Trip Planner stops so system and station names can be copied quickly.
 
+- Added right-click copy actions for Trip Planner stops so system and station names can be copied quickly.
+- Added soft-skipped Trip Planner stops so broken or unwanted route systems can be bypassed without deleting them from the trip.
 
 ## 0.4.5 Beta
 

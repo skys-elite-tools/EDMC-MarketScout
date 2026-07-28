@@ -16,7 +16,7 @@ const props = defineProps({
   currentSystem: { type: String, default: '' },
   currentPosition: { type: Object, default: null },
 })
-const emit = defineEmits(['import-route', 'import-station-hints', 'start-route', 'delete-route', 'select-stop', 'open-help'])
+const emit = defineEmits(['import-route', 'import-station-hints', 'start-route', 'set-stop-skipped', 'delete-route', 'select-stop', 'open-help'])
 
 const fileInput = ref(null)
 const hintFileInput = ref(null)
@@ -27,6 +27,7 @@ const stopContextMenuOpen = ref(false)
 const stopContextMenuEl = ref(null)
 const stopContextMenuStyle = ref({})
 const stopContextMenuStop = ref(null)
+const stopSkipHoldActive = ref(false)
 const stopsEl = ref(null)
 const stopEls = ref([])
 const expanded = ref(Boolean(dataStore.cached(EXPANDED_STORAGE_KEY, false)))
@@ -80,6 +81,7 @@ const routeSummary = computed(() => {
   if (Number(route.total_distance_ly)) parts.push(`${Number(route.total_distance_ly).toFixed(1)} Ly`)
   return parts.join(' · ')
 })
+let stopSkipHoldTimer = null
 
 function coordsFrom(value) {
   const x = Number(value?.x)
@@ -171,6 +173,10 @@ function stopStationName(stop) {
   return String(stop?.station_hint_name || stop?.last_station_name || '').trim()
 }
 
+function isStopSkipped(stop) {
+  return Number(stop?.stop_skipped || 0) === 1
+}
+
 function stopLegLabel(stop, index) {
   if (index === 0 && currentStopIndex.value !== 0) {
     const distance = distanceLy(currentCoords.value, coordsFrom(stop))
@@ -244,6 +250,7 @@ function openStopContextMenu(event, stop) {
   }
   stopContextMenuStop.value = stop
   stopContextMenuOpen.value = true
+  stopSkipHoldActive.value = false
   menuOpen.value = false
 }
 
@@ -281,6 +288,32 @@ function copyStopSystemName() {
 
 function copyStopStationName() {
   copyText(stopStationName(stopContextMenuStop.value))
+}
+
+function cancelStopSkipHold() {
+  if (stopSkipHoldTimer != null) {
+    window.clearTimeout(stopSkipHoldTimer)
+    stopSkipHoldTimer = null
+  }
+  stopSkipHoldActive.value = false
+}
+
+function beginStopSkipHold(event) {
+  event.preventDefault()
+  if (!stopContextMenuStop.value || stopSkipHoldTimer != null) return
+  stopSkipHoldActive.value = true
+  stopSkipHoldTimer = window.setTimeout(() => {
+    const stop = stopContextMenuStop.value
+    stopSkipHoldTimer = null
+    stopSkipHoldActive.value = false
+    stopContextMenuOpen.value = false
+    if (!stop) return
+    emit('set-stop-skipped', {
+      route_id: stop.route_id || props.activeRoute?.route_id,
+      stop_index: stop.stop_index,
+      skipped: !isStopSkipped(stop),
+    })
+  }, 2000)
 }
 
 function stepRoute(direction) {
@@ -348,6 +381,7 @@ function onDocumentClick(event) {
   }
   if (stopContextMenuOpen.value && !stopContextMenuEl.value?.contains(event.target)) {
     stopContextMenuOpen.value = false
+    cancelStopSkipHold()
   }
 }
 
@@ -356,6 +390,7 @@ watch(() => props.activeRoute?.route_id, () => {
   focusedStopIndex.value = progressStopIndex.value
   visibleStopIndexes.value = []
   stopContextMenuOpen.value = false
+  cancelStopSkipHold()
 })
 
 watch(routeWindowStops, () => {
@@ -387,6 +422,7 @@ onMounted(async () => {
   }
 })
 onBeforeUnmount(() => {
+  cancelStopSkipHold()
   document.removeEventListener('click', onDocumentClick)
   window.removeEventListener('resize', syncVisibleStops)
 })
@@ -481,13 +517,14 @@ onBeforeUnmount(() => {
             :ref="el => setStopRef(el, index)"
             type="button"
             class="tripStop"
-            :class="{ tripStopCurrent: index === currentStopIndex, tripStopProgress: index === progressStopIndex }"
+            :class="{ tripStopCurrent: index === currentStopIndex, tripStopProgress: index === progressStopIndex, tripStopSkipped: isStopSkipped(stop) }"
             role="listitem"
             :title="stopTitle(stop)"
             @click="emit('select-stop', stop)"
             @contextmenu.prevent.stop="openStopContextMenu($event, stop)"
           >
-            <span v-if="index === progressStopIndex" class="tripStopMarker tripStopProgressMarker">Progress</span>
+            <span v-if="isStopSkipped(stop)" class="tripStopMarker tripStopSkippedMarker">Skipped</span>
+            <span v-else-if="index === progressStopIndex" class="tripStopMarker tripStopProgressMarker">Progress</span>
             <span v-else-if="index === 0" class="tripStopMarker">Start</span>
             <span v-else-if="index === stops.length - 1" class="tripStopMarker">End</span>
             <span class="tripStopName">{{ stop.system_name }}</span>
@@ -513,6 +550,20 @@ onBeforeUnmount(() => {
         >
           <button type="button" @click="copyStopSystemName">Copy system name</button>
           <button type="button" :disabled="!stopStationName(stopContextMenuStop)" @click="copyStopStationName">Copy station name</button>
+          <div class="tripStopContextDivider"></div>
+          <button
+            type="button"
+            class="tripStopHoldButton"
+            :class="{ tripStopHoldActive: stopSkipHoldActive }"
+            @mousedown="beginStopSkipHold"
+            @mouseup="cancelStopSkipHold"
+            @mouseleave="cancelStopSkipHold"
+            @touchstart="beginStopSkipHold"
+            @touchend="cancelStopSkipHold"
+            @touchcancel="cancelStopSkipHold"
+          >
+            <span>{{ isStopSkipped(stopContextMenuStop) ? 'Hold to restore stop' : 'Hold to skip stop' }}</span>
+          </button>
         </div>
         <div v-if="stops.length > 1 && !isLargeRoute" class="tripStopPager" aria-label="Route stop navigation">
           <button type="button" class="tripStopPagerButton" title="Previous stop" @click="stepRoute(-1)">‹</button>
@@ -707,6 +758,32 @@ onBeforeUnmount(() => {
 .tripStopContextMenu button:disabled {
   color: rgba(151, 166, 184, .46);
 }
+.tripStopContextDivider {
+  height: 1px;
+  margin: 2px 0;
+  background: rgba(140, 200, 255, .16);
+}
+.tripStopContextMenu .tripStopHoldButton {
+  position: relative;
+  overflow: hidden;
+  color: #ecc9ff;
+  border-color: rgba(202, 132, 255, .28);
+}
+.tripStopHoldButton::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(202, 132, 255, .26), rgba(92, 208, 149, .36));
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+.tripStopHoldButton.tripStopHoldActive::before {
+  animation: tripStopHoldFill 2s linear forwards;
+}
+.tripStopHoldButton span {
+  position: relative;
+  z-index: 1;
+}
 .tripRouteMenuItem {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 2rem;
@@ -861,6 +938,28 @@ onBeforeUnmount(() => {
   border-color: rgba(202, 132, 255, .68);
   background: rgba(202, 132, 255, .22);
 }
+.tripStopSkipped {
+  border-color: rgba(151, 166, 184, .22);
+  background: linear-gradient(90deg, rgba(29, 34, 42, .82), rgba(40, 45, 54, .82));
+  color: rgba(230, 236, 243, .62);
+  box-shadow: none;
+}
+.tripStopSkipped::before,
+.tripStopSkipped::after {
+  filter: grayscale(1);
+  opacity: .32;
+}
+.tripStopSkipped .tripStopName,
+.tripStopSkipped .tripStopStationHint,
+.tripStopSkipped .tripStopMeta,
+.tripStopSkipped .tripStopVisit {
+  color: rgba(151, 166, 184, .68);
+}
+.tripStopSkippedMarker {
+  border-color: rgba(151, 166, 184, .30);
+  background: rgba(151, 166, 184, .14);
+  color: rgba(230, 236, 243, .72);
+}
 .tripStopName {
   font-weight: 900;
   white-space: nowrap;
@@ -1002,6 +1101,19 @@ onBeforeUnmount(() => {
   .tripStopCompactLabel {
     grid-column: 1 / -1;
     text-align: center;
+  }
+}
+@keyframes tripStopHoldFill {
+  from {
+    transform: scaleX(0);
+  }
+  96% {
+    transform: scaleX(1);
+    background: linear-gradient(90deg, rgba(202, 132, 255, .26), rgba(92, 208, 149, .36));
+  }
+  to {
+    transform: scaleX(1);
+    background: rgba(92, 208, 149, .52);
   }
 }
 </style>

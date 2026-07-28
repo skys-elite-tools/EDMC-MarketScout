@@ -42,6 +42,39 @@ def clean_text(value: Any) -> str:
     return " ".join(str(value or "").replace("\xa0", " ").strip().split())
 
 
+def contiguous_trip_progress_index(conn: sqlite3.Connection, route_id: int, current_index: int, baseline: str) -> int:
+    next_index = current_index
+    stop_rows = conn.execute(
+        """
+        SELECT
+            trs.stop_index,
+            COALESCE(trs.stop_skipped, 0) AS stop_skipped,
+            EXISTS (
+              SELECT 1
+              FROM systems s
+              WHERE s.last_visit_datetime IS NOT NULL
+                AND s.last_visit_datetime >= ?
+                AND (
+                  (trs.system_address IS NOT NULL AND s.system_address = trs.system_address)
+                  OR lower(s.system_name) = lower(trs.system_name_snapshot)
+                )
+              )
+            AS was_visited
+        FROM trip_route_stops trs
+        WHERE trs.route_id = ?
+          AND trs.stop_index > ?
+        ORDER BY trs.stop_index
+        """,
+        (baseline, route_id, current_index),
+    ).fetchall()
+
+    for row in stop_rows:
+        if not int(row["stop_skipped"] or 0) and not int(row["was_visited"] or 0):
+            break
+        next_index = int(row["stop_index"])
+    return next_index
+
+
 def advance_active_trip_progress(
     conn: sqlite3.Connection,
     system_name: Optional[str],
@@ -92,34 +125,7 @@ def advance_active_trip_progress(
     if not event_stop:
         return False
 
-    next_index = current_index
-    stop_rows = conn.execute(
-        """
-        SELECT
-            trs.stop_index,
-            EXISTS (
-              SELECT 1
-              FROM systems s
-              WHERE s.last_visit_datetime IS NOT NULL
-                AND s.last_visit_datetime >= ?
-                AND (
-                  (trs.system_address IS NOT NULL AND s.system_address = trs.system_address)
-                  OR lower(s.system_name) = lower(trs.system_name_snapshot)
-                )
-              )
-            AS was_visited
-        FROM trip_route_stops trs
-        WHERE trs.route_id = ?
-          AND trs.stop_index > ?
-        ORDER BY trs.stop_index
-        """,
-        (baseline, route_id, current_index),
-    ).fetchall()
-
-    for row in stop_rows:
-        if not int(row["was_visited"] or 0):
-            break
-        next_index = int(row["stop_index"])
+    next_index = contiguous_trip_progress_index(conn, route_id, current_index, baseline)
 
     if next_index <= current_index:
         return False
@@ -362,6 +368,8 @@ def trip_route_stop_rows(conn: sqlite3.Connection, route_id: int) -> List[Dict[s
             trs.station_hint_distance_to_arrival_ls,
             trs.station_hint_large_pads,
             trs.station_hint_market_id,
+            COALESCE(trs.stop_skipped, 0) AS stop_skipped,
+            trs.stop_skipped_datetime,
             s.last_visit_datetime AS last_system_visit_datetime,
             (
                 SELECT st.station_name
@@ -546,6 +554,71 @@ def start_trip_route(conn: sqlite3.Connection, payload: Dict[str, Any]) -> Dict[
         return {"ok": False, "error": "Route not found"}
     conn.execute("UPDATE trip_routes SET active=0")
     conn.execute("UPDATE trip_routes SET active=1 WHERE route_id=?", (route_id,))
+    conn.commit()
+    return {"ok": True, "routes": trip_route_rows(conn), "active_route": active_trip_route(conn)}
+
+
+def set_trip_route_stop_skipped(conn: sqlite3.Connection, payload: Dict[str, Any], updated_at: str) -> Dict[str, Any]:
+    route_id = coerce_int(payload.get("route_id"))
+    stop_index = coerce_int(payload.get("stop_index"))
+    skipped = bool(payload.get("skipped"))
+    if route_id is None or stop_index is None:
+        return {"ok": False, "error": "Missing route_id or stop_index"}
+
+    route = conn.execute(
+        """
+        SELECT route_id, active, imported_datetime, progress_stop_index, progress_updated_datetime
+        FROM trip_routes
+        WHERE route_id = ?
+        """,
+        (route_id,),
+    ).fetchone()
+    if not route:
+        return {"ok": False, "error": "Route not found"}
+
+    exists = conn.execute(
+        "SELECT 1 FROM trip_route_stops WHERE route_id=? AND stop_index=?",
+        (route_id, stop_index),
+    ).fetchone()
+    if not exists:
+        return {"ok": False, "error": "Route stop not found"}
+
+    conn.execute(
+        """
+        UPDATE trip_route_stops
+        SET stop_skipped = ?,
+            stop_skipped_datetime = ?
+        WHERE route_id = ?
+          AND stop_index = ?
+        """,
+        (1 if skipped else 0, clean_text(updated_at) if skipped else None, route_id, stop_index),
+    )
+
+    current_index = coerce_int(route["progress_stop_index"]) or 0
+    baseline = clean_text(route["progress_updated_datetime"] or route["imported_datetime"])
+    if skipped:
+        next_index = contiguous_trip_progress_index(conn, route_id, current_index, baseline)
+        if next_index > current_index:
+            conn.execute(
+                """
+                UPDATE trip_routes
+                SET progress_stop_index = ?,
+                    progress_updated_datetime = ?
+                WHERE route_id = ?
+                """,
+                (next_index, clean_text(updated_at), route_id),
+            )
+    elif stop_index <= current_index:
+        conn.execute(
+            """
+            UPDATE trip_routes
+            SET progress_stop_index = ?,
+                progress_updated_datetime = ?
+            WHERE route_id = ?
+            """,
+            (max(0, stop_index - 1), clean_text(updated_at), route_id),
+        )
+
     conn.commit()
     return {"ok": True, "routes": trip_route_rows(conn), "active_route": active_trip_route(conn)}
 

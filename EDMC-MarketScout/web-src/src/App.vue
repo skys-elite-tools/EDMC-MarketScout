@@ -420,6 +420,27 @@ async function deleteTripRoute(routeId) {
   }
 }
 
+async function setTripRouteStopSkipped(payload) {
+  tripRouteBusy.value = true
+  try {
+    const res = await fetch('/api/trip-routes/skip-stop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const data = await res.json()
+    if (!data.ok) throw new Error(data.error || 'Could not update route stop')
+    tripRoutes.value = data.routes || []
+    activeTripRoute.value = data.active_route || null
+    tripRouteStatus.value = payload?.skipped ? 'Route stop skipped.' : 'Route stop restored.'
+    setTimeout(() => { tripRouteStatus.value = '' }, 2600)
+  } catch (err) {
+    tripRouteStatus.value = err?.message || String(err)
+  } finally {
+    tripRouteBusy.value = false
+  }
+}
+
 async function selectTripRouteStop(stop) {
   const stopSystem = String(stop.system_name || '').trim()
   const stopStation = String(stop.station_hint_name || '').trim()
@@ -653,6 +674,7 @@ onUnmounted(() => {
       @import-route="importTripRoute"
       @import-station-hints="importTripRouteStationHints"
       @start-route="startTripRoute"
+      @set-stop-skipped="setTripRouteStopSkipped"
       @delete-route="deleteTripRoute"
       @select-stop="selectTripRouteStop"
       @open-help="openHelp"

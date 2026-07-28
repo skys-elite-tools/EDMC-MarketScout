@@ -31,6 +31,7 @@ from marketscout_data import (
     delete_trip_route as data_delete_trip_route,
     import_trip_route as data_import_trip_route,
     import_trip_route_station_hints as data_import_trip_route_station_hints,
+    set_trip_route_stop_skipped as data_set_trip_route_stop_skipped,
     start_trip_route as data_start_trip_route,
     trip_routes_response as data_trip_routes_response,
 )
@@ -599,6 +600,8 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
                 return self.send_json(api_import_trip_route_station_hints(payload))
             if parsed.path == "/api/trip-routes/start":
                 return self.send_json(api_start_trip_route(payload))
+            if parsed.path == "/api/trip-routes/skip-stop":
+                return self.send_json(api_set_trip_route_stop_skipped(payload))
             if parsed.path == "/api/trip-routes/delete":
                 return self.send_json(api_delete_trip_route(payload))
             if parsed.path == "/api/economy-presets":
@@ -1124,6 +1127,15 @@ def api_import_trip_route_station_hints(payload: Dict[str, Any]) -> Dict[str, An
 def api_start_trip_route(payload: Dict[str, Any]) -> Dict[str, Any]:
     with connect() as conn:
         result = data_start_trip_route(conn, payload)
+    if result.get("ok"):
+        notify_data_changed()
+    return result
+
+
+def api_set_trip_route_stop_skipped(payload: Dict[str, Any]) -> Dict[str, Any]:
+    updated_at = now_utc()
+    with connect() as conn:
+        result = data_set_trip_route_stop_skipped(conn, payload, updated_at)
     if result.get("ok"):
         notify_data_changed()
     return result
