@@ -54,6 +54,7 @@ WEB_MODULE: Any = None
 LEDGER_MODULE: Any = None
 COMMODITIES_IMPORTER_MODULE: Any = None
 MIGRATIONS_MODULE: Any = None
+DATA_MODULE: Any = None
 LAST_CURRENT_POS: Optional[Tuple[float, float, float]] = None
 LAST_CURRENT_SYSTEM: Optional[str] = None
 
@@ -117,6 +118,22 @@ def load_migrations_module():
     spec.loader.exec_module(module)
     MIGRATIONS_MODULE = module
     return module
+
+
+def load_data_module():
+    """Load shared data access helpers without relying on sys.path."""
+    global DATA_MODULE
+    if DATA_MODULE is not None:
+        return DATA_MODULE
+    path = os.path.join(os.path.dirname(__file__), "marketscout_data.py")
+    spec = importlib.util.spec_from_file_location("marketscout_data_local", path)
+    if spec is None or spec.loader is None:
+        raise ImportError("Could not load marketscout_data.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    DATA_MODULE = module
+    return module
+
 
 def load_importer_module():
     """Load the helper module from this plugin folder without relying on sys.path."""
@@ -256,6 +273,7 @@ def journal_entry(cmdr: str, is_beta: bool, system: str, station: str, entry: Di
 
         if name in ("Location", "FSDJump", "CarrierJump", "StartUp"):
             record_system_from_event(entry, state)
+            data_changed = advance_active_trip_progress_from_event(entry, state) or data_changed
 
         update_web_latest_journal_event(name, system, station, entry, state)
 
@@ -424,6 +442,27 @@ def record_system_from_event(entry: Dict[str, Any], state: Dict[str, Any]) -> No
     )
     if x is not None and y is not None and z is not None:
         upsert_systems_data(CONN, system_name, system_address, x, y, z, "journal", event_time(entry))
+
+
+def advance_active_trip_progress_from_event(entry: Dict[str, Any], state: Dict[str, Any]) -> bool:
+    if CONN is None:
+        return False
+    system_name = first_text(entry.get("StarSystem"), state.get("SystemName"))
+    system_address = first_int(entry.get("SystemAddress"), state.get("SystemAddress"))
+    if not system_name and system_address is None:
+        return False
+    try:
+        return bool(
+            load_data_module().advance_active_trip_progress(
+                CONN,
+                system_name=system_name,
+                system_address=system_address,
+                visited_at=event_time(entry),
+            )
+        )
+    except Exception:
+        log_exception("advance_active_trip_progress_from_event")
+        return False
 
 
 def upsert_systems_data(

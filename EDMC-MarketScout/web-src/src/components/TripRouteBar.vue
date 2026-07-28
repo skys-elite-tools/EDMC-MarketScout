@@ -36,6 +36,13 @@ const currentStopIndex = computed(() => {
   if (!current) return -1
   return stops.value.findIndex(stop => String(stop.system_name || '').trim().toLocaleLowerCase() === current)
 })
+const progressStopIndex = computed(() => {
+  if (!stops.value.length) return 0
+  const rawIndex = Number(props.activeRoute?.progress_stop_index)
+  if (!Number.isFinite(rawIndex)) return 0
+  return Math.max(0, Math.min(stops.value.length - 1, rawIndex))
+})
+const preferredStopIndex = computed(() => currentStopIndex.value >= 0 ? currentStopIndex.value : progressStopIndex.value)
 const activeDotIndex = computed(() => Math.max(0, Math.min(stops.value.length - 1, focusedStopIndex.value)))
 const currentCoords = computed(() => coordsFrom(props.currentPosition))
 const isLargeRoute = computed(() => stops.value.length > LARGE_ROUTE_STOP_THRESHOLD)
@@ -214,6 +221,10 @@ function scrollToStop(index) {
   window.setTimeout(syncVisibleStops, 260)
 }
 
+function goToProgress() {
+  scrollToStop(progressStopIndex.value)
+}
+
 function stepRoute(direction) {
   if (!stops.value.length) return
   const baseIndex = activeDotIndex.value
@@ -269,7 +280,7 @@ async function toggleExpanded() {
   expanded.value = !expanded.value
   if (!expanded.value) return
   await nextTick()
-  scrollToStop(currentStopIndex.value >= 0 ? currentStopIndex.value : activeDotIndex.value)
+  scrollToStop(preferredStopIndex.value)
   syncVisibleStops()
 }
 
@@ -281,7 +292,7 @@ function onDocumentClick(event) {
 
 watch(() => props.activeRoute?.route_id, () => {
   stopEls.value = []
-  focusedStopIndex.value = 0
+  focusedStopIndex.value = progressStopIndex.value
   visibleStopIndexes.value = []
 })
 
@@ -309,7 +320,7 @@ onMounted(async () => {
   expanded.value = Boolean(await dataStore.get(EXPANDED_STORAGE_KEY, expanded.value))
   await nextTick()
   if (expanded.value) {
-    scrollToStop(currentStopIndex.value >= 0 ? currentStopIndex.value : activeDotIndex.value)
+    scrollToStop(preferredStopIndex.value)
     syncVisibleStops()
   }
 })
@@ -357,6 +368,15 @@ onBeforeUnmount(() => {
               Add Stations
             </button>
             <input ref="hintFileInput" class="hiddenFileInput" type="file" accept="text/csv,.csv" @change="importHintFile" />
+            <button
+              type="button"
+              class="tripRouteProgressButton"
+              :disabled="busy || !hasActiveRoute || !stops.length"
+              title="Scroll the route to the highest stop reached with all previous stops visited since the last progress marker."
+              @click="goToProgress"
+            >
+              Go to Progress
+            </button>
             <div ref="menuEl" class="tripRouteMenuWrap">
               <button type="button" class="tripRouteMenuButton" :disabled="busy || !routes.length" @click.stop="toggleMenu">
                 Routes
@@ -399,12 +419,13 @@ onBeforeUnmount(() => {
             :ref="el => setStopRef(el, index)"
             type="button"
             class="tripStop"
-            :class="{ tripStopCurrent: index === currentStopIndex }"
+            :class="{ tripStopCurrent: index === currentStopIndex, tripStopProgress: index === progressStopIndex }"
             role="listitem"
             :title="stopTitle(stop)"
             @click="emit('select-stop', stop)"
           >
-            <span v-if="index === 0" class="tripStopMarker">Start</span>
+            <span v-if="index === progressStopIndex" class="tripStopMarker tripStopProgressMarker">Progress</span>
+            <span v-else-if="index === 0" class="tripStopMarker">Start</span>
             <span v-else-if="index === stops.length - 1" class="tripStopMarker">End</span>
             <span class="tripStopName">{{ stop.system_name }}</span>
             <span v-if="stationHintLabel(stop)" class="tripStopStationHint">{{ stationHintLabel(stop) }}</span>
@@ -432,6 +453,7 @@ onBeforeUnmount(() => {
             :class="{
               tripStopDotCurrent: index === activeDotIndex || visibleStopIndexes.includes(index),
               tripStopDotCommander: index === currentStopIndex,
+              tripStopDotProgress: index === progressStopIndex,
               tripStopDotDisabled: visibleStopIndexes.includes(index),
             }"
             :title="stop.system_name"
@@ -454,6 +476,7 @@ onBeforeUnmount(() => {
           />
           <span class="tripStopCompactLabel">
             Stop {{ (activeDotIndex + 1).toLocaleString() }} / {{ stops.length.toLocaleString() }}
+            <span>Progress stop {{ (progressStopIndex + 1).toLocaleString() }}</span>
             <span v-if="routeWindowLabel">{{ routeWindowLabel }}</span>
           </span>
           <button type="button" class="tripStopPagerButton" title="Next stop" @click="stepRoute(1)">›</button>
@@ -545,20 +568,27 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 .tripRouteImportButton,
+.tripRouteProgressButton,
 .tripRouteMenuButton {
   min-height: 1.75rem;
   padding: 4px 8px;
   font-weight: 800;
   white-space: nowrap;
 }
-.tripRouteImportButton {
+.tripRouteImportButton,
+.tripRouteProgressButton {
   grid-column: 1;
   min-width: 0;
   width: 100%;
 }
+.tripRouteProgressButton {
+  color: #ecc9ff;
+  border-color: rgba(202, 132, 255, .34);
+  background: rgba(202, 132, 255, .10);
+}
 .tripRouteMenuWrap {
   grid-column: 2;
-  grid-row: 1 / span 2;
+  grid-row: 1 / span 3;
   align-self: stretch;
   position: relative;
 }
@@ -725,6 +755,14 @@ onBeforeUnmount(() => {
 .tripStopCurrent::before {
   background: linear-gradient(180deg, #d8f6ff, #c783ff);
 }
+.tripStopProgress {
+  border-color: rgba(202, 132, 255, .58);
+  box-shadow: 0 0 0 1px rgba(202, 132, 255, .18), 0 8px 18px rgba(175, 92, 230, .18);
+}
+.tripStopProgressMarker {
+  border-color: rgba(202, 132, 255, .68);
+  background: rgba(202, 132, 255, .22);
+}
 .tripStopName {
   font-weight: 900;
   white-space: nowrap;
@@ -813,6 +851,9 @@ onBeforeUnmount(() => {
 .tripStopDotCommander {
   outline: 1px solid rgba(216, 246, 255, .72);
   outline-offset: 2px;
+}
+.tripStopDotProgress::before {
+  box-shadow: 0 0 0 3px rgba(202, 132, 255, .20), 0 0 0 6px rgba(202, 132, 255, .08);
 }
 .tripStopCompactPager {
   display: grid;

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added Trip Planner route progress tracking with a `Go to Progress` button that returns the route view to the highest contiguous visited stop.
+
 ## 0.4.4 Beta
 
 - Fixed the Stations Economic State filter so human-readable state names such as `Infrastructure Failure` also match compact journal values such as `InfrastructureFailure`.

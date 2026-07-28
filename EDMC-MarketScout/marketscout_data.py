@@ -42,6 +42,100 @@ def clean_text(value: Any) -> str:
     return " ".join(str(value or "").replace("\xa0", " ").strip().split())
 
 
+def advance_active_trip_progress(
+    conn: sqlite3.Connection,
+    system_name: Optional[str],
+    system_address: Optional[int],
+    visited_at: str,
+) -> bool:
+    """Advance the active trip route marker when all intervening stops were visited.
+
+    The marker represents route progress, not simply the latest clicked/visited
+    stop. It only moves forward if every stop after the existing marker and up
+    to the newly visited stop has a recent system visit.
+    """
+    name = clean_text(system_name)
+    address = coerce_int(system_address)
+    if not name and address is None:
+        return False
+
+    active = conn.execute(
+        """
+        SELECT route_id, imported_datetime, progress_stop_index, progress_updated_datetime
+        FROM trip_routes
+        WHERE active = 1
+        ORDER BY imported_datetime DESC, route_id DESC
+        LIMIT 1
+        """
+    ).fetchone()
+    if not active:
+        return False
+
+    route_id = int(active["route_id"])
+    current_index = coerce_int(active["progress_stop_index"]) or 0
+    baseline = clean_text(active["progress_updated_datetime"] or active["imported_datetime"])
+
+    event_stop = conn.execute(
+        """
+        SELECT 1
+        FROM trip_route_stops
+        WHERE route_id = ?
+          AND stop_index > ?
+          AND (
+            (? IS NOT NULL AND system_address = ?)
+            OR (? != '' AND lower(system_name_snapshot) = lower(?))
+          )
+        LIMIT 1
+        """,
+        (route_id, current_index, address, address, name, name),
+    ).fetchone()
+    if not event_stop:
+        return False
+
+    next_index = current_index
+    stop_rows = conn.execute(
+        """
+        SELECT
+            trs.stop_index,
+            EXISTS (
+              SELECT 1
+              FROM systems s
+              WHERE s.last_visit_datetime IS NOT NULL
+                AND s.last_visit_datetime >= ?
+                AND (
+                  (trs.system_address IS NOT NULL AND s.system_address = trs.system_address)
+                  OR lower(s.system_name) = lower(trs.system_name_snapshot)
+                )
+              )
+            AS was_visited
+        FROM trip_route_stops trs
+        WHERE trs.route_id = ?
+          AND trs.stop_index > ?
+        ORDER BY trs.stop_index
+        """,
+        (baseline, route_id, current_index),
+    ).fetchall()
+
+    for row in stop_rows:
+        if not int(row["was_visited"] or 0):
+            break
+        next_index = int(row["stop_index"])
+
+    if next_index <= current_index:
+        return False
+
+    conn.execute(
+        """
+        UPDATE trip_routes
+        SET progress_stop_index = ?,
+            progress_updated_datetime = ?
+        WHERE route_id = ?
+        """,
+        (next_index, clean_text(visited_at), route_id),
+    )
+    return True
+
+
 def parse_spansh_tourist_route(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
     raw_content = payload.get("content")
     if isinstance(raw_content, str):
@@ -236,6 +330,8 @@ def trip_route_rows(conn: sqlite3.Connection) -> List[Dict[str, Any]]:
             tr.loop_route,
             tr.imported_datetime,
             tr.active,
+            COALESCE(tr.progress_stop_index, 0) AS progress_stop_index,
+            tr.progress_updated_datetime,
             COUNT(trs.stop_index) AS stop_count,
             COALESCE(SUM(trs.jumps), 0) AS total_jumps,
             COALESCE(SUM(trs.leg_distance_ly), 0) AS total_distance_ly
@@ -339,9 +435,10 @@ def import_trip_route(conn: sqlite3.Connection, payload: Dict[str, Any], importe
         """
         INSERT INTO trip_routes(
             route_name, source, spansh_job_id, spansh_search_id, source_system,
-            final_destination_system, jump_range_ly, loop_route, imported_datetime, active
+            final_destination_system, jump_range_ly, loop_route, imported_datetime,
+            progress_stop_index, progress_updated_datetime, active
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 1)
         """,
         (
             route["route_name"],
@@ -352,6 +449,7 @@ def import_trip_route(conn: sqlite3.Connection, payload: Dict[str, Any], importe
             route["final_destination_system"],
             route["jump_range_ly"],
             route["loop_route"],
+            imported_at,
             imported_at,
         ),
     )
