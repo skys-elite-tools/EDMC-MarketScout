@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.4.5 Beta
 
+- Added FAQ document to the repository
+- Added rounding of distance-to-station in Tripplanner
 - Added Trip Planner route progress tracking with a `Go to Progress` button that returns the route view to the highest contiguous visited stop.
 
 ## 0.4.4 Beta
