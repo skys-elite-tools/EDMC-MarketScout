@@ -683,14 +683,86 @@ def api_status() -> Dict[str, Any]:
                 "label": "EDDN Station: Unknown",
                 "detail": f"Could not read EDMC status: {exc}",
             }
+    current_system_target_state_alert = current_target_state_alert(_LATEST_JOURNAL_EVENT)
     return {
         "ok": True,
         "data_version": version,
         "target_commodities": _CONTEXT.get("target_commodities", []),
         "primary_metals": _CONTEXT.get("primary_metals", []),
         "latest_journal_event": _LATEST_JOURNAL_EVENT,
+        "current_system_target_state_alert": current_system_target_state_alert,
         "edmc": edmc_status,
         "update": update_status_snapshot(),
+    }
+
+
+def normalized_state_key(value: Any) -> str:
+    return "".join(ch for ch in str(value or "").casefold() if ch.isalnum())
+
+
+def current_target_state_alert(latest_event: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    if not latest_event:
+        return None
+
+    system_name = str(latest_event.get("system") or "").strip()
+    system_address = coerce_int(latest_event.get("system_address"))
+    if not system_name and system_address is None:
+        return None
+
+    where = []
+    params: List[Any] = []
+    if system_address is not None:
+        where.append("sfs.system_address = ?")
+        params.append(system_address)
+    if system_name:
+        where.append("lower(sv.system_name) = lower(?)")
+        params.append(system_name)
+    if not where:
+        return None
+
+    try:
+        with connect() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT
+                    sfs.system_address,
+                    COALESCE(sv.system_name, ?) AS system_name,
+                    sfs.faction_name,
+                    sfs.faction_state,
+                    sfs.influence,
+                    sfs.updated_at
+                FROM system_faction_snapshots sfs
+                LEFT JOIN systems_visited sv ON sv.system_address = sfs.system_address
+                WHERE ({' OR '.join(where)})
+                ORDER BY COALESCE(sfs.influence, -1) DESC, sfs.faction_name COLLATE NOCASE
+                """,
+                [system_name, *params],
+            ).fetchall()
+    except sqlite3.OperationalError:
+        return None
+
+    target_rows = [
+        row for row in rows
+        if normalized_state_key(row["faction_state"]) == "infrastructurefailure"
+    ]
+    if not target_rows:
+        return None
+
+    row = target_rows[0]
+    faction_names = [str(r["faction_name"] or "") for r in target_rows if r["faction_name"]]
+    return {
+        "key": f"{row['system_address'] or system_name}:infrastructurefailure:{row['updated_at']}",
+        "state": "Infrastructure Failure",
+        "system_address": row["system_address"],
+        "system_name": row["system_name"] or system_name,
+        "faction_name": row["faction_name"],
+        "faction_count": len(target_rows),
+        "faction_names": faction_names[:5],
+        "updated_at": row["updated_at"],
+        "message": (
+            f"Infrastructure Failure detected in {row['system_name'] or system_name}: "
+            f"{row['faction_name']}"
+        ),
     }
 
 

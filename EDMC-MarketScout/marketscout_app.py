@@ -422,6 +422,7 @@ def update_web_latest_journal_event(name: Any, system: str, station: str, entry:
         event_name = str(name or entry.get("event") or "")
         event_time = str(entry.get("timestamp") or now_utc_iso())
         event_system = first_text(system, entry.get("StarSystem"), state.get("SystemName"), state.get("StarSystem"), LAST_CURRENT_SYSTEM)
+        event_system_address = first_int(entry.get("SystemAddress"), state.get("SystemAddress"))
         event_station = first_text(station, entry.get("StationName"), state.get("StationName"))
         pos = entry.get("StarPos") or state.get("StarPos") or LAST_CURRENT_POS
         x = y = z = None
@@ -431,6 +432,7 @@ def update_web_latest_journal_event(name: Any, system: str, station: str, entry:
             "event": event_name,
             "timestamp": event_time,
             "system": event_system,
+            "system_address": event_system_address,
             "station": event_station,
             "x": x,
             "y": y,
