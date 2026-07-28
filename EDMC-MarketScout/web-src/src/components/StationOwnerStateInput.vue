@@ -1,40 +1,50 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 
-const STATION_OWNER_STATES = [
+const STATE_GROUPS = [
   {
-    name: 'Boom',
-    description: 'Increases system wealth and trade efficiency; trade missions have double the influence effect.',
+    label: 'Economy States',
+    options: ['Famine', 'Bust', 'None', 'Boom', 'Investment'],
   },
   {
-    name: 'Investment',
-    description: 'A positive state triggered by failed expansions, increasing development and happiness.',
+    label: 'Security States',
+    options: ['Lockdown', 'Civil Unrest', 'None', 'Civil Liberty'],
   },
   {
-    name: 'Bust',
-    description: 'Reduces system wealth and influence; trade missions have reduced or negative effects.',
-  },
-  {
-    name: 'Famine',
-    description: 'Decreases standard of living; food trading has double the influence effect, while combat does not.',
-  },
-  {
-    name: 'Outbreak',
-    description: 'Decreases standard of living; medicine trading has double the influence effect, while combat does not.',
-  },
-  {
-    name: 'Drought',
-    description: 'Causes an economic downturn due to water shortages; countered by importing water.',
-  },
-  {
-    name: 'Blight',
-    description: 'Affects crop yields; countered by importing Agronomic Treatment.',
-  },
-  {
-    name: 'Infrastructure Failure',
-    description: 'Disrupts operations and reduces security and economic standards; countered by importing food and machinery.',
+    label: 'Other States',
+    options: [
+      'Incursion',
+      'Infested',
+      'Blight',
+      'Drought',
+      'Outbreak',
+      'Infrastructure Failure',
+      'Natural Disaster',
+      'Revolution',
+      'Cold War',
+      'Trade War',
+      'Pirate Attack',
+      'Terrorist Attack',
+      'Public Holiday',
+      'Technological Leap',
+      'Historic Event',
+      'Colonisation',
+      'War',
+      'Civil War',
+      'Elections',
+      'Retreat',
+      'Expansion',
+    ],
   },
 ]
+
+const STATION_OWNER_STATES = STATE_GROUPS.flatMap(group =>
+  group.options.map(name => ({
+    name,
+    group: group.label,
+    description: `${name} (${group.label})`,
+  })),
+)
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -59,6 +69,24 @@ const filteredOptions = computed(() => {
     ? STATION_OWNER_STATES
     : STATION_OWNER_STATES.filter(state => state.name.toLowerCase().includes(filter))
   return options
+})
+
+const filteredGroups = computed(() => {
+  const optionIndexes = new Map()
+  filteredOptions.value.forEach((option, index) => {
+    optionIndexes.set(`${option.group}:${option.name}`, index)
+  })
+  return STATE_GROUPS
+    .map(group => ({
+      label: group.label,
+      options: group.options
+        .map(name => {
+          const index = optionIndexes.get(`${group.label}:${name}`)
+          return index === undefined ? null : { ...filteredOptions.value[index], index }
+        })
+        .filter(Boolean),
+    }))
+    .filter(group => group.options.length)
 })
 
 function updateValue(value) {
@@ -143,7 +171,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
         ref="inputEl"
         :value="modelValue"
         type="text"
-        placeholder="Any state"
+        placeholder="Any owner state"
         :title="inputTitle"
         autocomplete="off"
         @input="updateValue($event.target.value)"
@@ -161,15 +189,18 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
         @click="openFullMenu"
       >▾</button>
       <div v-if="menuOpen" class="economyComboMenu" role="listbox">
-        <button
-          v-for="(option, index) in filteredOptions"
-          :key="option.name"
-          type="button"
-          class="economyComboOption"
-          :class="{ active: index === highlightedIndex }"
-          :title="option.description"
-          @mousedown.prevent="chooseOption(option)"
-        >{{ option.name }}</button>
+        <div v-for="group in filteredGroups" :key="group.label" class="stationOwnerStateGroup">
+          <div class="economyComboGroupLabel">{{ group.label }}</div>
+          <button
+            v-for="option in group.options"
+            :key="`${group.label}-${option.name}`"
+            type="button"
+            class="economyComboOption"
+            :class="{ active: option.index === highlightedIndex }"
+            :title="option.description"
+            @mousedown.prevent="chooseOption(option)"
+          >{{ option.name }}</button>
+        </div>
         <div v-if="!filteredOptions.length" class="economyComboEmpty">No matching states</div>
       </div>
     </div>

@@ -1186,10 +1186,12 @@ def station_state_filter_terms(value: str) -> List[str]:
     if not text:
         return []
     compact = re.sub(r"[\s_-]+", "", text)
-    terms = [text]
+    terms = {text}
     if compact and compact != text:
-        terms.append(compact)
-    return terms
+        terms.add(compact)
+    if compact.casefold() in {"election", "elections"}:
+        terms.update({"Election", "Elections"})
+    return list(terms)
 
 
 def api_trip_routes() -> Dict[str, Any]:
@@ -1298,9 +1300,9 @@ def api_save_economy_preset(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 def api_options() -> Dict[str, Any]:
     with connect() as conn:
-        states = [r[0] for r in conn.execute("SELECT DISTINCT station_faction_state FROM stations WHERE station_faction_state IS NOT NULL AND station_faction_state != '' ORDER BY station_faction_state").fetchall()]
+        station_faction_states = [r[0] for r in conn.execute("SELECT DISTINCT station_faction_state FROM stations WHERE station_faction_state IS NOT NULL AND station_faction_state != '' ORDER BY station_faction_state").fetchall()]
         sources = [r[0] for r in conn.execute("SELECT DISTINCT COALESCE(source, '') FROM stations WHERE source IS NOT NULL AND source != '' ORDER BY source").fetchall()]
-    return {"states": states, "sources": sources}
+    return {"station_faction_states": station_faction_states, "sources": sources}
 
 
 def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
@@ -1333,7 +1335,7 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
         "COALESCE(st.largest_pad, 'Unknown') AS pad",
         "COALESCE(st.is_fleet_carrier, 0) AS is_fleet_carrier",
         "CASE WHEN COALESCE(st.is_fleet_carrier, 0)=1 THEN 'Yes' ELSE '' END AS fleet_carrier",
-        "st.station_faction_state AS state",
+        "st.station_faction_state AS station_faction_state",
         "COALESCE(st.station_economies_json, st.station_economy) AS economies",
         "s.system_economy AS system_economy",
         "s.security AS security",
@@ -1425,7 +1427,7 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
 
     system = one("system")
     station = one("station")
-    state = one("state")
+    station_faction_state = one("station_faction_state")
     economies = [x.strip() for x in one("economy").split(",") if x.strip()]
     source = one("source")
     include_fc = one("include_fc") in ("1", "true", "yes")
@@ -1436,8 +1438,8 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
     if station:
         where.append("st.station_name LIKE ?")
         params.append(f"%{station}%")
-    if state:
-        state_terms = station_state_filter_terms(state)
+    if station_faction_state:
+        state_terms = station_state_filter_terms(station_faction_state)
         where.append("(" + " OR ".join("st.station_faction_state LIKE ?" for _ in state_terms) + ")")
         params.extend(f"%{term}%" for term in state_terms)
     if economies:

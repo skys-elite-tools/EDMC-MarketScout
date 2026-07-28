@@ -42,7 +42,7 @@ function cellParts(row, col) {
     </colgroup>
     <thead>
       <tr>
-        <th>Flag</th><th>System / Station</th><th>State / Economy</th>
+        <th>Flag</th><th>System / Station</th><th>Owner State / Economy</th>
         <th><span class="headerWithInfo">Best Buy <InfoButton title="How Best Buy works" @open="emit('open-help', 'best-buy')" /></span></th>
         <th v-for="col in displayColumns" :key="columnKey(col)">{{ col.commodity }} {{ col.side === 'buy' ? 'Buy' : 'Sell' }}</th>
         <th>Updated</th>
@@ -54,7 +54,7 @@ function cellParts(row, col) {
           <div v-for="item in flag(row).items" :key="item" class="flagItem">{{ flag(row).marker }} {{ item }}</div>
         </td>
         <td><div class="systemName">{{ fmt(row.system) }}</div><div class="stationName">{{ fmt(row.station) }} <span class="stationMeta">Pad {{ fmt(row.pad) }}</span></div></td>
-        <td><div class="cellMain">{{ fmt(row.state) }}</div><div class="cellSub">{{ fmt(row.economies) }}</div></td>
+        <td><div class="cellMain">{{ fmt(row.station_faction_state) }}</div><div class="cellSub">{{ fmt(row.economies) }}</div></td>
         <td>
           <div v-if="row.best_buy_commodity" class="price"><div class="cellMain">{{ row.best_buy_commodity }} @ {{ money(row.best_buy_price) }}</div><div class="cellSub">Supply: <span :class="quantityClass(row.best_buy_supply)">{{ money(row.best_buy_supply) }}</span></div><div v-if="shouldDisplayPotentialProfit(row.best_buy_potential_profit, minimumPotentialProfit)" class="cellSub"><a class="potentialLink" :href="inaraCommoditySellUrl(searchSystem(row), row.best_buy_inara_id)" :title="potentialProfitTooltip(row.best_buy_max_sell)" target="_blank" rel="noopener noreferrer" @click.stop>Potential Profit: <span :class="potentialProfitClass(row.best_buy_potential_profit)">{{ money(row.best_buy_potential_profit) }}</span> Cr/t</a></div></div>
           <div v-else class="price"><span>—</span></div>

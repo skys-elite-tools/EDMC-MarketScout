@@ -104,7 +104,7 @@ const hasControls = computed(() => !['analyze', 'carrier', 'carrierCalc', 'confi
             :save-status="economyPresetStatus"
             @save="emit('save-economy-preset')"
           />
-          <StationOwnerStateInput v-model="filters.state" />
+          <StationOwnerStateInput v-model="filters.stationFactionState" />
           <label class="sourceFilter">Source
             <select v-model="filters.source">
               <option>Any</option>

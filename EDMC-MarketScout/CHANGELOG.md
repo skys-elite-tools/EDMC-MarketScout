@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Added a `systems_visited` table name for clearer visited-system data, started storing latest faction-state snapshots from journal system events, and added a current-system Infrastructure Failure toast.
+- Renamed the Stations state filter/API field to `station_faction_state` and relabeled it as `Station Owner State` for clearer future system-state work.
+- Expanded the Station Owner State dropdown with grouped Economy, Security, and Other faction-state options.
 - Fixed Trip Planner progress tracking so the marker no longer gets stuck behind stops visited before the last progress update.
 - Added right-click copy actions for Trip Planner stops so system and station names can be copied quickly.
 - Added soft-skipped Trip Planner stops so broken or unwanted route systems can be bypassed without deleting them from the trip.

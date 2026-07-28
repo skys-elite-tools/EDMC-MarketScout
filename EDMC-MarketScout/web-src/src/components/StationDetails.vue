@@ -23,7 +23,7 @@ const stationDetails = computed(() => {
   const row = props.row || {}
   return [
     ['System', row.system], ['Station', row.station], ['Pad', row.pad], ['Type', row.type],
-    ['State', row.state], ['Economies', row.economies], ['System Economy', row.system_economy],
+    ['Station Owner State', row.station_faction_state], ['Economies', row.economies], ['System Economy', row.system_economy],
     ['Security', row.security], ['Population', money(row.population)], ['Arrival LS', money(row.arrival_ls)],
     ['Fleet Carrier', row.fleet_carrier || 'No'], ['Planetary', row.planetary || 'No'],
     ['Source', row.source], ['Source Pulled', localDateTime(row.source_pulled)], ['Source Updated', localDateTime(row.source_updated)],

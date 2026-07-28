@@ -370,6 +370,17 @@ h1 { margin: 0; font-size: 20px; }
   background: #263142;
   color: white;
 }
+.economyComboGroupLabel {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  padding: 8px 8px 4px;
+  text-transform: uppercase;
+}
+.stationOwnerStateGroup:first-child .economyComboGroupLabel {
+  padding-top: 4px;
+}
 .economyComboEmpty {
   color: var(--muted);
   padding: 7px 8px;
