@@ -23,6 +23,10 @@ const hintFileInput = ref(null)
 const menuOpen = ref(false)
 const menuEl = ref(null)
 const menuStyle = ref({})
+const stopContextMenuOpen = ref(false)
+const stopContextMenuEl = ref(null)
+const stopContextMenuStyle = ref({})
+const stopContextMenuStop = ref(null)
 const stopsEl = ref(null)
 const stopEls = ref([])
 const expanded = ref(Boolean(dataStore.cached(EXPANDED_STORAGE_KEY, false)))
@@ -163,6 +167,10 @@ function stationHintLabel(stop) {
   return parts.join(' · ')
 }
 
+function stopStationName(stop) {
+  return String(stop?.station_hint_name || stop?.last_station_name || '').trim()
+}
+
 function stopLegLabel(stop, index) {
   if (index === 0 && currentStopIndex.value !== 0) {
     const distance = distanceLy(currentCoords.value, coordsFrom(stop))
@@ -225,6 +233,56 @@ function goToProgress() {
   scrollToStop(progressStopIndex.value)
 }
 
+function openStopContextMenu(event, stop) {
+  const width = 204
+  const left = Math.max(12, Math.min(event.clientX, window.innerWidth - width - 12))
+  const top = Math.max(12, Math.min(event.clientY, window.innerHeight - 96))
+  stopContextMenuStyle.value = {
+    width: `${width}px`,
+    left: `${left}px`,
+    top: `${top}px`,
+  }
+  stopContextMenuStop.value = stop
+  stopContextMenuOpen.value = true
+  menuOpen.value = false
+}
+
+function fallbackCopyText(text) {
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.setAttribute('readonly', '')
+  textarea.style.position = 'fixed'
+  textarea.style.left = '-9999px'
+  textarea.style.top = '0'
+  document.body.appendChild(textarea)
+  textarea.focus()
+  textarea.select()
+  try {
+    return document.execCommand('copy')
+  } finally {
+    document.body.removeChild(textarea)
+  }
+}
+
+async function copyText(text) {
+  const value = String(text || '').trim()
+  if (!value) return
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value)
+  } else {
+    fallbackCopyText(value)
+  }
+  stopContextMenuOpen.value = false
+}
+
+function copyStopSystemName() {
+  copyText(stopContextMenuStop.value?.system_name)
+}
+
+function copyStopStationName() {
+  copyText(stopStationName(stopContextMenuStop.value))
+}
+
 function stepRoute(direction) {
   if (!stops.value.length) return
   const baseIndex = activeDotIndex.value
@@ -285,15 +343,19 @@ async function toggleExpanded() {
 }
 
 function onDocumentClick(event) {
-  if (!menuOpen.value) return
-  if (menuEl.value?.contains(event.target)) return
-  menuOpen.value = false
+  if (menuOpen.value && !menuEl.value?.contains(event.target)) {
+    menuOpen.value = false
+  }
+  if (stopContextMenuOpen.value && !stopContextMenuEl.value?.contains(event.target)) {
+    stopContextMenuOpen.value = false
+  }
 }
 
 watch(() => props.activeRoute?.route_id, () => {
   stopEls.value = []
   focusedStopIndex.value = progressStopIndex.value
   visibleStopIndexes.value = []
+  stopContextMenuOpen.value = false
 })
 
 watch(routeWindowStops, () => {
@@ -423,6 +485,7 @@ onBeforeUnmount(() => {
             role="listitem"
             :title="stopTitle(stop)"
             @click="emit('select-stop', stop)"
+            @contextmenu.prevent.stop="openStopContextMenu($event, stop)"
           >
             <span v-if="index === progressStopIndex" class="tripStopMarker tripStopProgressMarker">Progress</span>
             <span v-else-if="index === 0" class="tripStopMarker">Start</span>
@@ -441,6 +504,15 @@ onBeforeUnmount(() => {
             <span v-else class="tripStopMeta">{{ stopLegLabel(stop, index) }}</span>
             <span class="tripStopVisit">{{ index === currentStopIndex ? 'Current system' : stopVisitLabel(stop) }}</span>
           </button>
+        </div>
+        <div
+          v-if="stopContextMenuOpen"
+          ref="stopContextMenuEl"
+          class="tripStopContextMenu"
+          :style="stopContextMenuStyle"
+        >
+          <button type="button" @click="copyStopSystemName">Copy system name</button>
+          <button type="button" :disabled="!stopStationName(stopContextMenuStop)" @click="copyStopStationName">Copy station name</button>
         </div>
         <div v-if="stops.length > 1 && !isLargeRoute" class="tripStopPager" aria-label="Route stop navigation">
           <button type="button" class="tripStopPagerButton" title="Previous stop" @click="stepRoute(-1)">‹</button>
@@ -608,6 +680,32 @@ onBeforeUnmount(() => {
   background: #121923;
   box-shadow: 0 18px 40px rgba(0,0,0,.42);
   padding: 6px;
+}
+.tripStopContextMenu {
+  position: fixed;
+  z-index: 25;
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid rgba(202, 132, 255, .36);
+  border-radius: 6px;
+  background: #121923;
+  box-shadow: 0 18px 40px rgba(0,0,0,.42);
+}
+.tripStopContextMenu button {
+  justify-content: flex-start;
+  min-height: 1.85rem;
+  padding: 5px 8px;
+  color: var(--text);
+  text-align: left;
+}
+.tripStopContextMenu button:hover:not(:disabled) {
+  color: #ecc9ff;
+  border-color: rgba(202, 132, 255, .38);
+  background: rgba(202, 132, 255, .12);
+}
+.tripStopContextMenu button:disabled {
+  color: rgba(151, 166, 184, .46);
 }
 .tripRouteMenuItem {
   display: grid;

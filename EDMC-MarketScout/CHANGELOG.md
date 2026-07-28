@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Added right-click copy actions for Trip Planner stops so system and station names can be copied quickly.
+
+
 ## 0.4.5 Beta
 
 - Added FAQ document to the repository
