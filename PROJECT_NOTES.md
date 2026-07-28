@@ -325,6 +325,7 @@ Main data concepts:
 - Systems visited: system-level data such as name/address, coordinates, population, security, economy context, and `system_faction_state` for the system-controlling faction when known.
 - Systems data: authoritative coordinate table populated from `rawdata/systems_data.csv` and Journal `StarPos` sightings. This is separate from the visited/candidate `systems_visited` table.
 - Stations: station-level data such as name, market ID, station type, pad size, economies, source, source timestamps, fleet carrier flag, and `station_faction_state` for the station-owning faction when known.
+- System faction state details: active, pending, and recovering states reported in Journal `Factions[]`, keyed by system address, faction name, and state kind. Stations can infer pending owner states by matching their owner faction inside the current system.
 - Market prices: commodity rows per market/station. Current direction is to store all commodities, not just a fixed metal list.
 - Commodity global stats: catalog/config table populated from `rawdata/commodities.csv` with commodity display name, category, INARA ID, average buy/sell/profit, max sell, min buy, and max profit.
 - Rare commodities: catalog table populated from `rawdata/commodities_rare.csv` with commodity, INARA IDs, source station/system, usual supply, buy price, galactic average price, and preserved distance metadata. `usual_supply` should track source allocation values where known.
@@ -337,6 +338,7 @@ State naming convention:
 - Use `station_faction_state` in API/backend code when filtering or returning the state of the faction that owns a station. The Web UI labels this as `Station Owner State`.
 - Use `system_faction_state` for the state of the system-controlling faction stored with visited system context.
 - Use `system_faction_snapshots.faction_state` when dealing with any faction present in a system, not only the controlling faction.
+- Use `system_faction_state_details` for Journal `ActiveStates[]`, `PendingStates[]`, and `RecoveringStates[]` arrays. The Stations API exposes pending owner states as `station_faction_pending_states` and filters them with `pending_station_faction_state`.
 
 ## Commodity model
 

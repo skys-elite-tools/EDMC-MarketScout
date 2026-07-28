@@ -28,6 +28,26 @@ function searchSystem(row) {
 function cellParts(row, col) {
   return commodityCellParts(row, col.commodity, col.side, props.minimumPotentialProfit)
 }
+
+function pendingStates(row) {
+  return String(row?.station_faction_pending_states || '')
+    .split('|')
+    .map(state => state.trim())
+    .filter(Boolean)
+}
+
+function firstPendingState(row) {
+  return stateDisplayName(pendingStates(row)[0] || '')
+}
+
+function pendingStateTitle(row) {
+  const states = pendingStates(row).map(stateDisplayName)
+  return states.length ? `Pending station owner states: ${states.join(', ')}` : ''
+}
+
+function stateDisplayName(state) {
+  return String(state || '').replace(/([a-z])([A-Z])/g, '$1 $2')
+}
 </script>
 
 <template>
@@ -54,7 +74,13 @@ function cellParts(row, col) {
           <div v-for="item in flag(row).items" :key="item" class="flagItem">{{ flag(row).marker }} {{ item }}</div>
         </td>
         <td><div class="systemName">{{ fmt(row.system) }}</div><div class="stationName">{{ fmt(row.station) }} <span class="stationMeta">Pad {{ fmt(row.pad) }}</span></div></td>
-        <td><div class="cellMain">{{ fmt(row.station_faction_state) }}</div><div class="cellSub">{{ fmt(row.economies) }}</div></td>
+        <td>
+          <div class="cellMain">{{ fmt(row.station_faction_state) }}</div>
+          <div v-if="firstPendingState(row)" class="pendingStateBadge" :title="pendingStateTitle(row)">
+            Pending: {{ firstPendingState(row) }}
+          </div>
+          <div class="cellSub">{{ fmt(row.economies) }}</div>
+        </td>
         <td>
           <div v-if="row.best_buy_commodity" class="price"><div class="cellMain">{{ row.best_buy_commodity }} @ {{ money(row.best_buy_price) }}</div><div class="cellSub">Supply: <span :class="quantityClass(row.best_buy_supply)">{{ money(row.best_buy_supply) }}</span></div><div v-if="shouldDisplayPotentialProfit(row.best_buy_potential_profit, minimumPotentialProfit)" class="cellSub"><a class="potentialLink" :href="inaraCommoditySellUrl(searchSystem(row), row.best_buy_inara_id)" :title="potentialProfitTooltip(row.best_buy_max_sell)" target="_blank" rel="noopener noreferrer" @click.stop>Potential Profit: <span :class="potentialProfitClass(row.best_buy_potential_profit)">{{ money(row.best_buy_potential_profit) }}</span> Cr/t</a></div></div>
           <div v-else class="price"><span>—</span></div>

@@ -105,6 +105,13 @@ const hasControls = computed(() => !['analyze', 'carrier', 'carrierCalc', 'confi
             @save="emit('save-economy-preset')"
           />
           <StationOwnerStateInput v-model="filters.stationFactionState" />
+          <StationOwnerStateInput
+            v-model="filters.pendingStationFactionState"
+            label="Pending Owner State"
+            placeholder="Any pending state"
+            button-title="Show all pending station owner states"
+            empty-text="No matching pending states"
+          />
           <label class="sourceFilter">Source
             <select v-model="filters.source">
               <option>Any</option>

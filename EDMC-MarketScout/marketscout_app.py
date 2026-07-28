@@ -558,6 +558,86 @@ def record_system_from_event(entry: Dict[str, Any], state: Dict[str, Any]) -> No
         upsert_systems_data(CONN, system_name, system_address, x, y, z, "journal", event_time(entry))
 
 
+def faction_state_detail_items(faction: Dict[str, Any], key: str) -> List[Tuple[str, Optional[int]]]:
+    raw_items = faction.get(key)
+    if raw_items is None:
+        raw_items = faction.get(key[:1].lower() + key[1:])
+    if not isinstance(raw_items, list):
+        return []
+
+    seen: set[str] = set()
+    items: List[Tuple[str, Optional[int]]] = []
+    for raw_item in raw_items:
+        state_name = ""
+        trend: Optional[int] = None
+        if isinstance(raw_item, Mapping):
+            state_name = clean_text(
+                raw_item.get("State")
+                or raw_item.get("state")
+                or raw_item.get("Name")
+                or raw_item.get("name")
+            )
+            trend = first_int(raw_item.get("Trend"), raw_item.get("trend"))
+        else:
+            state_name = clean_text(raw_item)
+        if not state_name:
+            continue
+        state_key = state_name.casefold()
+        if state_key in seen:
+            continue
+        seen.add(state_key)
+        items.append((state_name, trend))
+    return items
+
+
+def record_system_faction_state_details(
+    system_address: int,
+    faction_name: str,
+    faction: Dict[str, Any],
+    updated_at: str,
+) -> bool:
+    if CONN is None:
+        return False
+
+    changed = False
+    state_kinds = (
+        ("active", "ActiveStates"),
+        ("pending", "PendingStates"),
+        ("recovering", "RecoveringStates"),
+    )
+    try:
+        for state_kind, source_key in state_kinds:
+            items = faction_state_detail_items(faction, source_key)
+            deleted = CONN.execute(
+                """
+                DELETE FROM system_faction_state_details
+                WHERE system_address = ? AND faction_name = ? AND state_kind = ?
+                """,
+                (system_address, faction_name, state_kind),
+            )
+            if deleted.rowcount:
+                changed = True
+            for state_name, trend in items:
+                CONN.execute(
+                    """
+                    INSERT INTO system_faction_state_details(
+                        system_address, faction_name, state_kind, state_name, trend, updated_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(system_address, faction_name, state_kind, state_name) DO UPDATE SET
+                        trend=excluded.trend,
+                        updated_at=excluded.updated_at
+                    """,
+                    (system_address, faction_name, state_kind, state_name, trend, updated_at),
+                )
+            if items:
+                changed = True
+    except sqlite3.OperationalError:
+        # Older in-memory test databases may not have the detail table yet.
+        return False
+    return changed
+
+
 def record_system_faction_snapshots_from_event(entry: Dict[str, Any], state: Dict[str, Any]) -> bool:
     if CONN is None:
         return False
@@ -572,12 +652,22 @@ def record_system_faction_snapshots_from_event(entry: Dict[str, Any], state: Dic
 
     updated_at = event_time(entry)
     changed = False
+    try:
+        deleted = CONN.execute(
+            "DELETE FROM system_faction_state_details WHERE system_address = ?",
+            (system_address,),
+        )
+        if deleted.rowcount:
+            changed = True
+    except sqlite3.OperationalError:
+        pass
     for faction in factions:
         if not isinstance(faction, dict):
             continue
         faction_name = clean_text(faction.get("Name") or faction.get("name"))
         if not faction_name:
             continue
+        changed = record_system_faction_state_details(system_address, faction_name, faction, updated_at) or changed
         faction_state_raw = faction.get("FactionState")
         if faction_state_raw is None:
             faction_state_raw = faction.get("State")

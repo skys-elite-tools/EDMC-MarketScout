@@ -91,6 +91,7 @@ const DEFAULT_STATION_FILTERS = {
   station: '',
   economy: '',
   stationFactionState: '',
+  pendingStationFactionState: '',
   source: 'Any',
   includeFc: false,
   priceThreshold: 6000,
@@ -144,6 +145,7 @@ function stationParams() {
     station: filters.value.station,
     economy: filters.value.economy,
     station_faction_state: filters.value.stationFactionState,
+    pending_station_faction_state: filters.value.pendingStationFactionState,
     source: filters.value.source,
     include_fc: filters.value.includeFc ? '1' : '0',
     limit: filters.value.limit || '1000',
@@ -722,6 +724,7 @@ onUnmounted(() => {
       v-if="targetStateToast"
       type="button"
       class="targetStateToast"
+      :class="{ targetStateToastPending: targetStateToast.tone === 'pending' }"
       :title="targetStateToast.faction_names?.length ? targetStateToast.faction_names.join(', ') : targetStateToast.message"
       @click="dismissTargetStateToast"
     >

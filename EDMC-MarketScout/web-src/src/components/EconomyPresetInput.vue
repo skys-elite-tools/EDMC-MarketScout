@@ -156,7 +156,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
           <div v-if="!filteredOptions.length" class="economyComboEmpty">No matching economies</div>
         </div>
       </div>
-      <button type="button" title="Save current economy filter as a preset" @click="emit('save')">Save Preset</button>
+      <button type="button" title="Save current economy filter as a preset" @click="emit('save')">Save</button>
     </div>
     <span v-if="saveStatus" class="presetStatus">{{ saveStatus }}</span>
   </label>

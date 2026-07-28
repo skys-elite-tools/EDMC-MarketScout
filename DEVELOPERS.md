@@ -146,7 +146,7 @@ This creates the next numbered file in `EDMC-MarketScout/migrations/` with match
 Useful Web API areas:
 
 - `/api/status`: status strip data, latest Journal metadata, and database version.
-- `/api/stations`: Stations table data, watched commodity buy/sell fields for Scout modes, Best Buy calculations, and filters. The station-owner faction state filter/field is named `station_faction_state` in API data to match the SQLite column; the Web UI labels it as `Station Owner State`.
+- `/api/stations`: Stations table data, watched commodity buy/sell fields for Scout modes, Best Buy calculations, and filters. The station-owner faction state filter/field is named `station_faction_state` in API data to match the SQLite column; the Web UI labels it as `Station Owner State`. Pending station-owner states are returned as `station_faction_pending_states` and filtered with `pending_station_faction_state`.
 - `/api/station-filter-options`: visited system/station suggestions for Stations filters.
 - `/api/jackpots`, `/api/ledger`, `/api/rare-commodities`, `/api/commodity-stats`: view data.
 - `/api/analyze-commodities`: splits pasted commodity lists into regular and rare matches.

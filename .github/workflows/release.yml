@@ -69,6 +69,7 @@ jobs:
             EDMC-MarketScout/migrations/0009_rename_systems_to_systems_visited.py \
             EDMC-MarketScout/migrations/0010_system_faction_snapshots.py \
             EDMC-MarketScout/migrations/0011_trip_route_progress_started.py \
+            EDMC-MarketScout/migrations/0012_system_faction_state_details.py \
             EDMC-MarketScout/marketscout_web.py \
             EDMC-MarketScout/marketscout_ledger.py \
             EDMC-MarketScout/marketscout_importer.py \

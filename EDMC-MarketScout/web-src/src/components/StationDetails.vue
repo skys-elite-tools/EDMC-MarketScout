@@ -19,11 +19,23 @@ function demandText(value) {
   return num(value) === 0 ? '0/unlimited' : money(value)
 }
 
+function pendingStates(row) {
+  return String(row?.station_faction_pending_states || '')
+    .split('|')
+    .map(state => state.trim())
+    .filter(Boolean)
+}
+
+function stateDisplayName(state) {
+  return String(state || '').replace(/([a-z])([A-Z])/g, '$1 $2')
+}
+
 const stationDetails = computed(() => {
   const row = props.row || {}
   return [
     ['System', row.system], ['Station', row.station], ['Pad', row.pad], ['Type', row.type],
-    ['Station Owner State', row.station_faction_state], ['Economies', row.economies], ['System Economy', row.system_economy],
+    ['Station Owner State', row.station_faction_state], ['Pending Owner States', pendingStates(row).map(stateDisplayName).join(', ') || null],
+    ['Economies', row.economies], ['System Economy', row.system_economy],
     ['Security', row.security], ['Population', money(row.population)], ['Arrival LS', money(row.arrival_ls)],
     ['Fleet Carrier', row.fleet_carrier || 'No'], ['Planetary', row.planetary || 'No'],
     ['Source', row.source], ['Source Pulled', localDateTime(row.source_pulled)], ['Source Updated', localDateTime(row.source_updated)],

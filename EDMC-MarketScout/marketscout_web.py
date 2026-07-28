@@ -746,12 +746,13 @@ def current_target_state_alert(latest_event: Optional[Dict[str, Any]]) -> Option
         if normalized_state_key(row["faction_state"]) == "infrastructurefailure"
     ]
     if not target_rows:
-        return None
+        return current_pending_target_state_alert(latest_event)
 
     row = target_rows[0]
     faction_names = [str(r["faction_name"] or "") for r in target_rows if r["faction_name"]]
     return {
         "key": f"{row['system_address'] or system_name}:infrastructurefailure:{row['updated_at']}",
+        "tone": "active",
         "state": "Infrastructure Failure",
         "system_address": row["system_address"],
         "system_name": row["system_name"] or system_name,
@@ -761,6 +762,76 @@ def current_target_state_alert(latest_event: Optional[Dict[str, Any]]) -> Option
         "updated_at": row["updated_at"],
         "message": (
             f"Infrastructure Failure detected in {row['system_name'] or system_name}: "
+            f"{row['faction_name']}"
+        ),
+    }
+
+
+def current_pending_target_state_alert(latest_event: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    if not latest_event:
+        return None
+
+    system_name = str(latest_event.get("system") or "").strip()
+    system_address = coerce_int(latest_event.get("system_address"))
+    if not system_name and system_address is None:
+        return None
+
+    where = []
+    params: List[Any] = []
+    if system_address is not None:
+        where.append("sfsd.system_address = ?")
+        params.append(system_address)
+    if system_name:
+        where.append("lower(sv.system_name) = lower(?)")
+        params.append(system_name)
+    if not where:
+        return None
+
+    try:
+        with connect() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT
+                    sfsd.system_address,
+                    COALESCE(sv.system_name, ?) AS system_name,
+                    sfsd.faction_name,
+                    sfsd.state_name,
+                    sfsd.updated_at,
+                    sfs.influence
+                FROM system_faction_state_details sfsd
+                LEFT JOIN systems_visited sv ON sv.system_address = sfsd.system_address
+                LEFT JOIN system_faction_snapshots sfs
+                    ON sfs.system_address = sfsd.system_address
+                    AND lower(sfs.faction_name) = lower(sfsd.faction_name)
+                WHERE sfsd.state_kind = 'pending' AND ({' OR '.join(where)})
+                ORDER BY COALESCE(sfs.influence, -1) DESC, sfsd.faction_name COLLATE NOCASE
+                """,
+                [system_name, *params],
+            ).fetchall()
+    except sqlite3.OperationalError:
+        return None
+
+    target_rows = [
+        row for row in rows
+        if normalized_state_key(row["state_name"]) == "infrastructurefailure"
+    ]
+    if not target_rows:
+        return None
+
+    row = target_rows[0]
+    faction_names = [str(r["faction_name"] or "") for r in target_rows if r["faction_name"]]
+    return {
+        "key": f"{row['system_address'] or system_name}:pending:infrastructurefailure:{row['updated_at']}",
+        "tone": "pending",
+        "state": "Pending Infrastructure Failure",
+        "system_address": row["system_address"],
+        "system_name": row["system_name"] or system_name,
+        "faction_name": row["faction_name"],
+        "faction_count": len(target_rows),
+        "faction_names": faction_names[:5],
+        "updated_at": row["updated_at"],
+        "message": (
+            f"Infrastructure Failure pending in {row['system_name'] or system_name}: "
             f"{row['faction_name']}"
         ),
     }
@@ -1302,7 +1373,24 @@ def api_options() -> Dict[str, Any]:
     with connect() as conn:
         station_faction_states = [r[0] for r in conn.execute("SELECT DISTINCT station_faction_state FROM stations WHERE station_faction_state IS NOT NULL AND station_faction_state != '' ORDER BY station_faction_state").fetchall()]
         sources = [r[0] for r in conn.execute("SELECT DISTINCT COALESCE(source, '') FROM stations WHERE source IS NOT NULL AND source != '' ORDER BY source").fetchall()]
-    return {"station_faction_states": station_faction_states, "sources": sources}
+        try:
+            pending_station_faction_states = [
+                r[0] for r in conn.execute(
+                    """
+                    SELECT DISTINCT state_name
+                    FROM system_faction_state_details
+                    WHERE state_kind = 'pending' AND state_name IS NOT NULL AND state_name != ''
+                    ORDER BY state_name
+                    """
+                ).fetchall()
+            ]
+        except sqlite3.OperationalError:
+            pending_station_faction_states = []
+    return {
+        "station_faction_states": station_faction_states,
+        "pending_station_faction_states": pending_station_faction_states,
+        "sources": sources,
+    }
 
 
 def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
@@ -1336,6 +1424,19 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
         "COALESCE(st.is_fleet_carrier, 0) AS is_fleet_carrier",
         "CASE WHEN COALESCE(st.is_fleet_carrier, 0)=1 THEN 'Yes' ELSE '' END AS fleet_carrier",
         "st.station_faction_state AS station_faction_state",
+        """
+        (
+            SELECT GROUP_CONCAT(pending.state_name, '|')
+            FROM (
+                SELECT sfsd.state_name
+                FROM system_faction_state_details sfsd
+                WHERE sfsd.system_address = st.system_address
+                    AND sfsd.state_kind = 'pending'
+                    AND lower(sfsd.faction_name) = lower(st.station_faction_name)
+                ORDER BY sfsd.state_name COLLATE NOCASE
+            ) pending
+        ) AS station_faction_pending_states
+        """,
         "COALESCE(st.station_economies_json, st.station_economy) AS economies",
         "s.system_economy AS system_economy",
         "s.security AS security",
@@ -1428,6 +1529,7 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
     system = one("system")
     station = one("station")
     station_faction_state = one("station_faction_state")
+    pending_station_faction_state = one("pending_station_faction_state")
     economies = [x.strip() for x in one("economy").split(",") if x.strip()]
     source = one("source")
     include_fc = one("include_fc") in ("1", "true", "yes")
@@ -1441,6 +1543,18 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
     if station_faction_state:
         state_terms = station_state_filter_terms(station_faction_state)
         where.append("(" + " OR ".join("st.station_faction_state LIKE ?" for _ in state_terms) + ")")
+        params.extend(f"%{term}%" for term in state_terms)
+    if pending_station_faction_state:
+        state_terms = station_state_filter_terms(pending_station_faction_state)
+        where.append(
+            "EXISTS ("
+            "SELECT 1 FROM system_faction_state_details sfsd "
+            "WHERE sfsd.system_address = st.system_address "
+            "AND sfsd.state_kind = 'pending' "
+            "AND lower(sfsd.faction_name) = lower(st.station_faction_name) "
+            "AND (" + " OR ".join("sfsd.state_name LIKE ?" for _ in state_terms) + ")"
+            ")"
+        )
         params.extend(f"%{term}%" for term in state_terms)
     if economies:
         parts = []

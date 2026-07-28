@@ -213,6 +213,14 @@ h1 { margin: 0; font-size: 20px; }
   align-items: end;
   min-width: 0;
 }
+.stationFilterFields .economyPresetField {
+  flex: 1 1 17rem;
+  min-width: 17rem;
+}
+.stationFilterFields .stationOwnerStateField {
+  flex: 1 1 12rem;
+  min-width: 12rem;
+}
 .stationScoutModeField {
   display: flex;
   flex-direction: column;
@@ -311,7 +319,7 @@ h1 { margin: 0; font-size: 20px; }
 .viewControls label.check { flex-direction: row; align-items: center; align-self: center; padding-top: 15px; }
 .stationControls label.check.includeFleetCarriers { order: 999; }
 .economyPresetField { min-width: 24rem; }
-.stationOwnerStateField { min-width: 15rem; }
+.stationOwnerStateField { min-width: 14rem; }
 .economyPresetControls {
   display: grid;
   grid-template-columns: minmax(14rem, 1fr) auto;
@@ -504,6 +512,22 @@ tr.cheap { background: var(--cheap); }
 tr.strong { background: var(--strong); }
 .cellMain { font-weight: 650; }
 .cellSub, .small { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.pendingStateBadge {
+  display: inline-flex;
+  max-width: 100%;
+  margin-top: 3px;
+  border: 1px solid rgba(123, 198, 255, .32);
+  border-radius: 999px;
+  background: rgba(86, 158, 223, .13);
+  color: #b7dcff;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .tripCounts { font-size: 11px; line-height: 1.2; }
 .systemName {
   color: var(--muted);
@@ -1060,6 +1084,18 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 .targetStateToast:hover {
   border-color: rgba(234, 204, 255, .86);
   background: linear-gradient(180deg, rgba(96, 52, 130, .99), rgba(63, 36, 87, .99));
+}
+.targetStateToastPending {
+  width: min(580px, calc(100vw - 32px));
+  padding: 7px 10px;
+  border-color: rgba(123, 198, 255, .46);
+  background: linear-gradient(180deg, rgba(35, 71, 106, .98), rgba(25, 47, 73, .98));
+  color: #e5f3ff;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .32), 0 0 18px rgba(123, 198, 255, .16);
+}
+.targetStateToastPending:hover {
+  border-color: rgba(123, 198, 255, .68);
+  background: linear-gradient(180deg, rgba(41, 82, 121, .99), rgba(29, 54, 82, .99));
 }
 .targetStateToast strong {
   color: #ffffff;

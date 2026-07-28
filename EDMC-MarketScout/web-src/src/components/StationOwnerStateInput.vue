@@ -48,6 +48,10 @@ const STATION_OWNER_STATES = STATE_GROUPS.flatMap(group =>
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
+  label: { type: String, default: 'Station Owner State' },
+  placeholder: { type: String, default: 'Any owner state' },
+  buttonTitle: { type: String, default: 'Show all station owner states' },
+  emptyText: { type: String, default: 'No matching states' },
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -61,7 +65,7 @@ const selectedState = computed(() => {
   return STATION_OWNER_STATES.find(state => state.name.toLowerCase() === value) || null
 })
 
-const inputTitle = computed(() => selectedState.value?.description || 'Choose a station owner state')
+const inputTitle = computed(() => selectedState.value?.description || `Choose ${props.label.toLowerCase()}`)
 
 const filteredOptions = computed(() => {
   const filter = String(props.modelValue || '').trim().toLowerCase()
@@ -165,13 +169,13 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
 
 <template>
   <label class="stationOwnerStateField">
-    Station Owner State
+    {{ label }}
     <div class="stationOwnerStateCombo">
       <input
         ref="inputEl"
         :value="modelValue"
         type="text"
-        placeholder="Any owner state"
+        :placeholder="placeholder"
         :title="inputTitle"
         autocomplete="off"
         @input="updateValue($event.target.value)"
@@ -183,8 +187,8 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
       <button
         type="button"
         class="economyComboToggle"
-        title="Show all station owner states"
-        aria-label="Show all station owner states"
+        :title="buttonTitle"
+        :aria-label="buttonTitle"
         @mousedown.prevent
         @click="openFullMenu"
       >▾</button>
@@ -201,7 +205,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
             @mousedown.prevent="chooseOption(option)"
           >{{ option.name }}</button>
         </div>
-        <div v-if="!filteredOptions.length" class="economyComboEmpty">No matching states</div>
+        <div v-if="!filteredOptions.length" class="economyComboEmpty">{{ emptyText }}</div>
       </div>
     </div>
   </label>
