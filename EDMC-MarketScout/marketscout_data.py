@@ -94,7 +94,7 @@ def advance_active_trip_progress(
 
     active = conn.execute(
         """
-        SELECT route_id, imported_datetime, progress_stop_index, progress_updated_datetime
+        SELECT route_id, imported_datetime, progress_started_datetime, progress_stop_index, progress_updated_datetime
         FROM trip_routes
         WHERE active = 1
         ORDER BY imported_datetime DESC, route_id DESC
@@ -106,7 +106,7 @@ def advance_active_trip_progress(
 
     route_id = int(active["route_id"])
     current_index = coerce_int(active["progress_stop_index"]) or 0
-    baseline = clean_text(active["progress_updated_datetime"] or active["imported_datetime"])
+    baseline = clean_text(active["progress_started_datetime"] or active["imported_datetime"])
 
     event_stop = conn.execute(
         """
@@ -444,9 +444,9 @@ def import_trip_route(conn: sqlite3.Connection, payload: Dict[str, Any], importe
         INSERT INTO trip_routes(
             route_name, source, spansh_job_id, spansh_search_id, source_system,
             final_destination_system, jump_range_ly, loop_route, imported_datetime,
-            progress_stop_index, progress_updated_datetime, active
+            progress_started_datetime, progress_stop_index, progress_updated_datetime, active
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 1)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 1)
         """,
         (
             route["route_name"],
@@ -457,6 +457,7 @@ def import_trip_route(conn: sqlite3.Connection, payload: Dict[str, Any], importe
             route["final_destination_system"],
             route["jump_range_ly"],
             route["loop_route"],
+            imported_at,
             imported_at,
             imported_at,
         ),
@@ -545,7 +546,7 @@ def import_trip_route_station_hints(conn: sqlite3.Connection, payload: Dict[str,
     }
 
 
-def start_trip_route(conn: sqlite3.Connection, payload: Dict[str, Any]) -> Dict[str, Any]:
+def start_trip_route(conn: sqlite3.Connection, payload: Dict[str, Any], started_at: str) -> Dict[str, Any]:
     route_id = coerce_int(payload.get("route_id"))
     if route_id is None:
         return {"ok": False, "error": "Missing route_id"}
@@ -553,7 +554,17 @@ def start_trip_route(conn: sqlite3.Connection, payload: Dict[str, Any]) -> Dict[
     if not exists:
         return {"ok": False, "error": "Route not found"}
     conn.execute("UPDATE trip_routes SET active=0")
-    conn.execute("UPDATE trip_routes SET active=1 WHERE route_id=?", (route_id,))
+    conn.execute(
+        """
+        UPDATE trip_routes
+        SET active=1,
+            progress_started_datetime=?,
+            progress_stop_index=0,
+            progress_updated_datetime=?
+        WHERE route_id=?
+        """,
+        (clean_text(started_at), clean_text(started_at), route_id),
+    )
     conn.commit()
     return {"ok": True, "routes": trip_route_rows(conn), "active_route": active_trip_route(conn)}
 
@@ -567,7 +578,7 @@ def set_trip_route_stop_skipped(conn: sqlite3.Connection, payload: Dict[str, Any
 
     route = conn.execute(
         """
-        SELECT route_id, active, imported_datetime, progress_stop_index, progress_updated_datetime
+        SELECT route_id, active, imported_datetime, progress_started_datetime, progress_stop_index, progress_updated_datetime
         FROM trip_routes
         WHERE route_id = ?
         """,
@@ -595,7 +606,7 @@ def set_trip_route_stop_skipped(conn: sqlite3.Connection, payload: Dict[str, Any
     )
 
     current_index = coerce_int(route["progress_stop_index"]) or 0
-    baseline = clean_text(route["progress_updated_datetime"] or route["imported_datetime"])
+    baseline = clean_text(route["progress_started_datetime"] or route["imported_datetime"])
     if skipped:
         next_index = contiguous_trip_progress_index(conn, route_id, current_index, baseline)
         if next_index > current_index:

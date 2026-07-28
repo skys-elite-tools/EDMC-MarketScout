@@ -1215,8 +1215,9 @@ def api_import_trip_route_station_hints(payload: Dict[str, Any]) -> Dict[str, An
 
 
 def api_start_trip_route(payload: Dict[str, Any]) -> Dict[str, Any]:
+    started_at = now_utc()
     with connect() as conn:
-        result = data_start_trip_route(conn, payload)
+        result = data_start_trip_route(conn, payload, started_at)
     if result.get("ok"):
         notify_data_changed()
     return result
