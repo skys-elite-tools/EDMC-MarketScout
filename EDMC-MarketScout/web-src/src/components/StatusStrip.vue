@@ -41,17 +41,21 @@ function delayedMessagePlace(message) {
   return message.station_name || message.system_name || 'Station data'
 }
 
+function delayedMessageSchema(message) {
+  return message?.schema_name || 'station'
+}
+
 const delayedMessagesTitle = computed(() => {
   if (!delayedMessages.value.length) return 'Delayed EDDN station messages waiting to be sent.'
   return delayedMessages.value
-    .map((message) => `${delayedMessagePlace(message)} · ~${Number(message.seconds_remaining || 0)}s`)
+    .map((message) => `${delayedMessageSchema(message)} · ${delayedMessagePlace(message)} · ~${Number(message.seconds_remaining || 0)}s`)
     .join('\n')
 })
 
 const firstDelayedMessageLabel = computed(() => {
   const message = delayedMessages.value[0]
   if (!message) return ''
-  return `${delayedMessagePlace(message)} · ~${Number(message.seconds_remaining || 0)}s`
+  return `${delayedMessageSchema(message)} · ${delayedMessagePlace(message)} · ~${Number(message.seconds_remaining || 0)}s`
 })
 </script>
 

@@ -273,6 +273,20 @@ def find_edmc_eddn_module() -> Any:
     return None
 
 
+def edmc_eddn_schema_name(schema_ref: Any) -> str:
+    """Return a safe short EDDN schema name from a schema URL."""
+    if not schema_ref:
+        return ""
+    parts = str(schema_ref).split("/")
+    try:
+        schema_index = parts.index("schemas")
+    except ValueError:
+        return ""
+    if schema_index + 1 >= len(parts):
+        return ""
+    return parts[schema_index + 1].strip()
+
+
 def edmc_eddn_send_control_status() -> Dict[str, Any]:
     module = find_edmc_eddn_module()
     if module is None:
@@ -296,6 +310,7 @@ def edmc_eddn_send_control_status() -> Dict[str, Any]:
                     {
                         "station_name": str(item.get("station_name") or ""),
                         "system_name": str(item.get("system_name") or ""),
+                        "schema_name": edmc_eddn_schema_name(item.get("schema_ref")),
                         "seconds_remaining": seconds_remaining,
                     }
                 )
