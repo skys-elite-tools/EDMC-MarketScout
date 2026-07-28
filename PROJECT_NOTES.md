@@ -71,6 +71,7 @@ Important files/directories:
 EDMC-MarketScout/
   load.py                    # Thin EDMC plugin adapter
   marketscout_app.py         # Core plugin lifecycle and journal/CAPI handling
+  marketscout_data.py        # Shared database queries and Trip Planner progress helpers
   marketscout_migrations.py  # SQLite migration runner
   migrations/                # Python schema migration files
   marketscout_importer.py    # CSV import logic, currently including Spansh templates
@@ -101,6 +102,9 @@ EDMC-MarketScout/
         LedgerView.vue
         RareCommoditiesView.vue
       components/
+        StatusStrip.vue
+        TripRouteBar.vue
+        StationOwnerStateInput.vue
         TopBar.vue
         ViewControls.vue
         StationsTable.vue
@@ -247,9 +251,9 @@ The Stations view Economy filter is intentionally empty by default so general us
 The Stations controls are intentionally direct and reversible:
 
 - System and Station are text inputs with typeahead suggestions.
-- System suggestions come from visited systems in the `systems` table.
+- System suggestions come from visited systems in the `systems_visited` table.
 - Station suggestions come from visited stations in the `stations` table.
-- Economic State and Economy are text inputs with dropdown menus. Clicking the dropdown should show the full option catalog even if the input already contains text.
+- Station Owner State, Pending Owner State, and Economy are text inputs with dropdown menus. State matching normalizes human-readable and compact Journal values such as `Infrastructure Failure` and `InfrastructureFailure`. Clicking a dropdown should show the full option catalog even if the input already contains text.
 - Clear restores the default station filter values and reloads the Stations table.
 - Watched Commodities controls highlighting/details and the commodity columns used by the Stations Scout modes. It is persisted in SQLite `settings`.
 - `Buy Scout` is the default Stations mode and shows watched commodity buy prices plus supply. Its row highlighting uses `Highlight price <=` and `Strong supply >=`.
@@ -456,6 +460,9 @@ This is based on latest known market data at the time of the trade, usually befo
 - Route imports also upsert every stop's coordinates into `systems_data` with source `spansh_tourist_route`.
 - `systems_data` remains the reusable authoritative coordinate table; `trip_route_stops` stores route membership/order and route-specific leg metadata.
 - The Stations page shows the active route above the table. Clicking a route stop filters Stations to that system.
+- Route progress is the highest contiguous visited stop since the current progress baseline. `Go to Progress` returns the visible route window to that marker.
+- Stops can be soft-skipped and restored without deleting them; skipped stops count as passable when progress advances.
+- A stop's context menu can copy its system or station name. Distance-to-station values are rounded for display.
 - Recalculating imported routes for shortest overall travel distance has been discussed but is intentionally left for a later iteration.
 
 ## Possible future features

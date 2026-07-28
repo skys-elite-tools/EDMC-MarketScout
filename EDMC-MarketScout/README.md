@@ -12,6 +12,7 @@ Local-only EDMarketConnector plugin for scouting station market/BGS conditions, 
 - Opens a local browser Web UI served from `127.0.0.1`.
 - Shows Stations, Jackpots, Ledger, Commodities, Rare Commodities, Analyze Commodities, Carrier Trade Announcements, and Carrier Trade Calculator views.
 - Supports watched commodity columns and a Best Buy ignore list.
+- Provides a Stations Trip Planner for imported Spansh Tourist Route JSON files, including progress tracking and soft-skipped stops.
 - Imports candidate stations from supported CSV exports, currently Spansh station-search CSVs.
 - Imports maintained rawdata CSV files for commodity stats, rare commodities, engineer unlock requirements, and relevant system coordinates.
 - Tracks row/source metadata such as `local_visit` or `spansh`.
@@ -58,7 +59,7 @@ If the release includes the standard installable zip, clicking the button downlo
 ## Install
 
 1. In EDMC, open `File` > `Settings` > `Plugins` > `Open`.
-2. Copy the entire `MarketScout` folder into that plugins directory.
+2. Copy the entire `EDMC-MarketScout` folder into that plugins directory.
 3. Restart EDMC.
 4. You should see a small `MarketScout` button in the EDMC main window.
 
@@ -71,7 +72,7 @@ The Spansh template currently expects columns like:
 - `Name`
 - `System Name`
 - `Distance to Arrival (LS)`
-- `Controlling Faction State`
+- `Controlling Faction State` (imported as the station-owner faction state)
 - `Export Commodities`
 - `Has Market`
 - `Economy`
@@ -100,6 +101,7 @@ The helper scripts for regenerating these files live under `local-tools/` in the
 - `Analyze Commodities`: paste a comma-separated commodity list and split matches into regular and rare commodity tables.
 - `Carrier Trade Announcements`: create local Fleet Carrier trade announcements with draggable on-image text and copyable Discord/Reddit text.
 - `Carrier Trade Calculator`: calculate Fleet Carrier buy/sell prices and profit splits for station-to-station trades, rare commodity carrier sales, and rare commodity station-to-station planning.
+- `Config`: edit the loopback address, shared port, and optional LAN listener.
 
 ## Changelog
 
@@ -108,7 +110,7 @@ See [CHANGELOG.md](CHANGELOG.md).
 ## Notes / limitations
 
 - Largest pad is inferred from station type when no explicit field is available.
-- Station faction state is read from the Journal if available; if Frontier/EDMC omits it for a specific event, it may remain blank until a later event provides it.
+- Station-owner faction state and pending state details are read from Journal system/station context when available; if Frontier/EDMC omits them, they may remain blank until a later event provides them.
 - Market prices are stored for all captured commodities.
 - Candidate imports from Spansh have no market prices until you actually visit/update the station.
-- No route planner yet.
+- Trip Planner imports are local-only and follow the order in the supplied Spansh Tourist Route; MarketScout does not recalculate the route.

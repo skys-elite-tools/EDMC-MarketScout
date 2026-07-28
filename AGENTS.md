@@ -12,6 +12,7 @@ EDMC-MarketScout is a local-only EDMarketConnector plugin for scouting Elite Dan
 ## Repo layout
 - `EDMC-MarketScout/load.py`: thin EDMC plugin adapter.
 - `EDMC-MarketScout/marketscout_app.py`: core plugin lifecycle and journal/CAPI handling.
+- `EDMC-MarketScout/marketscout_data.py`: shared database queries and Trip Planner progress helpers.
 - `EDMC-MarketScout/marketscout_migrations.py`: migration runner.
 - `EDMC-MarketScout/migrations/`: Python schema migration files.
 - `EDMC-MarketScout/marketscout_web.py`: local HTTP API and static web server.
@@ -34,7 +35,7 @@ EDMC-MarketScout is a local-only EDMarketConnector plugin for scouting Elite Dan
 
 ## Verification
 After Python changes:
-`python3 -m py_compile EDMC-MarketScout/load.py EDMC-MarketScout/marketscout_app.py EDMC-MarketScout/marketscout_migrations.py EDMC-MarketScout/migrations/0001_baseline.py EDMC-MarketScout/marketscout_web.py EDMC-MarketScout/marketscout_ledger.py EDMC-MarketScout/marketscout_importer.py EDMC-MarketScout/commodities_importer.py`
+`python3 -m py_compile EDMC-MarketScout/load.py EDMC-MarketScout/marketscout_app.py EDMC-MarketScout/marketscout_data.py EDMC-MarketScout/marketscout_migrations.py EDMC-MarketScout/migrations/*.py EDMC-MarketScout/marketscout_web.py EDMC-MarketScout/marketscout_ledger.py EDMC-MarketScout/marketscout_importer.py EDMC-MarketScout/commodities_importer.py`
 
 After frontend changes:
 `cd EDMC-MarketScout/web-src && npm run build`
@@ -44,8 +45,9 @@ After frontend changes:
 - Keep filters simple for general users.
 - Prefer visible highlights over extra sort-mode toggles.
 - Default Stations sort is newest `market_updated`, then newest `station_visit`, then best buy score, then system/station.
-- The Stations page has typeahead text filters for visited systems/stations, a Clear action that restores default station filters, watched commodity settings, and a Best Buy ignore list.
-- Carrier Trade Announcements is browser-only: drafts, uploaded images, and custom text layouts live in localStorage.
+- The Stations page has typeahead text filters for visited systems/stations, current and pending Station Owner State filters, a Clear action that restores default station filters, watched commodity settings, and a Best Buy ignore list.
+- Trip Planner progress advances through contiguous visited or soft-skipped stops. Keep right-click copy/skip actions and `Go to Progress` behavior available when changing the route UI.
+- Carrier Trade Announcements is local-only: drafts, uploaded images, and custom text layouts use browser localStorage first and synchronize to the local MarketScout database through `/api/user-data` when the backend is available.
 
 ## Handoff
 - Make small, focused commits.

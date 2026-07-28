@@ -10,6 +10,7 @@ End users do **not** need Node.js, npm, Vite, or Vue. Releases include a ready-t
 EDMC-MarketScout/
   load.py                    # Thin EDMC plugin adapter
   marketscout_app.py         # Core plugin lifecycle and journal/CAPI orchestration
+  marketscout_data.py        # Shared database queries and Trip Planner progress helpers
   marketscout_migrations.py  # SQLite migration runner
   migrations/                # Python schema migration files
   marketscout_importer.py    # CSV/import logic
@@ -153,6 +154,7 @@ Useful Web API areas:
 - `/api/rare-station-trade-options`: visited target stations for Rare Commodities station-to-station planning. It lists stations with at least one positive `market_prices.sell_price`, ordered newest station visit first.
 - `/api/rare-station-trade`: rare commodity origin buy prices compared against a selected target station's sell prices.
 - `/api/commodities`, `/api/settings`, `/api/user-data`, `/api/economy-presets`, `/api/config`: catalogs/settings/user-preference/config helpers.
+- `/api/edmc/eddn/discard-delayed-station-messages`: discards delayed, unsent station messages only when the running EDMC build exposes the compatible control hook.
 
 SQLite web connections use `PRAGMA temp_store=MEMORY` to avoid temporary-file I/O issues in EDMC runtime environments. Keep small dropdown/result sorting in Python when it avoids brittle SQLite temp sorting and does not materially affect performance.
 
@@ -222,9 +224,10 @@ The Stations page can import Spansh Tourist Route JSON files through the local W
 - `GET /api/trip-routes`
 - `POST /api/trip-routes/import`
 - `POST /api/trip-routes/start`
+- `POST /api/trip-routes/skip-stop`
 - `POST /api/trip-routes/delete`
 
-Imported routes are stored in `trip_routes` / `trip_route_stops`. Each imported stop also upserts coordinates into `systems_data` so other MarketScout distance features can reuse them. Keep this import local-only; do not fetch route data directly from Spansh.
+Imported routes are stored in `trip_routes` / `trip_route_stops`. Each imported stop also upserts coordinates into `systems_data` so other MarketScout distance features can reuse them. Progress tracks the highest contiguous stop visited since the current progress baseline; soft-skipped stops count as passable without being deleted. The route UI provides `Go to Progress`, rounded distance-to-station values, and right-click actions for copying system/station names or holding to skip/restore a stop. Keep this import local-only; do not fetch route data directly from Spansh.
 
 ## Local release helper
 

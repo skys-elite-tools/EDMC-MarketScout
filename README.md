@@ -67,7 +67,7 @@ The Best Buy ignore list excludes selected commodities from Best Buy calculation
 
 #### Trip Planner
 
-Trip Planner lets you import Spansh Tourist Route JSON files and follow scouting routes directly above the Stations table. Stops can be clicked to filter the table, the current system is highlighted when known, and MarketScout shows visit context plus approximate jump information when coordinates are available.
+Trip Planner lets you import Spansh Tourist Route JSON files and follow scouting routes directly above the Stations table. Stops can be clicked to filter the table, the current system is highlighted when known, and MarketScout shows visit context plus approximate jump information when coordinates are available. Route progress follows the highest contiguous visited stop, and `Go to Progress` returns to that marker. Right-click a stop to copy its system or station name, or hold the skip action to bypass/restore a broken or unwanted stop without deleting it.
 
 Using Trip Planner is completely optional. Commanders can ignore it and simply free-fly to random systems while scouting.
 
