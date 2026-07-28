@@ -891,7 +891,7 @@ def api_station_filter_options() -> Dict[str, Any]:
                 for r in conn.execute(
                     """
                     SELECT DISTINCT system_name
-                    FROM systems
+                    FROM systems_visited
                     WHERE system_name IS NOT NULL
                       AND TRIM(system_name) != ''
                       AND (last_visit_datetime IS NOT NULL OR source = 'local_visit')
@@ -1343,7 +1343,7 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
             f"THEN mp.sell_price - COALESCE({latest_buy_sql}, cgs.min_buy) END) AS '{c}_sell_profit'",
             f"MAX(CASE WHEN mp.commodity='{safe}' AND mp.buy_price IS NOT NULL AND mp.buy_price > 0 AND COALESCE(mp.supply, 0) > 0 AND cgs.max_sell IS NOT NULL AND (cgs.max_sell - mp.buy_price) >= {min_profit} THEN cgs.max_sell - mp.buy_price END) AS '{c}_potential_profit'",
         ])
-    sql = "SELECT " + ", ".join(select_cols) + " FROM stations st LEFT JOIN systems s ON s.system_address=st.system_address LEFT JOIN market_prices mp ON mp.market_id=st.market_id LEFT JOIN commodity_global_stats cgs ON cgs.commodity=mp.commodity"
+    sql = "SELECT " + ", ".join(select_cols) + " FROM stations st LEFT JOIN systems_visited s ON s.system_address=st.system_address LEFT JOIN market_prices mp ON mp.market_id=st.market_id LEFT JOIN commodity_global_stats cgs ON cgs.commodity=mp.commodity"
     where: List[str] = []
     params: List[Any] = []
 
@@ -1694,7 +1694,7 @@ def api_rare_station_trade_options() -> Dict[str, Any]:
                         st.last_station_visit_datetime,
                         NULL AS market_updated
                     FROM stations st
-                    LEFT JOIN systems s ON s.system_address = st.system_address
+                    LEFT JOIN systems_visited s ON s.system_address = st.system_address
                     WHERE st.station_name IS NOT NULL
                       AND trim(st.station_name) != ''
                       AND st.market_id IN ({placeholders})
@@ -1764,7 +1764,7 @@ def api_rare_station_trade(qs: Dict[str, List[str]]) -> Dict[str, Any]:
                        st.station_name, st.station_type, st.largest_pad,
                        st.last_station_visit_datetime
                 FROM stations st
-                LEFT JOIN systems s ON s.system_address = st.system_address
+                LEFT JOIN systems_visited s ON s.system_address = st.system_address
                 WHERE st.market_id=?
                 """,
                 (market_id,),
@@ -1789,7 +1789,7 @@ def latest_current_position(conn: sqlite3.Connection) -> Optional[Tuple[float, f
         row = conn.execute(
             """
             SELECT x, y, z
-            FROM systems
+            FROM systems_visited
             WHERE x IS NOT NULL AND y IS NOT NULL AND z IS NOT NULL
             ORDER BY last_visit_datetime IS NULL, last_visit_datetime DESC
             LIMIT 1

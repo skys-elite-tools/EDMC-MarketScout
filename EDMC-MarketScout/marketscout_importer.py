@@ -145,7 +145,7 @@ def import_spansh_row(conn, row: Dict[str, Any], pulled_at: str) -> bool:
     # prevents re-importing a Spansh candidate as a second synthetic station
     # after the commander has already visited the physical station.
     existing_system = conn.execute(
-        "SELECT system_address FROM systems WHERE lower(system_name)=lower(?) ORDER BY system_address > 0 DESC LIMIT 1",
+        "SELECT system_address FROM systems_visited WHERE lower(system_name)=lower(?) ORDER BY system_address > 0 DESC LIMIT 1",
         (system_name,),
     ).fetchone()
     system_address = int(existing_system[0]) if existing_system else stable_negative_id("spansh-system", system_name)
@@ -154,7 +154,7 @@ def import_spansh_row(conn, row: Dict[str, Any], pulled_at: str) -> bool:
         """
         SELECT st.market_id
         FROM stations st
-        LEFT JOIN systems s ON s.system_address=st.system_address
+        LEFT JOIN systems_visited s ON s.system_address=st.system_address
         WHERE lower(st.station_name)=lower(?) AND lower(COALESCE(s.system_name, ?))=lower(?)
         ORDER BY st.market_id > 0 DESC, st.last_station_visit_datetime IS NOT NULL DESC
         LIMIT 1
@@ -165,18 +165,18 @@ def import_spansh_row(conn, row: Dict[str, Any], pulled_at: str) -> bool:
 
     conn.execute(
         """
-        INSERT INTO systems(system_address, system_name, population, system_economy,
+        INSERT INTO systems_visited(system_address, system_name, population, system_economy,
                             system_economies_json, source, source_pulled_datetime,
                             source_data_updated_datetime)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(system_address) DO UPDATE SET
             system_name=excluded.system_name,
-            population=COALESCE(excluded.population, systems.population),
-            system_economy=COALESCE(excluded.system_economy, systems.system_economy),
-            system_economies_json=COALESCE(excluded.system_economies_json, systems.system_economies_json),
-            source=COALESCE(systems.source, excluded.source),
+            population=COALESCE(excluded.population, systems_visited.population),
+            system_economy=COALESCE(excluded.system_economy, systems_visited.system_economy),
+            system_economies_json=COALESCE(excluded.system_economies_json, systems_visited.system_economies_json),
+            source=COALESCE(systems_visited.source, excluded.source),
             source_pulled_datetime=excluded.source_pulled_datetime,
-            source_data_updated_datetime=COALESCE(excluded.source_data_updated_datetime, systems.source_data_updated_datetime)
+            source_data_updated_datetime=COALESCE(excluded.source_data_updated_datetime, systems_visited.source_data_updated_datetime)
         """,
         (system_address, system_name, population, system_primary_economy, json.dumps(system_economies) if system_economies else None, "spansh", pulled_at, source_updated),
     )

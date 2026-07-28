@@ -384,6 +384,7 @@ def journal_entry(cmdr: str, is_beta: bool, system: str, station: str, entry: Di
 
         if name in ("Location", "FSDJump", "CarrierJump", "StartUp"):
             record_system_from_event(entry, state)
+            data_changed = record_system_faction_snapshots_from_event(entry, state) or data_changed
             data_changed = advance_active_trip_progress_from_event(entry, state) or data_changed
 
         update_web_latest_journal_event(name, system, station, entry, state)
@@ -497,12 +498,12 @@ def record_system_from_event(entry: Dict[str, Any], state: Dict[str, Any]) -> No
     # If this system was previously imported with a negative placeholder ID,
     # move its candidate stations onto the real Elite system address.
     for old_row in CONN.execute(
-        "SELECT system_address FROM systems WHERE lower(system_name)=lower(?) AND system_address < 0",
+        "SELECT system_address FROM systems_visited WHERE lower(system_name)=lower(?) AND system_address < 0",
         (system_name,),
     ).fetchall():
         old_addr = old_row[0]
         CONN.execute("UPDATE stations SET system_address=? WHERE system_address=?", (system_address, old_addr))
-        CONN.execute("DELETE FROM systems WHERE system_address=?", (old_addr,))
+        CONN.execute("DELETE FROM systems_visited WHERE system_address=?", (old_addr,))
 
     pos = entry.get("StarPos") or state.get("StarPos")
     x = y = z = None
@@ -520,21 +521,21 @@ def record_system_from_event(entry: Dict[str, Any], state: Dict[str, Any]) -> No
 
     CONN.execute(
         """
-        INSERT INTO systems(system_address, system_name, x, y, z, population, security, system_faction_state,
+        INSERT INTO systems_visited(system_address, system_name, x, y, z, population, security, system_faction_state,
                             system_economy, system_economies_json, last_visit_datetime, source)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(system_address) DO UPDATE SET
             system_name=excluded.system_name,
-            x=COALESCE(excluded.x, systems.x),
-            y=COALESCE(excluded.y, systems.y),
-            z=COALESCE(excluded.z, systems.z),
-            population=COALESCE(excluded.population, systems.population),
-            security=COALESCE(excluded.security, systems.security),
-            system_faction_state=COALESCE(excluded.system_faction_state, systems.system_faction_state),
-            system_economy=COALESCE(excluded.system_economy, systems.system_economy),
-            system_economies_json=COALESCE(excluded.system_economies_json, systems.system_economies_json),
+            x=COALESCE(excluded.x, systems_visited.x),
+            y=COALESCE(excluded.y, systems_visited.y),
+            z=COALESCE(excluded.z, systems_visited.z),
+            population=COALESCE(excluded.population, systems_visited.population),
+            security=COALESCE(excluded.security, systems_visited.security),
+            system_faction_state=COALESCE(excluded.system_faction_state, systems_visited.system_faction_state),
+            system_economy=COALESCE(excluded.system_economy, systems_visited.system_economy),
+            system_economies_json=COALESCE(excluded.system_economies_json, systems_visited.system_economies_json),
             last_visit_datetime=excluded.last_visit_datetime,
-            source=CASE WHEN systems.source IS NULL OR systems.source != 'local_visit' THEN 'local_visit' ELSE systems.source END
+            source=CASE WHEN systems_visited.source IS NULL OR systems_visited.source != 'local_visit' THEN 'local_visit' ELSE systems_visited.source END
         """,
         (
             system_address,
@@ -553,6 +554,55 @@ def record_system_from_event(entry: Dict[str, Any], state: Dict[str, Any]) -> No
     )
     if x is not None and y is not None and z is not None:
         upsert_systems_data(CONN, system_name, system_address, x, y, z, "journal", event_time(entry))
+
+
+def record_system_faction_snapshots_from_event(entry: Dict[str, Any], state: Dict[str, Any]) -> bool:
+    if CONN is None:
+        return False
+
+    system_address = first_int(entry.get("SystemAddress"), state.get("SystemAddress"))
+    if system_address is None:
+        return False
+
+    factions = entry.get("Factions")
+    if not isinstance(factions, list):
+        return False
+
+    updated_at = event_time(entry)
+    changed = False
+    for faction in factions:
+        if not isinstance(faction, dict):
+            continue
+        faction_name = clean_text(faction.get("Name") or faction.get("name"))
+        if not faction_name:
+            continue
+        faction_state_raw = faction.get("FactionState")
+        if faction_state_raw is None:
+            faction_state_raw = faction.get("State")
+        if faction_state_raw is None:
+            faction_state_raw = faction.get("state")
+        if faction_state_raw is None:
+            continue
+        influence_raw = faction.get("Influence")
+        if influence_raw is None:
+            influence_raw = faction.get("influence")
+        faction_state = clean_text(faction_state_raw)
+        influence = safe_float(influence_raw)
+        CONN.execute(
+            """
+            INSERT INTO system_faction_snapshots(
+                system_address, faction_name, faction_state, influence, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(system_address, faction_name) DO UPDATE SET
+                faction_state=excluded.faction_state,
+                influence=excluded.influence,
+                updated_at=excluded.updated_at
+            """,
+            (system_address, faction_name, faction_state, influence, updated_at),
+        )
+        changed = True
+    return changed
 
 
 def advance_active_trip_progress_from_event(entry: Dict[str, Any], state: Dict[str, Any]) -> bool:
@@ -627,7 +677,7 @@ def record_station_from_event(entry: Dict[str, Any], state: Dict[str, Any]) -> N
         SELECT market_id FROM stations
         WHERE market_id < 0 AND lower(station_name)=lower(?)
           AND (? IS NULL OR system_address=? OR system_address IN (
-              SELECT system_address FROM systems WHERE lower(system_name)=lower(?)
+              SELECT system_address FROM systems_visited WHERE lower(system_name)=lower(?)
           ))
         LIMIT 1
         """,
@@ -1255,7 +1305,7 @@ def create_jackpot_event(market_id: int, detected_time: str, triggers: List[str]
         SELECT st.*, s.system_name, s.system_address AS sys_addr, s.population, s.security,
                s.system_economy, s.system_economies_json, s.system_faction_state
         FROM stations st
-        LEFT JOIN systems s ON s.system_address=st.system_address
+        LEFT JOIN systems_visited s ON s.system_address=st.system_address
         WHERE st.market_id=?
         """,
         (market_id,),
@@ -1411,7 +1461,7 @@ def market_location_for_history(market_id: int, fallback_station_name: Optional[
             """
             SELECT st.station_name, s.system_name
             FROM stations st
-            LEFT JOIN systems s ON s.system_address=st.system_address
+            LEFT JOIN systems_visited s ON s.system_address=st.system_address
             WHERE st.market_id=?
             """,
             (market_id,),
@@ -1539,7 +1589,7 @@ def deduplicate_station_rows(conn: sqlite3.Connection) -> int:
             SELECT st.*, s.system_name,
                    (SELECT MAX(market_price_update_datetime) FROM market_prices mp WHERE mp.market_id=st.market_id) AS market_updated
             FROM stations st
-            LEFT JOIN systems s ON s.system_address=st.system_address
+            LEFT JOIN systems_visited s ON s.system_address=st.system_address
             WHERE COALESCE(st.is_fleet_carrier, 0)=0
             ORDER BY COALESCE(st.last_station_visit_datetime, '' ) DESC, COALESCE(market_updated, '') DESC
             """
