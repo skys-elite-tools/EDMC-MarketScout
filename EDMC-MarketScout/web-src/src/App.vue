@@ -82,6 +82,9 @@ const tripRoutes = ref([])
 const activeTripRoute = ref(null)
 const tripRouteBusy = ref(false)
 const tripRouteStatus = ref('')
+const targetStateToast = ref(null)
+const dismissedTargetStateAlertKey = ref('')
+let targetStateToastTimer = null
 
 const DEFAULT_STATION_FILTERS = {
   system: '',
@@ -571,6 +574,7 @@ async function pollStatus() {
   const res = await fetch('/api/status', { cache: 'no-store' })
   const data = await res.json()
   latestJournalEvent.value = data.latest_journal_event || null
+  updateTargetStateToast(data.current_system_target_state_alert || null)
   edmcStatus.value = data.edmc || null
   updateStatus.value = data.update || null
   if (!autoRefresh.value) {
@@ -581,6 +585,39 @@ async function pollStatus() {
     await Promise.all([applyCurrentView({ preserveRows: true }), loadStationFilterOptions()])
   }
   lastVersion.value = data.data_version
+}
+
+function clearTargetStateToastTimer() {
+  if (targetStateToastTimer) {
+    clearTimeout(targetStateToastTimer)
+    targetStateToastTimer = null
+  }
+}
+
+function dismissTargetStateToast() {
+  if (targetStateToast.value?.key) dismissedTargetStateAlertKey.value = targetStateToast.value.key
+  targetStateToast.value = null
+  clearTargetStateToastTimer()
+}
+
+function expireTargetStateToast() {
+  if (targetStateToast.value?.key) dismissedTargetStateAlertKey.value = targetStateToast.value.key
+  targetStateToast.value = null
+  targetStateToastTimer = null
+}
+
+function updateTargetStateToast(alert) {
+  if (!alert?.key) {
+    targetStateToast.value = null
+    clearTargetStateToastTimer()
+    return
+  }
+  if (targetStateToast.value?.key === alert.key || dismissedTargetStateAlertKey.value === alert.key) {
+    return
+  }
+  targetStateToast.value = alert
+  clearTargetStateToastTimer()
+  targetStateToastTimer = setTimeout(expireTargetStateToast, 15000)
 }
 
 async function handleUpdateAction() {
@@ -662,6 +699,7 @@ onMounted(async () => {
 })
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
+  clearTargetStateToastTimer()
 })
 </script>
 
@@ -679,6 +717,18 @@ onUnmounted(() => {
       @discard-edmc-delayed="discardEdmcDelayedStationMessages"
       @open-support="supportOpen = true"
     />
+
+    <button
+      v-if="targetStateToast"
+      type="button"
+      class="targetStateToast"
+      :title="targetStateToast.faction_names?.length ? targetStateToast.faction_names.join(', ') : targetStateToast.message"
+      @click="dismissTargetStateToast"
+    >
+      <strong>{{ targetStateToast.state }}</strong>
+      <span>{{ targetStateToast.message }}</span>
+      <small>Click to dismiss</small>
+    </button>
 
     <TopBar
       v-model:current-view="currentView"

@@ -683,14 +683,86 @@ def api_status() -> Dict[str, Any]:
                 "label": "EDDN Station: Unknown",
                 "detail": f"Could not read EDMC status: {exc}",
             }
+    current_system_target_state_alert = current_target_state_alert(_LATEST_JOURNAL_EVENT)
     return {
         "ok": True,
         "data_version": version,
         "target_commodities": _CONTEXT.get("target_commodities", []),
         "primary_metals": _CONTEXT.get("primary_metals", []),
         "latest_journal_event": _LATEST_JOURNAL_EVENT,
+        "current_system_target_state_alert": current_system_target_state_alert,
         "edmc": edmc_status,
         "update": update_status_snapshot(),
+    }
+
+
+def normalized_state_key(value: Any) -> str:
+    return "".join(ch for ch in str(value or "").casefold() if ch.isalnum())
+
+
+def current_target_state_alert(latest_event: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    if not latest_event:
+        return None
+
+    system_name = str(latest_event.get("system") or "").strip()
+    system_address = coerce_int(latest_event.get("system_address"))
+    if not system_name and system_address is None:
+        return None
+
+    where = []
+    params: List[Any] = []
+    if system_address is not None:
+        where.append("sfs.system_address = ?")
+        params.append(system_address)
+    if system_name:
+        where.append("lower(sv.system_name) = lower(?)")
+        params.append(system_name)
+    if not where:
+        return None
+
+    try:
+        with connect() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT
+                    sfs.system_address,
+                    COALESCE(sv.system_name, ?) AS system_name,
+                    sfs.faction_name,
+                    sfs.faction_state,
+                    sfs.influence,
+                    sfs.updated_at
+                FROM system_faction_snapshots sfs
+                LEFT JOIN systems_visited sv ON sv.system_address = sfs.system_address
+                WHERE ({' OR '.join(where)})
+                ORDER BY COALESCE(sfs.influence, -1) DESC, sfs.faction_name COLLATE NOCASE
+                """,
+                [system_name, *params],
+            ).fetchall()
+    except sqlite3.OperationalError:
+        return None
+
+    target_rows = [
+        row for row in rows
+        if normalized_state_key(row["faction_state"]) == "infrastructurefailure"
+    ]
+    if not target_rows:
+        return None
+
+    row = target_rows[0]
+    faction_names = [str(r["faction_name"] or "") for r in target_rows if r["faction_name"]]
+    return {
+        "key": f"{row['system_address'] or system_name}:infrastructurefailure:{row['updated_at']}",
+        "state": "Infrastructure Failure",
+        "system_address": row["system_address"],
+        "system_name": row["system_name"] or system_name,
+        "faction_name": row["faction_name"],
+        "faction_count": len(target_rows),
+        "faction_names": faction_names[:5],
+        "updated_at": row["updated_at"],
+        "message": (
+            f"Infrastructure Failure detected in {row['system_name'] or system_name}: "
+            f"{row['faction_name']}"
+        ),
     }
 
 
@@ -891,7 +963,7 @@ def api_station_filter_options() -> Dict[str, Any]:
                 for r in conn.execute(
                     """
                     SELECT DISTINCT system_name
-                    FROM systems
+                    FROM systems_visited
                     WHERE system_name IS NOT NULL
                       AND TRIM(system_name) != ''
                       AND (last_visit_datetime IS NOT NULL OR source = 'local_visit')
@@ -1343,7 +1415,7 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
             f"THEN mp.sell_price - COALESCE({latest_buy_sql}, cgs.min_buy) END) AS '{c}_sell_profit'",
             f"MAX(CASE WHEN mp.commodity='{safe}' AND mp.buy_price IS NOT NULL AND mp.buy_price > 0 AND COALESCE(mp.supply, 0) > 0 AND cgs.max_sell IS NOT NULL AND (cgs.max_sell - mp.buy_price) >= {min_profit} THEN cgs.max_sell - mp.buy_price END) AS '{c}_potential_profit'",
         ])
-    sql = "SELECT " + ", ".join(select_cols) + " FROM stations st LEFT JOIN systems s ON s.system_address=st.system_address LEFT JOIN market_prices mp ON mp.market_id=st.market_id LEFT JOIN commodity_global_stats cgs ON cgs.commodity=mp.commodity"
+    sql = "SELECT " + ", ".join(select_cols) + " FROM stations st LEFT JOIN systems_visited s ON s.system_address=st.system_address LEFT JOIN market_prices mp ON mp.market_id=st.market_id LEFT JOIN commodity_global_stats cgs ON cgs.commodity=mp.commodity"
     where: List[str] = []
     params: List[Any] = []
 
@@ -1694,7 +1766,7 @@ def api_rare_station_trade_options() -> Dict[str, Any]:
                         st.last_station_visit_datetime,
                         NULL AS market_updated
                     FROM stations st
-                    LEFT JOIN systems s ON s.system_address = st.system_address
+                    LEFT JOIN systems_visited s ON s.system_address = st.system_address
                     WHERE st.station_name IS NOT NULL
                       AND trim(st.station_name) != ''
                       AND st.market_id IN ({placeholders})
@@ -1764,7 +1836,7 @@ def api_rare_station_trade(qs: Dict[str, List[str]]) -> Dict[str, Any]:
                        st.station_name, st.station_type, st.largest_pad,
                        st.last_station_visit_datetime
                 FROM stations st
-                LEFT JOIN systems s ON s.system_address = st.system_address
+                LEFT JOIN systems_visited s ON s.system_address = st.system_address
                 WHERE st.market_id=?
                 """,
                 (market_id,),
@@ -1789,7 +1861,7 @@ def latest_current_position(conn: sqlite3.Connection) -> Optional[Tuple[float, f
         row = conn.execute(
             """
             SELECT x, y, z
-            FROM systems
+            FROM systems_visited
             WHERE x IS NOT NULL AND y IS NOT NULL AND z IS NOT NULL
             ORDER BY last_visit_datetime IS NULL, last_visit_datetime DESC
             LIMIT 1

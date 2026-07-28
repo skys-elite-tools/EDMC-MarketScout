@@ -51,7 +51,7 @@ def contiguous_trip_progress_index(conn: sqlite3.Connection, route_id: int, curr
             COALESCE(trs.stop_skipped, 0) AS stop_skipped,
             EXISTS (
               SELECT 1
-              FROM systems s
+              FROM systems_visited s
               WHERE s.last_visit_datetime IS NOT NULL
                 AND s.last_visit_datetime >= ?
                 AND (
@@ -374,7 +374,7 @@ def trip_route_stop_rows(conn: sqlite3.Connection, route_id: int) -> List[Dict[s
             (
                 SELECT st.station_name
                 FROM stations st
-                LEFT JOIN systems ss ON ss.system_address = st.system_address
+                LEFT JOIN systems_visited ss ON ss.system_address = st.system_address
                 WHERE st.last_station_visit_datetime IS NOT NULL
                   AND (
                     st.system_address = trs.system_address
@@ -386,7 +386,7 @@ def trip_route_stop_rows(conn: sqlite3.Connection, route_id: int) -> List[Dict[s
             (
                 SELECT st.last_station_visit_datetime
                 FROM stations st
-                LEFT JOIN systems ss ON ss.system_address = st.system_address
+                LEFT JOIN systems_visited ss ON ss.system_address = st.system_address
                 WHERE st.last_station_visit_datetime IS NOT NULL
                   AND (
                     st.system_address = trs.system_address
@@ -396,7 +396,7 @@ def trip_route_stop_rows(conn: sqlite3.Connection, route_id: int) -> List[Dict[s
                 LIMIT 1
             ) AS last_station_visit_datetime
         FROM trip_route_stops trs
-        LEFT JOIN systems s ON s.system_address = trs.system_address
+        LEFT JOIN systems_visited s ON s.system_address = trs.system_address
         WHERE trs.route_id = ?
         ORDER BY trs.stop_index
         """,

@@ -1026,6 +1026,47 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   opacity: .72;
   cursor: progress;
 }
+.targetStateToast {
+  position: fixed;
+  z-index: 90;
+  top: 46px;
+  left: 50%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: min(720px, calc(100vw - 32px));
+  padding: 9px 12px;
+  border: 1px solid rgba(234, 204, 255, .64);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(83, 45, 112, .98), rgba(55, 32, 76, .98));
+  color: #f6eaff;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .38), 0 0 24px rgba(202, 132, 255, .22);
+  transform: translateX(-50%);
+  cursor: pointer;
+  text-align: left;
+}
+.targetStateToast:hover {
+  border-color: rgba(234, 204, 255, .86);
+  background: linear-gradient(180deg, rgba(96, 52, 130, .99), rgba(63, 36, 87, .99));
+}
+.targetStateToast strong {
+  color: #ffffff;
+  font-weight: 900;
+}
+.targetStateToast span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.targetStateToast small {
+  color: #d9b2ff;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
 .modalPath {
   overflow-wrap: anywhere;
   color: var(--muted);
