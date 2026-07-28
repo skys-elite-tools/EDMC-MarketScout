@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import AutocompleteDropdown from './AutocompleteDropdown.vue'
 import EconomyPresetInput from './EconomyPresetInput.vue'
-import EconomicStateInput from './EconomicStateInput.vue'
+import StationOwnerStateInput from './StationOwnerStateInput.vue'
 const props = defineProps({
   currentView: { type: String, required: true },
   filters: { type: Object, required: true },
@@ -104,7 +104,7 @@ const hasControls = computed(() => !['analyze', 'carrier', 'carrierCalc', 'confi
             :save-status="economyPresetStatus"
             @save="emit('save-economy-preset')"
           />
-          <EconomicStateInput v-model="filters.state" />
+          <StationOwnerStateInput v-model="filters.state" />
           <label class="sourceFilter">Source
             <select v-model="filters.source">
               <option>Any</option>

@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 
-const ECONOMIC_STATES = [
+const STATION_OWNER_STATES = [
   {
     name: 'Boom',
     description: 'Increases system wealth and trade efficiency; trade missions have double the influence effect.',
@@ -48,16 +48,16 @@ const highlightedIndex = ref(-1)
 
 const selectedState = computed(() => {
   const value = String(props.modelValue || '').trim().toLowerCase()
-  return ECONOMIC_STATES.find(state => state.name.toLowerCase() === value) || null
+  return STATION_OWNER_STATES.find(state => state.name.toLowerCase() === value) || null
 })
 
-const inputTitle = computed(() => selectedState.value?.description || 'Choose an economic state')
+const inputTitle = computed(() => selectedState.value?.description || 'Choose a station owner state')
 
 const filteredOptions = computed(() => {
   const filter = String(props.modelValue || '').trim().toLowerCase()
   const options = showAll.value || !filter
-    ? ECONOMIC_STATES
-    : ECONOMIC_STATES.filter(state => state.name.toLowerCase().includes(filter))
+    ? STATION_OWNER_STATES
+    : STATION_OWNER_STATES.filter(state => state.name.toLowerCase().includes(filter))
   return options
 })
 
@@ -124,7 +124,7 @@ function onKeydown(event) {
 }
 
 function onDocumentPointerDown(event) {
-  if (!event.target.closest?.('.economicStateField')) {
+  if (!event.target.closest?.('.stationOwnerStateField')) {
     menuOpen.value = false
     showAll.value = false
     highlightedIndex.value = -1
@@ -136,9 +136,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
 </script>
 
 <template>
-  <label class="economicStateField">
-    Economic State
-    <div class="economicStateCombo">
+  <label class="stationOwnerStateField">
+    Station Owner State
+    <div class="stationOwnerStateCombo">
       <input
         ref="inputEl"
         :value="modelValue"
@@ -155,8 +155,8 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPoin
       <button
         type="button"
         class="economyComboToggle"
-        title="Show all economic states"
-        aria-label="Show all economic states"
+        title="Show all station owner states"
+        aria-label="Show all station owner states"
         @mousedown.prevent
         @click="openFullMenu"
       >▾</button>
