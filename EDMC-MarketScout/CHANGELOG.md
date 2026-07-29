@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed the active Infrastructure Failure toast so it detects factions listed in active state details, not only the single snapshot state field.
 - Added pending station-owner faction-state storage, filtering, subtle station-row labels, and a lower-priority pending Infrastructure Failure toast.
 - Added a `systems_visited` table name for clearer visited-system data, started storing latest faction-state snapshots from journal system events, and added a current-system Infrastructure Failure toast.
 - Renamed the Stations state filter/API field to `station_faction_state` and relabeled it as `Station Owner State` for clearer future system-state work.

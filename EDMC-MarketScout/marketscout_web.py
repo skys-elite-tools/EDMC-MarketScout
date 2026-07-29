@@ -725,26 +725,31 @@ def current_target_state_alert(latest_event: Optional[Dict[str, Any]]) -> Option
             rows = conn.execute(
                 f"""
                 SELECT
-                    sfs.system_address,
+                    sfsd.system_address,
                     COALESCE(sv.system_name, ?) AS system_name,
-                    sfs.faction_name,
-                    sfs.faction_state,
-                    sfs.influence,
-                    sfs.updated_at
-                FROM system_faction_snapshots sfs
-                LEFT JOIN systems_visited sv ON sv.system_address = sfs.system_address
-                WHERE ({' OR '.join(where)})
-                ORDER BY COALESCE(sfs.influence, -1) DESC, sfs.faction_name COLLATE NOCASE
+                    sfsd.faction_name,
+                    sfsd.state_name,
+                    sfsd.updated_at,
+                    sfs.influence
+                FROM system_faction_state_details sfsd
+                LEFT JOIN systems_visited sv ON sv.system_address = sfsd.system_address
+                LEFT JOIN system_faction_snapshots sfs
+                    ON sfs.system_address = sfsd.system_address
+                    AND lower(sfs.faction_name) = lower(sfsd.faction_name)
+                WHERE sfsd.state_kind = 'active' AND ({' OR '.join(where).replace('sfs.', 'sfsd.')})
+                ORDER BY COALESCE(sfs.influence, -1) DESC, sfsd.faction_name COLLATE NOCASE
                 """,
                 [system_name, *params],
             ).fetchall()
     except sqlite3.OperationalError:
-        return None
+        rows = []
 
     target_rows = [
         row for row in rows
-        if normalized_state_key(row["faction_state"]) == "infrastructurefailure"
+        if normalized_state_key(row["state_name"]) == "infrastructurefailure"
     ]
+    if not target_rows:
+        target_rows = current_snapshot_target_state_rows(system_name, system_address)
     if not target_rows:
         return current_pending_target_state_alert(latest_event)
 
@@ -765,6 +770,45 @@ def current_target_state_alert(latest_event: Optional[Dict[str, Any]]) -> Option
             f"{row['faction_name']}"
         ),
     }
+
+
+def current_snapshot_target_state_rows(system_name: str, system_address: Optional[int]) -> List[sqlite3.Row]:
+    where = []
+    params: List[Any] = []
+    if system_address is not None:
+        where.append("sfs.system_address = ?")
+        params.append(system_address)
+    if system_name:
+        where.append("lower(sv.system_name) = lower(?)")
+        params.append(system_name)
+    if not where:
+        return []
+
+    try:
+        with connect() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT
+                    sfs.system_address,
+                    COALESCE(sv.system_name, ?) AS system_name,
+                    sfs.faction_name,
+                    sfs.faction_state AS state_name,
+                    sfs.updated_at,
+                    sfs.influence
+                FROM system_faction_snapshots sfs
+                LEFT JOIN systems_visited sv ON sv.system_address = sfs.system_address
+                WHERE ({' OR '.join(where)})
+                ORDER BY COALESCE(sfs.influence, -1) DESC, sfs.faction_name COLLATE NOCASE
+                """,
+                [system_name, *params],
+            ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+
+    return [
+        row for row in rows
+        if normalized_state_key(row["state_name"]) == "infrastructurefailure"
+    ]
 
 
 def current_pending_target_state_alert(latest_event: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
