@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 Beta
 
 - Routed MarketScout runtime diagnostics through EDMC-compatible plugin loggers instead of writing separate plugin log files.
 - Moved MarketScout listener settings into EDMC's main config storage with a one-time import from legacy `marketscout.config`.
