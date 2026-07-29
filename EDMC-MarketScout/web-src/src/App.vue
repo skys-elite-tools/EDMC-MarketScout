@@ -1,4 +1,5 @@
 <script setup>
+import { storeToRefs } from 'pinia'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import StatusStrip from './components/StatusStrip.vue'
 import TopBar from './components/TopBar.vue'
@@ -17,13 +18,21 @@ import CarrierTradeCalculatorView from './views/CarrierTradeCalculatorView.vue'
 import ConfigurationView from './views/ConfigurationView.vue'
 import FooterBar from './components/FooterBar.vue'
 import ModalShell from './components/ModalShell.vue'
+import { useStatusStore } from './stores/statusStore.js'
 import { dedupeStationRows, query } from './utils.js'
 import { dataStore } from './services/dataStoreService.js'
+
+const statusStore = useStatusStore()
+const {
+  statusText,
+  latestJournalEvent,
+  updateStatus,
+  updateBusy,
+} = storeToRefs(statusStore)
 
 const rows = ref([])
 const selectedIndex = ref(-1)
 const selectedRow = computed(() => selectedIndex.value >= 0 ? rows.value[selectedIndex.value] : null)
-const lastVersion = ref(null)
 let latestRowsRequestId = 0
 const ACTIVE_VIEW_STORAGE_KEY = 'ui.activeView'
 const LEGACY_ACTIVE_VIEW_STORAGE_KEY = 'marketscout.activeView'
@@ -69,16 +78,9 @@ const helpRequestId = ref(0)
 const supportOpen = ref(false)
 const commoditySearch = ref('')
 const bestBuyIgnoreSearch = ref('')
-const statusText = ref('Loading…')
 const stationRowsLoading = ref(false)
 const stationRowsRendering = ref(false)
 const stationPage = ref({ totalCount: 0, hasMore: false, nextOffset: null, limit: DEFAULT_STATION_ROW_LIMIT, offset: 0 })
-const latestJournalEvent = ref(null)
-const edmcStatus = ref(null)
-const autoRefresh = ref(true)
-const updateStatus = ref(null)
-const updateBusy = ref(false)
-const edmcDiscardBusy = ref(false)
 const updateModal = ref({
   visible: false,
   title: '',
@@ -679,20 +681,12 @@ async function openBestBuyIgnoreSettings() {
 }
 
 async function pollStatus() {
-  const res = await fetch('/api/status', { cache: 'no-store' })
-  const data = await res.json()
-  latestJournalEvent.value = data.latest_journal_event || null
-  updateTargetStateToast(data.current_system_target_state_alert || null)
-  edmcStatus.value = data.edmc || null
-  updateStatus.value = data.update || null
-  if (!autoRefresh.value) {
-    lastVersion.value = data.data_version
-    return
-  }
-  if (lastVersion.value !== null && data.data_version !== lastVersion.value) {
-    await Promise.all([applyCurrentView({ preserveRows: true }), loadStationFilterOptions()])
-  }
-  lastVersion.value = data.data_version
+  return statusStore.pollStatus({
+    onTargetStateAlert: updateTargetStateToast,
+    onDataVersionChanged: async () => {
+      await Promise.all([applyCurrentView({ preserveRows: true }), loadStationFilterOptions()])
+    },
+  })
 }
 
 function clearTargetStateToastTimer() {
@@ -761,62 +755,10 @@ function updateTargetStateToast(alert) {
   resetTargetStateToastTimer()
 }
 
-async function handleUpdateAction() {
-  const update = updateStatus.value || {}
-  if (!update.can_update) {
-    const url = update.html_url || update.download_url
-    if (url) window.open(url, '_blank', 'noopener')
-    return
-  }
 
-  updateBusy.value = true
-  try {
-    const res = await fetch('/api/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    })
-    const data = await res.json()
-    updateStatus.value = data.update || updateStatus.value
-    updateModal.value = {
-      visible: true,
-      title: data.ok ? 'Update Complete' : 'Update Could Not Be Completed',
-      message: data.ok
-        ? (data.message || 'Update Complete. Please restart EDMC to start using the latest version of MarketScout.')
-        : `${data.message || 'The update could not be completed.'} Copy all files from the backup directory to the plugin directory if you need to restore the previous working version.`,
-      backupPath: data.backup_path || '',
-      pluginDir: data.plugin_dir || '',
-    }
-  } catch (err) {
-    updateModal.value = {
-      visible: true,
-      title: 'Update Could Not Be Completed',
-      message: `The update could not be completed. ${err?.message || err}`,
-      backupPath: '',
-      pluginDir: '',
-    }
-  } finally {
-    updateBusy.value = false
-  }
-}
 
 async function discardEdmcDelayedStationMessages() {
-  edmcDiscardBusy.value = true
-  try {
-    const res = await fetch('/api/edmc/eddn/discard-delayed-station-messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    })
-    const data = await res.json()
-    if (!data.ok) throw new Error(data.error || 'Could not clear delayed EDDN station messages')
-    statusText.value = `Cleared ${Number(data.discarded || 0)} delayed EDDN station message(s) · ${new Date().toLocaleTimeString()}`
-    await pollStatus()
-  } catch (err) {
-    statusText.value = `${err?.message || err} · ${new Date().toLocaleTimeString()}`
-  } finally {
-    edmcDiscardBusy.value = false
-  }
+  await statusStore.discardEdmcDelayedStationMessages({ refresh: pollStatus })
 }
 
 let pollTimer = null
@@ -848,15 +790,7 @@ onUnmounted(() => {
 <template>
   <div class="appShell">
     <StatusStrip
-      v-model:auto-refresh="autoRefresh"
-      :status-text="statusText"
-      :latest-journal-event="latestJournalEvent"
-      :edmc-status="edmcStatus"
       :busy-text="stationRowsLoading ? 'Loading stations...' : (stationRowsRendering ? 'Updating table...' : '')"
-      :update-status="updateStatus"
-      :update-busy="updateBusy"
-      :edmc-discard-busy="edmcDiscardBusy"
-      @run-update="handleUpdateAction"
       @discard-edmc-delayed="discardEdmcDelayedStationMessages"
       @open-support="supportOpen = true"
     />

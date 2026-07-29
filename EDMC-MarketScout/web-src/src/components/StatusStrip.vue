@@ -1,18 +1,27 @@
 <script setup>
+import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { useStatusStore } from '../stores/statusStore.js'
+import { useSystemStore } from '../stores/systemStore.js'
 import { shortTime } from '../utils.js'
 
 const props = defineProps({
-  statusText: { type: String, default: '' },
-  latestJournalEvent: { type: Object, default: null },
-  edmcStatus: { type: Object, default: null },
-  autoRefresh: { type: Boolean, default: true },
   busyText: { type: String, default: '' },
-  updateStatus: { type: Object, default: null },
-  updateBusy: { type: Boolean, default: false },
-  edmcDiscardBusy: { type: Boolean, default: false },
 })
-const emit = defineEmits(['update:autoRefresh', 'run-update', 'discard-edmc-delayed', 'open-support'])
+const emit = defineEmits(['run-update', 'discard-edmc-delayed', 'open-support'])
+const statusStore = useStatusStore()
+const {
+  autoRefresh,
+  statusText,
+  latestJournalEvent,
+  edmcStatus,
+  updateStatus,
+  updateBusy,
+  edmcDiscardBusy,
+} = storeToRefs(statusStore)
+
+const systemStore = useSystemStore()
+
 const displayedBusyText = ref('')
 let busyTextTimer = null
 
@@ -45,7 +54,7 @@ watch(
 onBeforeUnmount(clearBusyTextTimer)
 
 const journalLabel = computed(() => {
-  const event = props.latestJournalEvent || null
+  const event = latestJournalEvent.value || null
   if (!event || !event.event) return 'No Journal event received yet'
   const parts = [`${shortTime(event.timestamp)} · ${event.event}`]
   if (event.system) parts.push(event.system)
@@ -54,15 +63,15 @@ const journalLabel = computed(() => {
 })
 
 const updateLabel = computed(() => {
-  if (props.updateBusy) return 'Updating MarketScout...'
-  return props.updateStatus?.can_update
+  if (updateBusy.value) return 'Updating MarketScout...'
+  return updateStatus.value?.can_update
     ? 'Update Available: Click Here to Update'
     : 'Update Available: Click Here to Download'
 })
 
 const delayedMessages = computed(() => (
-  Array.isArray(props.edmcStatus?.delayed_station_messages)
-    ? props.edmcStatus.delayed_station_messages
+  Array.isArray(edmcStatus.value?.delayed_station_messages)
+    ? edmcStatus.value.delayed_station_messages
     : []
 ))
 
@@ -109,7 +118,7 @@ const firstDelayedMessageLabel = computed(() => {
         class="updateAvailableButton"
         type="button"
         :disabled="updateBusy"
-        @click="emit('run-update')"
+        @click="systemStore.handleUpdateAction()"
       >
         {{ updateLabel }}
       </button>
@@ -144,7 +153,7 @@ const firstDelayedMessageLabel = computed(() => {
         <input
           type="checkbox"
           :checked="autoRefresh"
-          @change="emit('update:autoRefresh', $event.target.checked)"
+          @change="statusStore.autoRefresh = $event.target.checked"
         />
         Auto-refresh
       </label>
