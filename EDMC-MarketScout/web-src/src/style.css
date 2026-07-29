@@ -996,6 +996,9 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   }
   .configurationGrid,
   .qrSharePanel { grid-template-columns: 1fr; }
+  .targetStateToastDetails {
+    grid-template-columns: 1fr;
+  }
 }
 .statusStrip {
   display: grid;
@@ -1088,11 +1091,9 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   top: 46px;
   left: 50%;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
   width: min(720px, calc(100vw - 32px));
-  padding: 9px 12px;
+  padding: 0;
   border: 1px solid rgba(234, 204, 255, .64);
   border-radius: 8px;
   background: linear-gradient(180deg, rgba(83, 45, 112, .98), rgba(55, 32, 76, .98));
@@ -1103,8 +1104,14 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   text-align: left;
   overflow: hidden;
 }
-.targetStateToast::after {
-  content: "";
+.targetStateToastSummary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+}
+.targetStateToastCountdown {
   position: absolute;
   left: 0;
   right: auto;
@@ -1121,11 +1128,17 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 }
 .targetStateToastPending {
   width: min(580px, calc(100vw - 32px));
-  padding: 7px 10px;
   border-color: rgba(123, 198, 255, .46);
   background: linear-gradient(180deg, rgba(35, 71, 106, .98), rgba(25, 47, 73, .98));
   color: #e5f3ff;
   box-shadow: 0 10px 26px rgba(0, 0, 0, .32), 0 0 18px rgba(123, 198, 255, .16);
+}
+.targetStateToastPending .targetStateToastSummary {
+  padding: 7px 10px;
+}
+.targetStateToastOpen,
+.targetStateToastPending.targetStateToastOpen {
+  width: min(760px, calc(100vw - 32px));
 }
 .targetStateToastPending:hover {
   border-color: rgba(123, 198, 255, .68);
@@ -1139,7 +1152,7 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   color: #ffffff;
   font-weight: 900;
 }
-.targetStateToast span {
+.targetStateToastSummary > span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1151,6 +1164,67 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: .04em;
+}
+.targetStateToastClose {
+  width: 1.7rem;
+  min-width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  border-color: rgba(255, 255, 255, .22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+}
+.targetStateToastClose:hover {
+  background: rgba(255, 255, 255, .18);
+}
+.targetStateToastDetails {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 0 12px 14px;
+  border-top: 1px solid rgba(255, 255, 255, .12);
+}
+.targetStateToastDetailBlock {
+  min-width: 0;
+  padding-top: 11px;
+}
+.targetStateToastDetailBlock h3 {
+  margin: 0 0 7px;
+  color: #ffffff;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.targetStateToastDetailBlock ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.targetStateToastDetailBlock li {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  color: rgba(255, 255, 255, .82);
+  font-size: 12px;
+}
+.targetStateToastDetailBlock li strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.targetStateToastDetailBlock li span,
+.targetStateToastDetailBlock p {
+  margin: 0;
+  color: rgba(255, 255, 255, .68);
+}
+.targetStateToastNote {
+  margin-top: 8px !important;
+  font-size: 11px;
 }
 .modalPath {
   overflow-wrap: anywhere;

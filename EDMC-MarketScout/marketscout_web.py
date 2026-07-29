@@ -873,6 +873,66 @@ def alert_target_state(conn: sqlite3.Connection) -> str:
     return value or DEFAULT_ALERT_TARGET_STATE
 
 
+def target_state_detection_rows(target_rows: List[sqlite3.Row], state_kind: str) -> List[Dict[str, Any]]:
+    detections = []
+    for row in target_rows[:10]:
+        detections.append({
+            "state_kind": state_kind,
+            "faction_name": row["faction_name"],
+            "state_name": row["state_name"],
+            "updated_at": row["updated_at"],
+            "influence": row["influence"],
+        })
+    return detections
+
+
+def target_state_station_rows(
+    system_name: str,
+    system_address: Optional[int],
+    faction_names: List[str],
+) -> List[Dict[str, Any]]:
+    faction_names = [name for name in faction_names if str(name or "").strip()]
+    if not faction_names:
+        return []
+
+    where = []
+    params: List[Any] = []
+    if system_address is not None:
+        where.append("st.system_address = ?")
+        params.append(system_address)
+    if system_name:
+        where.append("lower(sv.system_name) = lower(?)")
+        params.append(system_name)
+    if not where:
+        return []
+
+    params.extend(faction_names)
+    try:
+        with connect() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT
+                    st.station_name,
+                    st.station_type,
+                    st.largest_pad,
+                    st.station_faction_name,
+                    st.last_station_visit_datetime
+                FROM stations st
+                LEFT JOIN systems_visited sv ON sv.system_address = st.system_address
+                WHERE ({' OR '.join(where)})
+                  AND lower(st.station_faction_name) IN ({','.join('lower(?)' for _ in faction_names)})
+                  AND st.station_name IS NOT NULL
+                  AND trim(st.station_name) != ''
+                ORDER BY st.station_name COLLATE NOCASE
+                LIMIT 12
+                """,
+                params,
+            ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    return [row_to_dict(row) for row in rows]
+
+
 def current_target_state_alert(latest_event: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     if not latest_event:
         return None
@@ -932,6 +992,7 @@ def current_target_state_alert(latest_event: Optional[Dict[str, Any]]) -> Option
 
     row = target_rows[0]
     faction_names = [str(r["faction_name"] or "") for r in target_rows if r["faction_name"]]
+    station_rows = target_state_station_rows(row["system_name"] or system_name, row["system_address"], faction_names)
     return {
         "key": f"{row['system_address'] or system_name}:{target_state_key}:{row['updated_at']}",
         "tone": "active",
@@ -941,6 +1002,9 @@ def current_target_state_alert(latest_event: Optional[Dict[str, Any]]) -> Option
         "faction_name": row["faction_name"],
         "faction_count": len(target_rows),
         "faction_names": faction_names[:5],
+        "detections": target_state_detection_rows(target_rows, "active"),
+        "stations": station_rows,
+        "station_ownership_note": bool(station_rows),
         "updated_at": row["updated_at"],
         "message": (
             f"{target_state} detected in {row['system_name'] or system_name}: "
@@ -1045,6 +1109,7 @@ def current_pending_target_state_alert(
 
     row = target_rows[0]
     faction_names = [str(r["faction_name"] or "") for r in target_rows if r["faction_name"]]
+    station_rows = target_state_station_rows(row["system_name"] or system_name, row["system_address"], faction_names)
     return {
         "key": f"{row['system_address'] or system_name}:pending:{target_state_key}:{row['updated_at']}",
         "tone": "pending",
@@ -1054,6 +1119,9 @@ def current_pending_target_state_alert(
         "faction_name": row["faction_name"],
         "faction_count": len(target_rows),
         "faction_names": faction_names[:5],
+        "detections": target_state_detection_rows(target_rows, "pending"),
+        "stations": station_rows,
+        "station_ownership_note": bool(station_rows),
         "updated_at": row["updated_at"],
         "message": (
             f"{target_state} pending in {row['system_name'] or system_name}: "
