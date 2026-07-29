@@ -65,6 +65,8 @@ DEFAULT_BIND_ADDRESS = "127.0.0.1"
 DEFAULT_BIND_PORT = 40595
 DEFAULT_BEST_BUY_SUPPLY_CAP = 1000
 DEFAULT_MINIMUM_POTENTIAL_PROFIT = 10000
+DEFAULT_ALERT_TARGET_STATE = "Infrastructure Failure"
+ALERT_TARGET_STATE_SETTING_KEY = "alerts.targetState"
 GITHUB_REPO = "skys-elite-tools/EDMC-MarketScout"
 GITHUB_RELEASES_LATEST_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 PLUGIN_FOLDER_NAME = "EDMC-MarketScout"
@@ -865,6 +867,12 @@ def normalized_state_key(value: Any) -> str:
     return "".join(ch for ch in str(value or "").casefold() if ch.isalnum())
 
 
+def alert_target_state(conn: sqlite3.Connection) -> str:
+    value = setting_get(conn, ALERT_TARGET_STATE_SETTING_KEY, DEFAULT_ALERT_TARGET_STATE)
+    value = str(value or "").strip()
+    return value or DEFAULT_ALERT_TARGET_STATE
+
+
 def current_target_state_alert(latest_event: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     if not latest_event:
         return None
@@ -885,8 +893,12 @@ def current_target_state_alert(latest_event: Optional[Dict[str, Any]]) -> Option
     if not where:
         return None
 
+    target_state = DEFAULT_ALERT_TARGET_STATE
+    target_state_key = normalized_state_key(target_state)
     try:
         with connect() as conn:
+            target_state = alert_target_state(conn)
+            target_state_key = normalized_state_key(target_state)
             rows = conn.execute(
                 f"""
                 SELECT
@@ -911,19 +923,19 @@ def current_target_state_alert(latest_event: Optional[Dict[str, Any]]) -> Option
 
     target_rows = [
         row for row in rows
-        if normalized_state_key(row["state_name"]) == "infrastructurefailure"
+        if normalized_state_key(row["state_name"]) == target_state_key
     ]
     if not target_rows:
-        target_rows = current_snapshot_target_state_rows(system_name, system_address)
+        target_rows = current_snapshot_target_state_rows(system_name, system_address, target_state_key)
     if not target_rows:
-        return current_pending_target_state_alert(latest_event)
+        return current_pending_target_state_alert(latest_event, target_state, target_state_key)
 
     row = target_rows[0]
     faction_names = [str(r["faction_name"] or "") for r in target_rows if r["faction_name"]]
     return {
-        "key": f"{row['system_address'] or system_name}:infrastructurefailure:{row['updated_at']}",
+        "key": f"{row['system_address'] or system_name}:{target_state_key}:{row['updated_at']}",
         "tone": "active",
-        "state": "Infrastructure Failure",
+        "state": target_state,
         "system_address": row["system_address"],
         "system_name": row["system_name"] or system_name,
         "faction_name": row["faction_name"],
@@ -931,13 +943,13 @@ def current_target_state_alert(latest_event: Optional[Dict[str, Any]]) -> Option
         "faction_names": faction_names[:5],
         "updated_at": row["updated_at"],
         "message": (
-            f"Infrastructure Failure detected in {row['system_name'] or system_name}: "
+            f"{target_state} detected in {row['system_name'] or system_name}: "
             f"{row['faction_name']}"
         ),
     }
 
 
-def current_snapshot_target_state_rows(system_name: str, system_address: Optional[int]) -> List[sqlite3.Row]:
+def current_snapshot_target_state_rows(system_name: str, system_address: Optional[int], target_state_key: str) -> List[sqlite3.Row]:
     where = []
     params: List[Any] = []
     if system_address is not None:
@@ -972,11 +984,15 @@ def current_snapshot_target_state_rows(system_name: str, system_address: Optiona
 
     return [
         row for row in rows
-        if normalized_state_key(row["state_name"]) == "infrastructurefailure"
+        if normalized_state_key(row["state_name"]) == target_state_key
     ]
 
 
-def current_pending_target_state_alert(latest_event: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+def current_pending_target_state_alert(
+    latest_event: Optional[Dict[str, Any]],
+    target_state: str,
+    target_state_key: str,
+) -> Optional[Dict[str, Any]]:
     if not latest_event:
         return None
 
@@ -1022,7 +1038,7 @@ def current_pending_target_state_alert(latest_event: Optional[Dict[str, Any]]) -
 
     target_rows = [
         row for row in rows
-        if normalized_state_key(row["state_name"]) == "infrastructurefailure"
+        if normalized_state_key(row["state_name"]) == target_state_key
     ]
     if not target_rows:
         return None
@@ -1030,9 +1046,9 @@ def current_pending_target_state_alert(latest_event: Optional[Dict[str, Any]]) -
     row = target_rows[0]
     faction_names = [str(r["faction_name"] or "") for r in target_rows if r["faction_name"]]
     return {
-        "key": f"{row['system_address'] or system_name}:pending:infrastructurefailure:{row['updated_at']}",
+        "key": f"{row['system_address'] or system_name}:pending:{target_state_key}:{row['updated_at']}",
         "tone": "pending",
-        "state": "Pending Infrastructure Failure",
+        "state": f"Pending {target_state}",
         "system_address": row["system_address"],
         "system_name": row["system_name"] or system_name,
         "faction_name": row["faction_name"],
@@ -1040,7 +1056,7 @@ def current_pending_target_state_alert(latest_event: Optional[Dict[str, Any]]) -
         "faction_names": faction_names[:5],
         "updated_at": row["updated_at"],
         "message": (
-            f"Infrastructure Failure pending in {row['system_name'] or system_name}: "
+            f"{target_state} pending in {row['system_name'] or system_name}: "
             f"{row['faction_name']}"
         ),
     }

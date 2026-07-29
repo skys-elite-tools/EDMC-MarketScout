@@ -663,10 +663,17 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 .configurationView {
   padding: 12px 16px 18px;
   display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr);
+  grid-template-areas:
+    "listener settings"
+    "network settings";
   gap: 12px;
   align-content: start;
-  max-width: 58rem;
+  max-width: 86rem;
 }
+.listenerConfigurationPanel { grid-area: listener; }
+.networkNotesPanel { grid-area: network; }
+.alertSettingsPanel { grid-area: settings; }
 .configurationPanel {
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -765,6 +772,13 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 }
 .configError {
   color: #ff9f9f;
+}
+.alertSettingsControls {
+  display: grid;
+  gap: 10px;
+}
+.alertSettingsControls .stationOwnerStateField {
+  min-width: 0;
 }
 .qrSharePanel {
   display: grid;
@@ -973,6 +987,13 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   main.detailsOpen { grid-template-columns: 1fr; }
   .details { border-left: none; border-top: 1px solid var(--line); max-height: 45vh; }
   .analysisTables { grid-template-columns: 1fr; }
+  .configurationView {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "listener"
+      "network"
+      "settings";
+  }
   .configurationGrid,
   .qrSharePanel { grid-template-columns: 1fr; }
 }

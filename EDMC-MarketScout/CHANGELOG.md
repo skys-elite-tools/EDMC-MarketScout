@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added a user-selectable Target State alert setting for current-system active and pending faction-state toasts.
+
 ## 0.6.0 Beta
 
 - Routed MarketScout runtime diagnostics through EDMC-compatible plugin loggers instead of writing separate plugin log files.

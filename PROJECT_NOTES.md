@@ -77,6 +77,8 @@ Older installs may still contain plugin-folder `marketscout.config`. Current bui
 
 The Web UI exposes these values in the top-menu `Config` page. Local address quick-fill options include only loopback addresses such as `127.0.0.1`, `localhost`, and detected loopback aliases. LAN suggestions are kept separate, and QR sharing is shown only for enabled non-loopback IPv4 LAN addresses. Changing the listen port or LAN settings requires restarting EDMC because the HTTP server socket is already bound. mDNS advertising as `marketscout.local` is not enabled for beta; doing it reliably should use a real Zeroconf/mDNS implementation rather than a hand-rolled shortcut.
 
+Gameplay preferences can live on the Config page only when they are visually separated from network/app configuration. The Target State alert preference is stored through the db-backed localStorage service under `alerts.targetState`, defaulting to `Infrastructure Failure`. `/api/status` reads that same setting and checks the current system for matching active faction-state details first, snapshot fallback second, and pending faction-state details last.
+
 ## Repository structure
 
 Important files/directories:

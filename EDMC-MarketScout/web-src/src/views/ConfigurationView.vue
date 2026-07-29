@@ -1,7 +1,11 @@
 <script setup>
 import QRCode from 'qrcode'
 import { computed, onMounted, ref, watch } from 'vue'
+import StationOwnerStateInput from '../components/StationOwnerStateInput.vue'
+import { dataStore } from '../services/dataStoreService.js'
 
+const ALERT_TARGET_STATE_STORAGE_KEY = 'alerts.targetState'
+const DEFAULT_ALERT_TARGET_STATE = 'Infrastructure Failure'
 const loading = ref(true)
 const saving = ref(false)
 const status = ref('')
@@ -20,6 +24,11 @@ const configSource = ref('edmc')
 const urlCopied = ref(false)
 const qrDataUrl = ref('')
 const qrError = ref('')
+const alertTargetState = ref(DEFAULT_ALERT_TARGET_STATE)
+const alertSettingsLoading = ref(true)
+const alertSettingsSaving = ref(false)
+const alertSettingsStatus = ref('')
+const alertSettingsError = ref('')
 
 const localUrl = computed(() => `http://${localAddress.value || defaults.value.bind_address}:${bindPort.value || defaults.value.bind_port}/`)
 const shareUrl = computed(() => `http://${lanBindAddress.value || defaults.value.lan_bind_address}:${bindPort.value || defaults.value.bind_port}/`)
@@ -90,6 +99,37 @@ async function saveConfig() {
   }
 }
 
+async function loadAlertSettings() {
+  alertSettingsLoading.value = true
+  alertSettingsStatus.value = ''
+  alertSettingsError.value = ''
+  try {
+    const value = await dataStore.get(ALERT_TARGET_STATE_STORAGE_KEY, DEFAULT_ALERT_TARGET_STATE, { legacyJson: false })
+    alertTargetState.value = String(value || '').trim() || DEFAULT_ALERT_TARGET_STATE
+  } catch (err) {
+    alertSettingsError.value = String(err?.message || err)
+  } finally {
+    alertSettingsLoading.value = false
+  }
+}
+
+async function saveAlertSettings() {
+  alertSettingsSaving.value = true
+  alertSettingsStatus.value = ''
+  alertSettingsError.value = ''
+  try {
+    const value = String(alertTargetState.value || '').trim() || DEFAULT_ALERT_TARGET_STATE
+    alertTargetState.value = value
+    dataStore.set(ALERT_TARGET_STATE_STORAGE_KEY, value, { debounceMs: 0 })
+    await dataStore.flushNow()
+    alertSettingsStatus.value = 'Saved.'
+  } catch (err) {
+    alertSettingsError.value = String(err?.message || err)
+  } finally {
+    alertSettingsSaving.value = false
+  }
+}
+
 function useLocalAddress(value) {
   localAddress.value = value
 }
@@ -99,7 +139,10 @@ function useLanAddress(value) {
   lanEnabled.value = true
 }
 
-onMounted(loadConfig)
+onMounted(() => {
+  loadConfig()
+  loadAlertSettings()
+})
 
 watch([shareUrl, isShareableAddress], async () => {
   qrDataUrl.value = ''
@@ -129,7 +172,7 @@ async function copyShareUrl() {
 
 <template>
   <section class="configurationView">
-    <fieldset class="configurationPanel">
+    <fieldset class="configurationPanel listenerConfigurationPanel">
       <legend>Configuration</legend>
       <div class="configurationIntro">
         <p v-if="configSource === 'edmc'">MarketScout stores app-level configuration in EDMC's main <code>config.toml</code> file with <code>marketscout.app.*</code> keys. Port and LAN sharing changes are applied after restarting EDMC.</p>
@@ -211,12 +254,38 @@ async function copyShareUrl() {
       </template>
     </fieldset>
 
-    <fieldset class="configurationPanel">
+    <fieldset class="configurationPanel networkNotesPanel">
       <legend>Network Notes</legend>
       <p><strong>127.0.0.1</strong> is always available on this computer, so browser settings saved for MarketScout stay on a stable local address.</p>
       <p><strong>localhost</strong> also points to this computer, but browser localStorage is stored separately from 127.0.0.1.</p>
       <p>Enabling LAN access starts an additional listener for other devices on your local network. Only use that intentionally.</p>
       <p><strong>{{ mdns.name || 'marketscout.local' }}</strong>: {{ mdns.message || 'mDNS advertising is not enabled.' }}</p>
+    </fieldset>
+
+    <fieldset class="configurationPanel alertSettingsPanel">
+      <legend>Settings</legend>
+      <div class="configurationIntro">
+        <p>Target State alerts watch the current system for matching active or pending faction states.</p>
+      </div>
+      <div v-if="alertSettingsLoading" class="placeholderBox">Loading settings…</div>
+      <template v-else>
+        <div class="alertSettingsControls">
+          <StationOwnerStateInput
+            v-model="alertTargetState"
+            label="Target State Alert"
+            placeholder="Choose a state"
+            button-title="Show all target states"
+            empty-text="No matching states"
+          />
+          <div class="configurationActions">
+            <button type="button" :disabled="alertSettingsSaving" @click="saveAlertSettings">{{ alertSettingsSaving ? 'Saving…' : 'Save Settings' }}</button>
+            <button type="button" @click="loadAlertSettings">Reload</button>
+          </div>
+          <p class="configHint">Current toasts are shown for active <strong>{{ alertTargetState || DEFAULT_ALERT_TARGET_STATE }}</strong> first, then pending if no active match is found.</p>
+          <span v-if="alertSettingsStatus" class="configStatus">{{ alertSettingsStatus }}</span>
+          <span v-if="alertSettingsError" class="configError">{{ alertSettingsError }}</span>
+        </div>
+      </template>
     </fieldset>
   </section>
 </template>
