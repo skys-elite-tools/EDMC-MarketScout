@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added EDMC Plugin Registry-compatible version metadata and switched update HTTP requests from `urllib` to `requests`.
 - Moved legacy startup maintenance scans off the EDMC startup path so large local databases do not delay plugin loading.
 
 ## 0.5.0

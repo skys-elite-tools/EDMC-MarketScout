@@ -20,12 +20,13 @@ import sqlite3
 import tempfile
 import threading
 import traceback
-import urllib.request
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
+
+import requests
 
 from marketscout_data import (
     delete_trip_route as data_delete_trip_route,
@@ -366,15 +367,16 @@ def version_tuple(value: Any) -> Tuple[int, int, int]:
 
 
 def github_request(url: str, timeout: int = 12) -> bytes:
-    request = urllib.request.Request(
+    response = requests.get(
         url,
         headers={
             "Accept": "application/vnd.github+json",
             "User-Agent": f"EDMC-MarketScout/{_PLUGIN_VERSION}",
         },
+        timeout=timeout,
     )
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        return response.read()
+    response.raise_for_status()
+    return response.content
 
 
 def start_update_check(plugin_dir: str, current_version: str) -> None:
@@ -435,16 +437,20 @@ def check_for_updates() -> None:
 
 
 def download_release_zip(url: str, destination: Path) -> None:
-    request = urllib.request.Request(
+    with requests.get(
         url,
         headers={
             "Accept": "application/octet-stream",
             "User-Agent": f"EDMC-MarketScout/{_PLUGIN_VERSION}",
         },
-    )
-    with urllib.request.urlopen(request, timeout=60) as response:
+        stream=True,
+        timeout=60,
+    ) as response:
+        response.raise_for_status()
         with destination.open("wb") as f:
-            shutil.copyfileobj(response, f)
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    f.write(chunk)
 
 
 def safe_extract_zip(zip_path: Path, destination: Path) -> None:
