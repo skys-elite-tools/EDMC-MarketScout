@@ -1,6 +1,10 @@
 <script setup>
 import { nextTick, ref, watch } from 'vue'
+import { defineStore } from 'pinia'
 import ModalShell from './ModalShell.vue'
+import { useSystemStore } from '../stores/systemStore.js'
+
+const systemStore = useSystemStore()
 
 const props = defineProps({
   helpArticle: { type: String, default: '' },
@@ -38,7 +42,7 @@ watch(() => props.helpRequestId, () => {
     <span class="footerLinks">
       <button type="button" class="linkButton" @click="aboutOpen = true">About</button>
       <button type="button" class="linkButton" @click="openHelp()">Help</button>
-      <button type="button" class="linkButton" @click="emit('open-support')">Support</button>
+      <button type="button" class="linkButton" @click="systemStore.openSupport()">Support</button>
     </span>
   </footer>
 

@@ -19,6 +19,7 @@ import ConfigurationView from './views/ConfigurationView.vue'
 import FooterBar from './components/FooterBar.vue'
 import ModalShell from './components/ModalShell.vue'
 import { useStatusStore } from './stores/statusStore.js'
+import { useSystemStore } from './stores/systemStore.js'
 import { dedupeStationRows, query } from './utils.js'
 import { dataStore } from './services/dataStoreService.js'
 
@@ -29,6 +30,8 @@ const {
   updateStatus,
   updateBusy,
 } = storeToRefs(statusStore)
+
+const systemStore = useSystemStore()
 
 const rows = ref([])
 const selectedIndex = ref(-1)
@@ -75,7 +78,6 @@ const settingsVisible = ref(false)
 const bestBuyIgnoreVisible = ref(false)
 const helpArticle = ref('')
 const helpRequestId = ref(0)
-const supportOpen = ref(false)
 const commoditySearch = ref('')
 const bestBuyIgnoreSearch = ref('')
 const stationRowsLoading = ref(false)
@@ -792,7 +794,6 @@ onUnmounted(() => {
     <StatusStrip
       :busy-text="stationRowsLoading ? 'Loading stations...' : (stationRowsRendering ? 'Updating table...' : '')"
       @discard-edmc-delayed="discardEdmcDelayedStationMessages"
-      @open-support="supportOpen = true"
     />
 
     <section
@@ -1008,10 +1009,9 @@ onUnmounted(() => {
     <FooterBar
       :help-article="helpArticle"
       :help-request-id="helpRequestId"
-      @open-support="supportOpen = true"
     />
 
-    <ModalShell v-if="supportOpen" title="Support MarketScout" title-id="supportTitle" panel-class="aboutModal" @close="supportOpen = false">
+    <ModalShell v-if="systemStore.supportOpen" title="Support MarketScout" title-id="supportTitle" panel-class="aboutModal" @close="systemStore.closeSupport()">
       <p>MarketScout is free and open source. If you find it useful and would like to support development, you can do so here:</p>
       <p>
         <a href="https://oriondreams.gumroad.com/l/MarketScout/" target="_blank" rel="noreferrer">Support MarketScout on Gumroad</a>

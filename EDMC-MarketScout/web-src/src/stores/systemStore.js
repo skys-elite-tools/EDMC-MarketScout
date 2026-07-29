@@ -5,6 +5,9 @@ export const useSystemStore = defineStore('system', () => {
 
 // --- STATE ---
 
+// Global UI Modals
+const supportOpen = ref(false)
+
 // --- ACTIONS ---
 
     async function handleUpdateAction() {
@@ -46,7 +49,13 @@ export const useSystemStore = defineStore('system', () => {
         }
     }
 
+    function openSupport() { supportOpen.value = true }
+    function closeSupport() { supportOpen.value = false }
+
     return {
-        handleUpdateAction
+        handleUpdateAction,
+        supportOpen,
+        openSupport,
+        closeSupport
     }
 })

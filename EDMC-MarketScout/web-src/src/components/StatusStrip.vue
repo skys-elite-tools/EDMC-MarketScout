@@ -161,7 +161,7 @@ const firstDelayedMessageLabel = computed(() => {
         type="button"
         class="statusSupportLink"
         title="Support MarketScout development"
-        @click="emit('open-support')"
+        @click="systemStore.openSupport()"
       >
         Support
       </button>
