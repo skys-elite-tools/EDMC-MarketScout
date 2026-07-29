@@ -42,7 +42,7 @@ def clean_text(value: Any) -> str:
     return " ".join(str(value or "").replace("\xa0", " ").strip().split())
 
 
-def contiguous_trip_progress_index(conn: sqlite3.Connection, route_id: int, current_index: int, baseline: str) -> int:
+def contiguous_trip_progress_index(conn: sqlite3.Connection, route_id: int, current_index: int, baseline: str = "") -> int:
     next_index = current_index
     stop_rows = conn.execute(
         """
@@ -53,7 +53,6 @@ def contiguous_trip_progress_index(conn: sqlite3.Connection, route_id: int, curr
               SELECT 1
               FROM systems_visited s
               WHERE s.last_visit_datetime IS NOT NULL
-                AND s.last_visit_datetime >= ?
                 AND (
                   (trs.system_address IS NOT NULL AND s.system_address = trs.system_address)
                   OR lower(s.system_name) = lower(trs.system_name_snapshot)
@@ -65,13 +64,27 @@ def contiguous_trip_progress_index(conn: sqlite3.Connection, route_id: int, curr
           AND trs.stop_index > ?
         ORDER BY trs.stop_index
         """,
-        (baseline, route_id, current_index),
+        (route_id, current_index),
     ).fetchall()
 
     for row in stop_rows:
         if not int(row["stop_skipped"] or 0) and not int(row["was_visited"] or 0):
             break
         next_index = int(row["stop_index"])
+    return next_index
+
+
+def contiguous_trip_progress_index_from_stops(stops: List[Dict[str, Any]], current_index: int) -> int:
+    next_index = max(0, current_index)
+    for stop in sorted(stops, key=lambda row: coerce_int(row.get("stop_index")) or 0):
+        stop_index = coerce_int(stop.get("stop_index"))
+        if stop_index is None or stop_index <= next_index:
+            continue
+        visited = clean_text(stop.get("last_system_visit_datetime"))
+        skipped = int(coerce_int(stop.get("stop_skipped")) or 0) == 1
+        if not visited and not skipped:
+            break
+        next_index = stop_index
     return next_index
 
 
@@ -423,6 +436,8 @@ def active_trip_route(conn: sqlite3.Connection) -> Optional[Dict[str, Any]]:
         return None
     route = routes[0]
     route["stops"] = trip_route_stop_rows(conn, route_id)
+    stored_progress_index = coerce_int(route.get("progress_stop_index")) or 0
+    route["progress_stop_index"] = contiguous_trip_progress_index_from_stops(route["stops"], stored_progress_index)
     return route
 
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed Trip Planner progress so active routes can advance through already visited contiguous stops, including routes imported after early stops were visited.
+- Added short Trip Planner progress visibility and initial scroll-to-progress behavior for active routes loaded at startup.
 - Fixed the active Infrastructure Failure toast so it detects factions listed in active state details, not only the single snapshot state field.
 - Added pending station-owner faction-state storage, filtering, subtle station-row labels, and a lower-priority pending Infrastructure Failure toast.
 - Added a `systems_visited` table name for clearer visited-system data, started storing latest faction-state snapshots from journal system events, and added a current-system Infrastructure Failure toast.

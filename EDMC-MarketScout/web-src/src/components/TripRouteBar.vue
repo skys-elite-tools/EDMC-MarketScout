@@ -72,6 +72,12 @@ const routeWindowLabel = computed(() => {
   const end = Math.min(stops.value.length, routeWindowStart.value + LARGE_ROUTE_WINDOW_SIZE)
   return `Showing stops ${start.toLocaleString()}-${end.toLocaleString()} of ${stops.value.length.toLocaleString()}`
 })
+const progressSummary = computed(() => {
+  if (!stops.value.length) return ''
+  const progress = `Progress stop ${(progressStopIndex.value + 1).toLocaleString()}`
+  if (currentStopIndex.value < 0) return progress
+  return `${progress} · Current stop ${(currentStopIndex.value + 1).toLocaleString()}`
+})
 const routeSummary = computed(() => {
   const route = props.activeRoute
   if (!route) return ''
@@ -385,12 +391,23 @@ function onDocumentClick(event) {
   }
 }
 
-watch(() => props.activeRoute?.route_id, () => {
+watch(() => props.activeRoute?.route_id, async () => {
   stopEls.value = []
   focusedStopIndex.value = progressStopIndex.value
   visibleStopIndexes.value = []
   stopContextMenuOpen.value = false
   cancelStopSkipHold()
+  if (!expanded.value) return
+  await nextTick()
+  scrollToStop(preferredStopIndex.value)
+  syncVisibleStops()
+})
+
+watch(progressStopIndex, async () => {
+  if (!expanded.value || currentStopIndex.value >= 0) return
+  await nextTick()
+  scrollToStop(progressStopIndex.value)
+  syncVisibleStops()
 })
 
 watch(routeWindowStops, () => {
@@ -583,6 +600,7 @@ onBeforeUnmount(() => {
             @click="scrollToStop(index)"
           />
           <button type="button" class="tripStopPagerButton" title="Next stop" @click="stepRoute(1)">›</button>
+          <span v-if="progressSummary" class="tripStopPagerLabel">{{ progressSummary }}</span>
         </div>
         <div v-else-if="stops.length > 1" class="tripStopCompactPager" aria-label="Large route stop navigation">
           <button type="button" class="tripStopPagerButton" title="First stop" @click="scrollToStop(0)">‹‹</button>
@@ -996,6 +1014,15 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   min-height: 24px;
 }
+.tripStopPagerLabel {
+  flex: 0 1 auto;
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
 .tripStopPagerButton {
   display: inline-grid;
   place-items: center;
@@ -1100,6 +1127,11 @@ onBeforeUnmount(() => {
   }
   .tripStopCompactLabel {
     grid-column: 1 / -1;
+    text-align: center;
+  }
+  .tripStopPagerLabel {
+    flex-basis: 100%;
+    margin-left: 0;
     text-align: center;
   }
 }
