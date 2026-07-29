@@ -56,6 +56,12 @@ MarketScout checks the latest GitHub release tag on startup. When a newer releas
 
 If the release includes the standard installable zip, clicking the button downloads it, backs up the current plugin folder to a sibling `EDMC-MarketScout-backups.disabled/` directory, copies the new `EDMC-MarketScout/` files over the current plugin files, and then asks you to restart EDMC. If automatic updating fails, MarketScout shows the backup path so you can manually restore the previous working plugin folder.
 
+The updater is owned by MarketScout rather than EDMC core. It uses `requests` for GitHub release metadata and release-zip downloads, and those requests do not include commander, journal, route, station, market, or database data.
+
+## Runtime diagnostics
+
+MarketScout routes runtime diagnostics through EDMC-compatible plugin loggers so messages appear in EDMC's normal logging pipeline. Verbose market/CAPI traces are logged at `DEBUG`, one-time maintenance outcomes at `INFO`, and exceptions at `ERROR`. Current builds should not create separate `marketscout-error.log`, `marketscout-market-debug.log`, or `marketscout-web-error.log` files.
+
 ## Install
 
 1. In EDMC, open `File` > `Settings` > `Plugins` > `Open`.
@@ -90,6 +96,8 @@ On startup, MarketScout refreshes selected local CSV data only when the file SHA
 - `systems_data.csv` -> `systems_data`
 
 The helper scripts for regenerating these files live under `local-tools/` in the development workspace.
+
+Legacy startup maintenance that scans large local tables is deferred to a background thread and gated so it runs once per database repair version instead of blocking EDMC startup on every launch.
 
 ## Web UI views
 

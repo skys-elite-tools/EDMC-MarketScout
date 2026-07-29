@@ -36,7 +36,19 @@ If future Discord/webhook/overlay/network features are added, they should be opt
 
 `marketscout_app.py` starts a background update check via `marketscout_web.start_update_check()` during plugin startup. The Web UI receives update state through `/api/status`; when a newer GitHub release is available, the status strip displays a prominent update/download button.
 
+EDMC does not currently expose a public plugin API for delegating plugin update checks/downloads. MarketScout owns its updater. External update HTTP requests use `requests`, matching EDMC plugin guidance, and should not include commander, journal, route, station, or market data.
+
 One-click updates are handled by `POST /api/update`. The updater downloads the GitHub release zip, creates a sibling backup under `EDMC-MarketScout-backups.disabled/`, safely extracts the archive to a temporary directory, finds the inner `EDMC-MarketScout/` payload, and copies those files over the current plugin folder. The `.disabled` suffix prevents EDMC from treating the backup container as another plugin. EDMC still needs a restart because Python modules and static assets may already be loaded in the running process.
+
+### EDMC logging
+
+Runtime diagnostics are routed through EDMC-compatible plugin loggers rather than separate MarketScout log files. Logger names use EDMC's expected shape:
+
+```python
+logging.getLogger(f"{appname}.{plugin_folder_name}")
+```
+
+where `plugin_folder_name` is the actual folder EDMC loaded. Market/CAPI payload summaries are `DEBUG`, rare operational maintenance outcomes are `INFO`, and exceptions/SQLite diagnostics are `ERROR` or `logger.exception(...)`. Do not reintroduce side files such as `marketscout-error.log`, `marketscout-market-debug.log`, or `marketscout-web-error.log`.
 
 ## Runtime and packaging rules
 
@@ -139,6 +151,8 @@ Schema changes are managed by `marketscout_migrations.py`. Migration files live 
 `0001_baseline.py` is the historical checkpoint for the schema through v0.2.4. It is intentionally idempotent so clean installs and older local databases converge to the same baseline state. Future schema changes should be added as new migration files such as `0002_add_example_column.py`; do not put new schema DDL in `marketscout_app.py`, importer modules, or feature modules.
 
 Reference-data imports are separate from schema migrations. Rawdata CSV imports remain SHA-256 gated through the `imports` table and should stay deterministic/local.
+
+Legacy data cleanup that scans user-growth tables, such as station or market-price dedupe repair, must not block `plugin_start3()`. These tasks are run through deferred startup maintenance with their own SQLite connection and one-time gates stored in `settings`.
 
 ## Web UI architecture
 
@@ -460,7 +474,7 @@ This is based on latest known market data at the time of the trade, usually befo
 - Route imports also upsert every stop's coordinates into `systems_data` with source `spansh_tourist_route`.
 - `systems_data` remains the reusable authoritative coordinate table; `trip_route_stops` stores route membership/order and route-specific leg metadata.
 - The Stations page shows the active route above the table. Clicking a route stop filters Stations to that system.
-- Route progress is the highest contiguous visited stop since the current progress baseline. `Go to Progress` returns the visible route window to that marker.
+- Route progress is the highest contiguous visited or soft-skipped stop. Visits that happened before route import still count, allowing users to resume a partially scouted route. `Go to Progress` returns the visible route window to that marker, and short/simple routes also display the Progress marker/summary.
 - Stops can be soft-skipped and restored without deleting them; skipped stops count as passable when progress advances.
 - A stop's context menu can copy its system or station name. Distance-to-station values are rounded for display.
 - Recalculating imported routes for shortest overall travel distance has been discussed but is intentionally left for a later iteration.
@@ -471,6 +485,7 @@ Ideas discussed but not yet implemented:
 
 - Route recalculation based on current position and shortest overall travel distance.
 - Efficient scouting route planner based on stored/imported candidate stations and current position.
+- EDMC Plugin Registry submission so MarketScout appears in EDMC's Plugin Browser. Notes and a draft registry entry live in `local-assets/PLUGIN_REGISTRY.md`; current blockers include choosing/adding a root open-source license and filling in the release hash/metadata.
 - Overlay integration with EDMC-ModernOverlay/EDMCOverlay, likely optional and modular in `marketscout_overlay.py`.
 - Discord webhook jackpot notifications, optional and privacy-aware, likely modular in `marketscout_discord.py`.
 - Remote/bridge overlay was considered but is probably not needed.

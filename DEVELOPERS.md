@@ -120,6 +120,27 @@ The Web UI Config page edits the loopback address, shared port, and optional LAN
 
 Important privacy rule: MarketScout itself must not upload data to EDDN, Inara, EDSM, Discord, or any other remote service unless an explicit opt-in feature is added later. The update checker may read GitHub release metadata and download a release zip after the user clicks update, but it must not include commander, journal, route, station, or market data in those requests. Current Web UI assets must be bundled locally; no CDN scripts/styles.
 
+### EDMC ecosystem compatibility
+
+`load.py` is the only file imported directly by EDMC. Keep it thin and keep registry-compatible version metadata in sync:
+
+```python
+PLUGIN_VERSION = "x.y.z"
+VERSION = PLUGIN_VERSION
+__version__ = PLUGIN_VERSION
+```
+
+EDMC does not currently provide a public plugin API for delegating plugin update checks or downloads. MarketScout owns its updater, but outbound HTTP requests should use `requests`, matching EDMC plugin guidance. Do not use `urllib.request` for external update requests.
+
+Runtime diagnostics should use EDMC-compatible plugin loggers instead of writing separate side-log files. Configure loggers as `logging.getLogger(f"{appname}.{plugin_folder_name}")`, where `plugin_folder_name` is the actual folder EDMC loaded. Use appropriate levels:
+
+- `DEBUG`: verbose CAPI/Market.json payload summaries and market capture traces.
+- `INFO`: rare operational maintenance outcomes, such as one-time dedupe repairs.
+- `WARNING`: recoverable conditions users or maintainers may need to notice.
+- `ERROR`/`logger.exception(...)`: request-handler, startup, database, and plugin-hook exceptions.
+
+Do not reintroduce `print(...)`, `traceback.print_exc(...)`, or ad hoc files such as `marketscout-error.log`, `marketscout-market-debug.log`, or `marketscout-web-error.log` for runtime diagnostics.
+
 ## Database migrations
 
 Schema migrations live in `EDMC-MarketScout/migrations/` and are run by `marketscout_migrations.py` during plugin startup. Applied migrations are recorded in the local SQLite `schema_migrations` table, so each migration runs once per database.
@@ -157,6 +178,8 @@ Useful Web API areas:
 - `/api/edmc/eddn/discard-delayed-station-messages`: discards delayed, unsent station messages only when the running EDMC build exposes the compatible control hook.
 
 SQLite web connections use `PRAGMA temp_store=MEMORY` to avoid temporary-file I/O issues in EDMC runtime environments. Keep small dropdown/result sorting in Python when it avoids brittle SQLite temp sorting and does not materially affect performance.
+
+Legacy content cleanup that scans user-growth tables must not run synchronously in `plugin_start3()`. Use one-time maintenance gates in `settings` and run expensive cleanup on the deferred startup maintenance thread with its own SQLite connection.
 
 ## Local testing checklist
 
@@ -227,7 +250,7 @@ The Stations page can import Spansh Tourist Route JSON files through the local W
 - `POST /api/trip-routes/skip-stop`
 - `POST /api/trip-routes/delete`
 
-Imported routes are stored in `trip_routes` / `trip_route_stops`. Each imported stop also upserts coordinates into `systems_data` so other MarketScout distance features can reuse them. Progress tracks the highest contiguous stop visited since the current progress baseline; soft-skipped stops count as passable without being deleted. The route UI provides `Go to Progress`, rounded distance-to-station values, and right-click actions for copying system/station names or holding to skip/restore a stop. Keep this import local-only; do not fetch route data directly from Spansh.
+Imported routes are stored in `trip_routes` / `trip_route_stops`. Each imported stop also upserts coordinates into `systems_data` so other MarketScout distance features can reuse them. Progress tracks the highest contiguous visited or soft-skipped stop; visits that happened before route import still count, so users can resume a route they partially scouted before importing it. The route UI provides `Go to Progress`, a visible Progress marker in both simple and large-route views, rounded distance-to-station values, and right-click actions for copying system/station names or holding to skip/restore a stop. Keep this import local-only; do not fetch route data directly from Spansh.
 
 ## Local release helper
 
@@ -258,6 +281,16 @@ git push origin v0.1.0
 The workflow accepts only tags matching `vMAJOR.MINOR.PATCH`, such as `v0.1.0`. Semantic Versioning itself is `MAJOR.MINOR.PATCH`; the leading `v` is the common Git tag convention used by this project.
 
 The release workflow builds the Web UI, runs the Python syntax check, packages only the installable `EDMC-MarketScout/` plugin folder, and attaches `EDMC-MarketScout-vX.Y.Z.zip` to the GitHub Release.
+
+## EDMC Plugin Registry
+
+Research notes and a draft Plugin Registry entry are stored in `local-assets/PLUGIN_REGISTRY.md` for maintainer follow-up. That directory is local/ignored scratch by design; copy the final entry into a PR against `EDCD/EDMC-Plugin-Registry` when ready.
+
+Before submitting to the registry:
+
+- Add or confirm a root open-source `LICENSE` compatible with the registry rules.
+- Fill in the exact release zip URL, SHA-256 hash, license string, author, icon, VirusTotal link if used, and EDMC tested version.
+- Keep `autoUpdateEnabled` and `autoInstallEnabled` set to `false` until EDMC registry docs say otherwise.
 
 ## Git workflow
 
