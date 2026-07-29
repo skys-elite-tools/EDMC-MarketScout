@@ -107,14 +107,16 @@ Use `MetricCard.vue` for repeated calculator-style output cards, `ModalShell.vue
 
 The local Web UI API is implemented in `marketscout_web.py`. It starts with a loopback listener and can optionally start a separate LAN listener when enabled in runtime configuration.
 
-The runtime config file is `marketscout.config` in the plugin folder. It is created on startup if missing, ignored by git, and defaults to:
+Runtime listener settings are stored through EDMC's plugin config API in EDMC's main `config.toml`, using unique `marketscout.app.*` keys. Defaults are:
 
-```ini
-app.bind_address=127.0.0.1
-app.bind_port=40595
-app.lan_enabled=0
-app.lan_bind_address=
+```toml
+marketscout.app.bind_address = "127.0.0.1"
+marketscout.app.bind_port = 40595
+marketscout.app.lan_enabled = false
+marketscout.app.lan_bind_address = ""
 ```
+
+`marketscout_web.py` still reads the old plugin-folder `marketscout.config` once when EDMC config is available, imports those values into EDMC config, and leaves the legacy file untouched. When EDMC's `config` object is unavailable in standalone/dev contexts, MarketScout falls back to the legacy file path.
 
 The Web UI Config page edits the loopback address, shared port, and optional LAN address. Address/port changes require restarting EDMC. QR-code sharing appears only for enabled non-loopback LAN IPv4 addresses.
 

@@ -29,9 +29,10 @@ from urllib.parse import parse_qs, urlparse
 import requests
 
 try:
-    from config import appname as EDMC_APPNAME
+    from config import appname as EDMC_APPNAME, config as EDMC_CONFIG
 except Exception:
     EDMC_APPNAME = "EDMarketConnector"
+    EDMC_CONFIG = None
 
 from marketscout_data import (
     delete_trip_route as data_delete_trip_route,
@@ -53,6 +54,13 @@ _CONTEXT: Dict[str, Any] = {}
 _LATEST_JOURNAL_EVENT: Optional[Dict[str, Any]] = None
 ECONOMY_PRESETS_FILE = "marketscout-economy-presets.json"
 CONFIG_FILE = "marketscout.config"
+CONFIG_SOURCE_EDMC = "EDMC config.toml"
+CONFIG_KEY_PREFIX = "marketscout.app."
+CONFIG_KEY_BIND_ADDRESS = f"{CONFIG_KEY_PREFIX}bind_address"
+CONFIG_KEY_BIND_PORT = f"{CONFIG_KEY_PREFIX}bind_port"
+CONFIG_KEY_LAN_ENABLED = f"{CONFIG_KEY_PREFIX}lan_enabled"
+CONFIG_KEY_LAN_BIND_ADDRESS = f"{CONFIG_KEY_PREFIX}lan_bind_address"
+CONFIG_KEY_LEGACY_IMPORTED = f"{CONFIG_KEY_PREFIX}legacy_config_imported"
 DEFAULT_BIND_ADDRESS = "127.0.0.1"
 DEFAULT_BIND_PORT = 40595
 DEFAULT_BEST_BUY_SUPPLY_CAP = 1000
@@ -93,8 +101,108 @@ DEFAULT_ECONOMY_PRESETS = [
 ]
 
 
-def load_web_config(plugin_dir: str) -> Dict[str, Any]:
-    """Load the tiny MarketScout config file, creating defaults when missing."""
+def edmc_config_available() -> bool:
+    return EDMC_CONFIG is not None and hasattr(EDMC_CONFIG, "set")
+
+
+def edmc_config_get_str(key: str, default: str = "") -> str:
+    if EDMC_CONFIG is None:
+        return default
+    try:
+        if hasattr(EDMC_CONFIG, "get_str"):
+            value = EDMC_CONFIG.get_str(key)
+            return default if value is None else str(value)
+        if hasattr(EDMC_CONFIG, "get"):
+            value = EDMC_CONFIG.get(key)
+            return default if value is None else str(value)
+    except Exception:
+        return default
+    return default
+
+
+def edmc_config_get_int(key: str, default: int) -> int:
+    if EDMC_CONFIG is None:
+        return default
+    try:
+        if hasattr(EDMC_CONFIG, "get_int"):
+            value = EDMC_CONFIG.get_int(key)
+        elif hasattr(EDMC_CONFIG, "get"):
+            value = EDMC_CONFIG.get(key)
+        else:
+            return default
+        return int(value)
+    except Exception:
+        return default
+
+
+def edmc_config_get_bool(key: str, default: bool = False) -> bool:
+    if EDMC_CONFIG is None:
+        return default
+    try:
+        if hasattr(EDMC_CONFIG, "get_bool"):
+            return coerce_bool(EDMC_CONFIG.get_bool(key), default)
+        if hasattr(EDMC_CONFIG, "get"):
+            return coerce_bool(EDMC_CONFIG.get(key), default)
+    except Exception:
+        return default
+    return default
+
+
+def edmc_config_set(key: str, value: Any) -> None:
+    if EDMC_CONFIG is None or not hasattr(EDMC_CONFIG, "set"):
+        return
+    try:
+        EDMC_CONFIG.set(key, value)
+    except Exception:
+        LOGGER.exception("Could not save MarketScout config key %s", key)
+
+
+def coerce_bool(value: Any, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    text = str(value if value is not None else "").strip().lower()
+    if text in {"1", "true", "yes", "on"}:
+        return True
+    if text in {"0", "false", "no", "off"}:
+        return False
+    return default
+
+
+def coerce_port(value: Any) -> int:
+    try:
+        bind_port = int(value)
+        if bind_port < 1 or bind_port > 65535:
+            raise ValueError
+    except (TypeError, ValueError):
+        bind_port = DEFAULT_BIND_PORT
+    return bind_port
+
+
+def normalize_web_config(raw: Dict[str, Any], import_legacy_bind: bool = False) -> Dict[str, Any]:
+    legacy_bind_address = str(raw.get("app.bind_address") or "").strip()
+    bind_address = str(raw.get("bind_address") or legacy_bind_address or DEFAULT_BIND_ADDRESS).strip()
+    if not is_loopback_host(bind_address):
+        bind_address = DEFAULT_BIND_ADDRESS
+
+    lan_bind_address = str(raw.get("lan_bind_address") or raw.get("app.lan_bind_address") or "").strip()
+    lan_enabled = coerce_bool(raw.get("lan_enabled", raw.get("app.lan_enabled")), False)
+    if import_legacy_bind and legacy_bind_address not in {"", DEFAULT_BIND_ADDRESS, "localhost"} and not lan_bind_address:
+        lan_bind_address = legacy_bind_address
+        lan_enabled = True
+    if lan_bind_address and (any(ch.isspace() for ch in lan_bind_address) or "/" in lan_bind_address):
+        lan_bind_address = ""
+    if lan_enabled and not is_shareable_ipv4(lan_bind_address):
+        lan_enabled = False
+
+    return {
+        "bind_address": bind_address,
+        "bind_port": coerce_port(raw.get("bind_port", raw.get("app.bind_port", DEFAULT_BIND_PORT))),
+        "lan_enabled": lan_enabled,
+        "lan_bind_address": lan_bind_address,
+    }
+
+
+def read_legacy_web_config(plugin_dir: str, create_if_missing: bool = False) -> Dict[str, Any]:
     path = os.path.join(plugin_dir, CONFIG_FILE)
     defaults = {
         "app.bind_address": DEFAULT_BIND_ADDRESS,
@@ -103,9 +211,10 @@ def load_web_config(plugin_dir: str) -> Dict[str, Any]:
         "app.lan_bind_address": "",
     }
     if not os.path.exists(path):
-        with open(path, "w", encoding="utf-8") as f:
-            for key, value in defaults.items():
-                f.write(f"{key}={value}\n")
+        if create_if_missing:
+            with open(path, "w", encoding="utf-8") as f:
+                for key, value in defaults.items():
+                    f.write(f"{key}={value}\n")
         raw = dict(defaults)
     else:
         raw = dict(defaults)
@@ -116,41 +225,66 @@ def load_web_config(plugin_dir: str) -> Dict[str, Any]:
                     continue
                 key, value = line.split("=", 1)
                 raw[key.strip()] = value.strip()
+    return raw
 
-    legacy_bind_address = raw.get("app.bind_address") or DEFAULT_BIND_ADDRESS
-    bind_address = legacy_bind_address if is_loopback_host(legacy_bind_address) else DEFAULT_BIND_ADDRESS
-    lan_bind_address = raw.get("app.lan_bind_address") or ""
-    lan_enabled = str(raw.get("app.lan_enabled") or "0").strip().lower() in {"1", "true", "yes", "on"}
-    if legacy_bind_address not in {DEFAULT_BIND_ADDRESS, "localhost"} and not lan_bind_address:
-        lan_bind_address = legacy_bind_address
-        lan_enabled = True
-    try:
-        bind_port = int(raw.get("app.bind_port") or DEFAULT_BIND_PORT)
-        if bind_port < 1 or bind_port > 65535:
-            raise ValueError
-    except (TypeError, ValueError):
-        bind_port = DEFAULT_BIND_PORT
-    return {
-        "bind_address": bind_address,
-        "bind_port": bind_port,
-        "lan_enabled": lan_enabled,
-        "lan_bind_address": lan_bind_address,
-    }
+
+def save_config_to_edmc(config: Dict[str, Any]) -> None:
+    edmc_config_set(CONFIG_KEY_BIND_ADDRESS, str(config["bind_address"]))
+    edmc_config_set(CONFIG_KEY_BIND_PORT, int(config["bind_port"]))
+    edmc_config_set(CONFIG_KEY_LAN_ENABLED, bool(config["lan_enabled"]))
+    edmc_config_set(CONFIG_KEY_LAN_BIND_ADDRESS, str(config["lan_bind_address"]))
+    edmc_config_set(CONFIG_KEY_LEGACY_IMPORTED, True)
+
+
+def load_web_config(plugin_dir: str) -> Dict[str, Any]:
+    """Load MarketScout listener settings from EDMC config, with legacy fallback."""
+    if edmc_config_available():
+        if not edmc_config_get_bool(CONFIG_KEY_LEGACY_IMPORTED, False):
+            legacy_path = os.path.join(plugin_dir, CONFIG_FILE)
+            if os.path.exists(legacy_path):
+                config = normalize_web_config(read_legacy_web_config(plugin_dir), import_legacy_bind=True)
+                save_config_to_edmc(config)
+                LOGGER.info("Imported legacy MarketScout listener config into EDMC config.toml")
+            else:
+                edmc_config_set(CONFIG_KEY_LEGACY_IMPORTED, True)
+
+        raw = {
+            "bind_address": edmc_config_get_str(CONFIG_KEY_BIND_ADDRESS, DEFAULT_BIND_ADDRESS),
+            "bind_port": edmc_config_get_int(CONFIG_KEY_BIND_PORT, DEFAULT_BIND_PORT),
+            "lan_enabled": edmc_config_get_bool(CONFIG_KEY_LAN_ENABLED, False),
+            "lan_bind_address": edmc_config_get_str(CONFIG_KEY_LAN_BIND_ADDRESS, ""),
+        }
+        config = normalize_web_config(raw)
+        if (
+            raw["bind_address"] != config["bind_address"]
+            or raw["bind_port"] != config["bind_port"]
+            or raw["lan_enabled"] != config["lan_enabled"]
+            or raw["lan_bind_address"] != config["lan_bind_address"]
+        ):
+            save_config_to_edmc(config)
+        return config
+
+    return normalize_web_config(read_legacy_web_config(plugin_dir, create_if_missing=True), import_legacy_bind=True)
 
 
 def save_web_config(plugin_dir: str, bind_address: str, bind_port: int, lan_enabled: bool = False, lan_bind_address: str = "") -> Dict[str, Any]:
-    path = os.path.join(plugin_dir, CONFIG_FILE)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(f"app.bind_address={bind_address}\n")
-        f.write(f"app.bind_port={bind_port}\n")
-        f.write(f"app.lan_enabled={1 if lan_enabled else 0}\n")
-        f.write(f"app.lan_bind_address={lan_bind_address}\n")
-    return {
+    config = normalize_web_config({
         "bind_address": bind_address,
         "bind_port": bind_port,
         "lan_enabled": lan_enabled,
         "lan_bind_address": lan_bind_address,
-    }
+    })
+    if edmc_config_available():
+        save_config_to_edmc(config)
+        return config
+
+    path = os.path.join(plugin_dir, CONFIG_FILE)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(f"app.bind_address={config['bind_address']}\n")
+        f.write(f"app.bind_port={config['bind_port']}\n")
+        f.write(f"app.lan_enabled={1 if config['lan_enabled'] else 0}\n")
+        f.write(f"app.lan_bind_address={config['lan_bind_address']}\n")
+    return config
 
 
 def is_loopback_host(value: str) -> bool:
@@ -1191,7 +1325,9 @@ def api_config() -> Dict[str, Any]:
         "suggested_bind_addresses": suggestions,
         "suggested_loopback_addresses": loopback_suggestions,
         "suggested_lan_addresses": lan_suggestions,
-        "config_file": CONFIG_FILE,
+        "config_file": CONFIG_SOURCE_EDMC if edmc_config_available() else CONFIG_FILE,
+        "config_source": "edmc" if edmc_config_available() else "legacy_file",
+        "legacy_config_file": CONFIG_FILE,
         "mdns": {
             "available": False,
             "name": "marketscout.local",

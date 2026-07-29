@@ -58,20 +58,22 @@ End users should not need frontend build tools.
 - Vue/Vite/Node/npm are development/build-time tools only.
 - Release packages must include a ready-to-serve `web/` directory.
 - Do not include `node_modules/` in releases or patches.
-- Do not include runtime/local data such as `marketscout.sqlite3`, `marketscout.config`, `marketscout-ui.json`, `marketscout-economy-presets.json`, logs, or `__pycache__/`.
+- Do not include runtime/local data such as `marketscout.sqlite3`, legacy `marketscout.config`, `marketscout-ui.json`, `marketscout-economy-presets.json`, logs, or `__pycache__/`.
 
 ### Web server configuration
 
-MarketScout creates `marketscout.config` in the plugin folder on startup if it does not exist. Defaults:
+MarketScout stores Web UI listener settings through EDMC's plugin config API in EDMC's main `config.toml`, using unique `marketscout.app.*` keys. Defaults:
 
-```ini
-app.bind_address=127.0.0.1
-app.bind_port=40595
-app.lan_enabled=0
-app.lan_bind_address=
+```toml
+marketscout.app.bind_address = "127.0.0.1"
+marketscout.app.bind_port = 40595
+marketscout.app.lan_enabled = false
+marketscout.app.lan_bind_address = ""
 ```
 
-MarketScout always starts a local listener on a loopback address. The fixed default port is intentional so browser-side state and same-origin behavior remain stable across restarts. Users can edit the config and restart EDMC to use a different loopback address, a different port, or an additional LAN listener.
+MarketScout always starts a local listener on a loopback address. The fixed default port is intentional so browser-side state and same-origin behavior remain stable across restarts. Users can edit the Config page and restart EDMC to use a different loopback address, a different port, or an additional LAN listener.
+
+Older installs may still contain plugin-folder `marketscout.config`. Current builds import that file into EDMC config once and leave it untouched. Standalone/dev contexts where EDMC's `config` object is unavailable still fall back to the legacy file path.
 
 The Web UI exposes these values in the top-menu `Config` page. Local address quick-fill options include only loopback addresses such as `127.0.0.1`, `localhost`, and detected loopback aliases. LAN suggestions are kept separate, and QR sharing is shown only for enabled non-loopback IPv4 LAN addresses. Changing the listen port or LAN settings requires restarting EDMC because the HTTP server socket is already bound. mDNS advertising as `marketscout.local` is not enabled for beta; doing it reliably should use a real Zeroconf/mDNS implementation rather than a hand-rolled shortcut.
 

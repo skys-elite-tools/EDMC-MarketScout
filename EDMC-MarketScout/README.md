@@ -35,20 +35,22 @@ Re-enable them later when you are ready to contribute data.
 
 ## Configuration
 
-On startup, MarketScout creates `marketscout.config` in the plugin folder if it does not already exist. The default file is:
+MarketScout stores listener settings in EDMC's main `config.toml` through EDMC's plugin config API, using unique `marketscout.app.*` keys:
 
-```ini
-app.bind_address=127.0.0.1
-app.bind_port=40595
-app.lan_enabled=0
-app.lan_bind_address=
+```toml
+marketscout.app.bind_address = "127.0.0.1"
+marketscout.app.bind_port = 40595
+marketscout.app.lan_enabled = false
+marketscout.app.lan_bind_address = ""
 ```
 
-MarketScout always uses a loopback address for same-computer access. The fixed default port keeps browser-side UI state stable across EDMC/browser restarts, and current builds also synchronize supported UI preferences to the local MarketScout database. Users may edit this file if they need a different loopback address, a different port, or an additional LAN listener. Restart EDMC after changing it.
+Older installs may still have a plugin-folder `marketscout.config` file. Current builds import those values into EDMC config once and leave the old file in place as a non-destructive backup.
+
+MarketScout always uses a loopback address for same-computer access. The fixed default port keeps browser-side UI state stable across EDMC/browser restarts, and current builds also synchronize supported UI preferences to the local MarketScout database. Users may edit settings from the Web UI Config page. Restart EDMC after changing listener settings.
 
 The Web UI also has a `Config` page at the end of the top navigation. It can edit the local loopback address, the shared port, and the optional LAN listener. Local quick-fill options only include loopback addresses such as `127.0.0.1`, `localhost`, and `127.0.1.1` when detected. It shows a QR code only when LAN access is enabled with a shareable IPv4 address, so another same-network device can open the UI more easily. Restart EDMC after saving listening changes.
 
-Keep `app.lan_enabled=0` if you want MarketScout reachable only from this computer. Enabling LAN access can make the Web UI reachable from other devices on your local network.
+Keep LAN access disabled if you want MarketScout reachable only from this computer. Enabling LAN access can make the Web UI reachable from other devices on your local network.
 
 ## Updates
 

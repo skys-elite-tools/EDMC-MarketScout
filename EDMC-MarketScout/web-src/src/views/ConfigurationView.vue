@@ -15,7 +15,8 @@ const defaults = ref({ bind_address: '127.0.0.1', bind_port: 40595, lan_enabled:
 const loopbackSuggestions = ref(['127.0.0.1', 'localhost'])
 const lanSuggestions = ref([])
 const mdns = ref({})
-const configFile = ref('marketscout.config')
+const configFile = ref('EDMC config.toml')
+const configSource = ref('edmc')
 const urlCopied = ref(false)
 const qrDataUrl = ref('')
 const qrError = ref('')
@@ -52,6 +53,7 @@ async function loadConfig() {
     lanSuggestions.value = data.suggested_lan_addresses || lanSuggestions.value
     mdns.value = data.mdns || {}
     configFile.value = data.config_file || configFile.value
+    configSource.value = data.config_source || configSource.value
   } catch (err) {
     error.value = String(err?.message || err)
   } finally {
@@ -130,7 +132,8 @@ async function copyShareUrl() {
     <fieldset class="configurationPanel">
       <legend>Configuration</legend>
       <div class="configurationIntro">
-        <p>MarketScout stores app-level configuration in <code>{{ configFile }}</code> in the plugin folder. Port and LAN sharing changes are applied after restarting EDMC.</p>
+        <p v-if="configSource === 'edmc'">MarketScout stores app-level configuration in EDMC's main <code>config.toml</code> file with <code>marketscout.app.*</code> keys. Port and LAN sharing changes are applied after restarting EDMC.</p>
+        <p v-else>MarketScout stores app-level configuration in <code>{{ configFile }}</code> in the plugin folder. Port and LAN sharing changes are applied after restarting EDMC.</p>
         <p v-if="active.url">Local Web UI: <strong>{{ active.url }}</strong></p>
         <p v-if="active.lan_url">LAN Web UI: <strong>{{ active.lan_url }}</strong></p>
         <p v-if="active.lan_error" class="configError">LAN listener could not start: {{ active.lan_error }}</p>

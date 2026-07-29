@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Routed MarketScout runtime diagnostics through EDMC-compatible plugin loggers instead of writing separate plugin log files.
+- Moved MarketScout listener settings into EDMC's main config storage with a one-time import from legacy `marketscout.config`.
 - Added EDMC Plugin Registry-compatible version metadata and switched update HTTP requests from `urllib` to `requests`.
 - Moved legacy startup maintenance scans off the EDMC startup path so large local databases do not delay plugin loading.
 
