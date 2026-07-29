@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { shortTime } from '../utils.js'
 
 const props = defineProps({
@@ -7,11 +7,42 @@ const props = defineProps({
   latestJournalEvent: { type: Object, default: null },
   edmcStatus: { type: Object, default: null },
   autoRefresh: { type: Boolean, default: true },
+  busyText: { type: String, default: '' },
   updateStatus: { type: Object, default: null },
   updateBusy: { type: Boolean, default: false },
   edmcDiscardBusy: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:autoRefresh', 'run-update', 'discard-edmc-delayed', 'open-support'])
+const displayedBusyText = ref('')
+let busyTextTimer = null
+
+function clearBusyTextTimer() {
+  if (!busyTextTimer) return
+  clearTimeout(busyTextTimer)
+  busyTextTimer = null
+}
+
+watch(
+  () => props.busyText,
+  (busyText) => {
+    clearBusyTextTimer()
+    if (!busyText) {
+      displayedBusyText.value = ''
+      return
+    }
+    if (displayedBusyText.value) {
+      displayedBusyText.value = busyText
+      return
+    }
+    busyTextTimer = setTimeout(() => {
+      if (props.busyText) displayedBusyText.value = props.busyText
+      busyTextTimer = null
+    }, 1000)
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(clearBusyTextTimer)
 
 const journalLabel = computed(() => {
   const event = props.latestJournalEvent || null
@@ -45,6 +76,10 @@ function delayedMessageSchema(message) {
   return message?.schema_name || 'station'
 }
 
+function delayedMessageShortLabel(message) {
+  return delayedMessageSchema(message)
+}
+
 const delayedMessagesTitle = computed(() => {
   if (!delayedMessages.value.length) return 'Delayed EDDN station messages waiting to be sent.'
   return delayedMessages.value
@@ -55,7 +90,7 @@ const delayedMessagesTitle = computed(() => {
 const firstDelayedMessageLabel = computed(() => {
   const message = delayedMessages.value[0]
   if (!message) return ''
-  return `${delayedMessageSchema(message)} · ${delayedMessagePlace(message)} · ~${Number(message.seconds_remaining || 0)}s`
+  return `${delayedMessageShortLabel(message)} · ~${Number(message.seconds_remaining || 0)}s`
 })
 </script>
 
@@ -64,6 +99,10 @@ const firstDelayedMessageLabel = computed(() => {
     <div class="journalStatus" :title="journalLabel">
       <span class="statusLabel">Journal</span>
       <span class="statusValue">{{ journalLabel }}</span>
+      <span v-if="displayedBusyText" class="topBusyStatus" :title="displayedBusyText">
+        <span class="stationTableBusyIndicator"></span>
+        <span>{{ displayedBusyText }}</span>
+      </span>
     </div>
     <div v-if="updateStatus?.available" class="updateStatusSlot">
       <button

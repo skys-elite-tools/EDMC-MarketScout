@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import StatusStrip from './components/StatusStrip.vue'
 import TopBar from './components/TopBar.vue'
 import ViewControls from './components/ViewControls.vue'
@@ -29,6 +29,8 @@ const ACTIVE_VIEW_STORAGE_KEY = 'ui.activeView'
 const LEGACY_ACTIVE_VIEW_STORAGE_KEY = 'marketscout.activeView'
 const STATION_SCOUT_MODE_STORAGE_KEY = 'stations.scoutMode'
 const STATION_SCOUT_THRESHOLDS_STORAGE_KEY = 'stations.scoutThresholds'
+const STATION_ROW_LIMIT_STORAGE_KEY = 'stations.rowLimit'
+const DEFAULT_STATION_ROW_LIMIT = 30
 const TARGET_STATE_TOAST_TIMEOUT_MS = 60000
 const VALID_VIEWS = new Set(['stations', 'jackpots', 'ledger', 'commodities', 'rare', 'analyze', 'carrier', 'carrierCalc', 'config'])
 const VALID_STATION_SCOUT_MODES = new Set(['buy', 'sell'])
@@ -51,6 +53,7 @@ const watchedCommodities = ref(['Palladium', 'Gold', 'Silver'])
 const draftWatchedCommodities = ref(['Palladium', 'Gold', 'Silver'])
 const cachedStationScoutMode = dataStore.cached(STATION_SCOUT_MODE_STORAGE_KEY, 'buy', { legacyJson: false })
 const stationScoutMode = ref(VALID_STATION_SCOUT_MODES.has(cachedStationScoutMode) ? cachedStationScoutMode : 'buy')
+const stationRowLimit = ref(clampStationRowLimit(dataStore.cached(STATION_ROW_LIMIT_STORAGE_KEY, DEFAULT_STATION_ROW_LIMIT)))
 const bestBuyIgnoreCommodities = ref([])
 const draftBestBuyIgnoreCommodities = ref([])
 const bestBuySupplyCap = ref(1000)
@@ -67,6 +70,9 @@ const supportOpen = ref(false)
 const commoditySearch = ref('')
 const bestBuyIgnoreSearch = ref('')
 const statusText = ref('Loading…')
+const stationRowsLoading = ref(false)
+const stationRowsRendering = ref(false)
+const stationPage = ref({ totalCount: 0, hasMore: false, nextOffset: null, limit: DEFAULT_STATION_ROW_LIMIT, offset: 0 })
 const latestJournalEvent = ref(null)
 const edmcStatus = ref(null)
 const autoRefresh = ref(true)
@@ -105,7 +111,12 @@ const DEFAULT_STATION_FILTERS = {
   supplyThreshold: 10000,
   sellPriceThreshold: 40000,
   demandThreshold: 10000,
-  limit: 1000,
+}
+
+function clampStationRowLimit(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return DEFAULT_STATION_ROW_LIMIT
+  return Math.max(30, Math.min(Math.round(number), 2000))
 }
 
 function stationThresholdsFrom(value) {
@@ -164,7 +175,7 @@ const bestBuySettingsDirty = computed(() => (
   || Number(draftMinimumPotentialProfit.value) !== Number(minimumPotentialProfit.value)
 ))
 
-function stationParams() {
+function stationParams(offset = 0, limit = stationRowLimit.value) {
   return {
     system: filters.value.system,
     station: filters.value.station,
@@ -173,8 +184,22 @@ function stationParams() {
     pending_station_faction_state: filters.value.pendingStationFactionState,
     source: filters.value.source,
     include_fc: filters.value.includeFc ? '1' : '0',
-    limit: filters.value.limit || '1000',
+    limit,
+    offset,
   }
+}
+
+function afterBrowserPaint() {
+  return new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve))
+  })
+}
+
+function stationStatusLabel() {
+  const total = Number(stationPage.value.totalCount || rows.value.length)
+  const shown = rows.value.length
+  if (total && shown < total) return `Showing ${shown.toLocaleString()} of ${total.toLocaleString()} stations`
+  return `${shown.toLocaleString()} stations`
 }
 
 function setSelected(idx) {
@@ -216,14 +241,41 @@ async function clearStationFilters() {
 }
 
 async function loadStations(options = {}) {
-  const requestId = beginRowsLoad('stations', options)
-  const res = await fetch(`/api/stations?${query(stationParams())}`, { cache: 'no-store' })
-  const data = await res.json()
-  if (!isActiveRowsLoad('stations', requestId)) return
-  rows.value = dedupeStationRows(data.rows || [])
-  displayColumns.value = data.display_columns || []
-  watchedCommodities.value = data.watched_commodities || watchedCommodities.value
-  statusText.value = `${rows.value.length} rows · ${new Date().toLocaleTimeString()}`
+  const append = options.append === true
+  const offset = append ? Number(stationPage.value.nextOffset || rows.value.length || 0) : 0
+  const requestLimit = append ? stationRowLimit.value : (options.preserveRows ? Math.max(stationRowLimit.value, rows.value.length || 0) : stationRowLimit.value)
+  const requestId = beginRowsLoad('stations', { ...options, preserveRows: append || options.preserveRows })
+  stationRowsLoading.value = true
+  if (!append) {
+    stationPage.value = { totalCount: 0, hasMore: false, nextOffset: null, limit: requestLimit, offset: 0 }
+  }
+  statusText.value = append ? `${stationStatusLabel()} · Loading more...` : 'Loading stations...'
+  try {
+    const res = await fetch(`/api/stations?${query(stationParams(offset, requestLimit))}`, { cache: 'no-store' })
+    const data = await res.json()
+    if (!isActiveRowsLoad('stations', requestId)) return
+    const nextRows = data.rows || []
+    rows.value = append ? dedupeStationRows([...rows.value, ...nextRows]) : dedupeStationRows(nextRows)
+    displayColumns.value = data.display_columns || []
+    watchedCommodities.value = data.watched_commodities || watchedCommodities.value
+    stationPage.value = {
+      totalCount: Number(data.total_count || rows.value.length),
+      hasMore: Boolean(data.has_more),
+      nextOffset: data.next_offset ?? null,
+      limit: Number(data.limit || stationRowLimit.value),
+      offset: Number(data.offset || offset),
+    }
+    await nextTick()
+    await afterBrowserPaint()
+    statusText.value = `${stationStatusLabel()} · ${new Date().toLocaleTimeString()}`
+  } finally {
+    if (isActiveRowsLoad('stations', requestId)) stationRowsLoading.value = false
+  }
+}
+
+async function loadMoreStations() {
+  if (!stationPage.value.hasMore || stationRowsLoading.value) return
+  await loadStations({ append: true })
 }
 
 async function loadJackpots(options = {}) {
@@ -558,9 +610,25 @@ function setBestBuyIgnoreCommodity(commodity, checked) {
   draftBestBuyIgnoreCommodities.value = Array.from(set)
 }
 
-function setStationScoutMode(mode) {
+async function setStationScoutMode(mode) {
   if (!VALID_STATION_SCOUT_MODES.has(mode)) return
+  if (stationScoutMode.value === mode) return
+  stationRowsRendering.value = currentView.value === 'stations'
   stationScoutMode.value = mode
+  try {
+    await nextTick()
+    await afterBrowserPaint()
+  } finally {
+    stationRowsRendering.value = false
+  }
+}
+
+function setStationRowLimit(value) {
+  const nextLimit = clampStationRowLimit(value)
+  if (stationRowLimit.value === nextLimit) return
+  stationRowLimit.value = nextLimit
+  dataStore.set(STATION_ROW_LIMIT_STORAGE_KEY, nextLimit, { debounceMs: 0 })
+  if (currentView.value === 'stations') loadStations()
 }
 
 async function saveCommoditySettings() {
@@ -760,6 +828,7 @@ onMounted(async () => {
   if (VALID_VIEWS.has(storedView)) currentView.value = storedView
   const storedStationScoutMode = await dataStore.get(STATION_SCOUT_MODE_STORAGE_KEY, stationScoutMode.value, { legacyJson: false })
   if (VALID_STATION_SCOUT_MODES.has(storedStationScoutMode)) stationScoutMode.value = storedStationScoutMode
+  stationRowLimit.value = clampStationRowLimit(await dataStore.get(STATION_ROW_LIMIT_STORAGE_KEY, stationRowLimit.value))
   const storedStationThresholds = await dataStore.get(STATION_SCOUT_THRESHOLDS_STORAGE_KEY, currentStationThresholds())
   filters.value = {
     ...filters.value,
@@ -783,6 +852,7 @@ onUnmounted(() => {
       :status-text="statusText"
       :latest-journal-event="latestJournalEvent"
       :edmc-status="edmcStatus"
+      :busy-text="stationRowsLoading ? 'Loading stations...' : (stationRowsRendering ? 'Updating table...' : '')"
       :update-status="updateStatus"
       :update-busy="updateBusy"
       :edmc-discard-busy="edmcDiscardBusy"
@@ -875,6 +945,7 @@ onUnmounted(() => {
       :watched-count="watchedCommodities.length"
       :best-buy-ignore-count="bestBuyIgnoreCommodities.length"
       :station-scout-mode="stationScoutMode"
+      :station-row-limit="stationRowLimit"
       :economy-presets="economyPresets"
       :economy-preset-status="economyPresetStatus"
       :system-suggestions="stationFilterOptions.systems"
@@ -886,6 +957,7 @@ onUnmounted(() => {
       @open-help="openHelp"
       @clear-station-filters="clearStationFilters"
       @set-station-scout-mode="setStationScoutMode"
+      @set-station-row-limit="setStationRowLimit"
     />
 
     <CommoditySettings
@@ -942,6 +1014,16 @@ onUnmounted(() => {
             @select="setSelected"
             @open-help="openHelp"
           />
+          <div class="stationLoadMoreBar">
+            <button
+              type="button"
+              class="loadMoreButton"
+              :disabled="stationRowsLoading || !stationPage.hasMore"
+              @click="loadMoreStations"
+            >
+              {{ stationPage.hasMore ? `Load More (${rows.length.toLocaleString()} of ${Number(stationPage.totalCount || 0).toLocaleString()})` : `Showing ${rows.length.toLocaleString()} station${rows.length === 1 ? '' : 's'}` }}
+            </button>
+          </div>
         </template>
         <JackpotHistory
           v-else-if="currentView === 'jackpots'"

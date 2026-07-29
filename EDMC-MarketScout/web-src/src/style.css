@@ -449,7 +449,10 @@ main {
 main.detailsOpen {
   grid-template-columns: minmax(680px, 1fr) 380px;
 }
-.tablePanel { overflow: auto; }
+.tablePanel {
+  position: relative;
+  overflow: auto;
+}
 .stationScoutModeButtons {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -457,6 +460,30 @@ main.detailsOpen {
   border-radius: 6px;
   overflow: hidden;
   width: 100%;
+}
+.stationTableBusyIndicator {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(140, 200, 255, .25);
+  border-top-color: var(--accent);
+  border-radius: 999px;
+  animation: stationBusySpin .75s linear infinite;
+}
+@keyframes stationBusySpin {
+  to { transform: rotate(360deg); }
+}
+.stationLoadMoreBar {
+  position: sticky;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  padding: 10px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  background: rgba(10, 15, 22, .9);
+}
+.loadMoreButton {
+  min-width: min(18rem, 100%);
+  font-weight: 900;
 }
 .stationScoutModeButtons button {
   border: 0;
@@ -1037,9 +1064,33 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   gap: 10px;
   min-width: 0;
 }
+.journalStatus .statusValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .viewStatus {
   justify-content: flex-end;
   white-space: nowrap;
+}
+.topBusyStatus {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 1.35rem;
+  padding: 1px 7px;
+  border: 1px solid rgba(140, 200, 255, .35);
+  border-radius: 999px;
+  color: var(--accent);
+  background: rgba(140, 200, 255, .08);
+  font-weight: 800;
+  white-space: nowrap;
+}
+.topBusyStatus .stationTableBusyIndicator {
+  width: .85rem;
+  height: .85rem;
+  border-width: 2px;
 }
 .edmcSettingStatus {
   display: inline-flex;

@@ -1868,54 +1868,84 @@ def api_stations(qs: Dict[str, List[str]]) -> Dict[str, Any]:
     if where:
         sql += " WHERE " + " AND ".join(where)
     sql += " GROUP BY st.market_id"
-    sql += " ORDER BY market_updated IS NULL, market_updated DESC, station_visit IS NULL, station_visit DESC, best_buy_score IS NULL, best_buy_score DESC, system ASC, station ASC"
     limit = one("limit")
+    offset = one("offset")
     try:
         lim = max(1, min(int(limit), 2000)) if limit else 1000
     except Exception:
         lim = 1000
-    sql += f" LIMIT {lim}"
+    try:
+        off = max(0, int(offset)) if offset else 0
+    except Exception:
+        off = 0
 
-    with connect() as conn:
-        raw_rows = [row_to_dict(r) for r in conn.execute(sql, params).fetchall()]
-
-    # Defensive collapse: the main Stations view must show one current row per
-    # physical station. Older imported/legacy rows or odd joins can otherwise
-    # leak through as duplicates even when the stations table itself looks OK.
-    def station_key(row):
-        return (str(row.get("system") or "").strip().casefold(), str(row.get("station") or "").strip().casefold())
-
-    def row_rank(row):
-        # Prefer the freshest station row first, then higher best-buy score.
-        # Timestamp strings are stored in ISO-like formats, so lexical ordering
-        # matches chronological ordering for our data.
-        return (
-            str(row.get("market_updated") or ""),
-            str(row.get("station_visit") or ""),
-            float(row.get("best_buy_score") or -1),
-            0 if row.get("source") == "local_visit" else -1,
+    paged_sql = f"""
+        WITH station_rows AS (
+            {sql}
+        ),
+        ranked_rows AS (
+            SELECT
+                station_rows.*,
+                ROW_NUMBER() OVER (
+                    PARTITION BY
+                        CASE
+                            WHEN trim(COALESCE(system, '')) != '' AND trim(COALESCE(station, '')) != ''
+                                THEN lower(trim(system))
+                            ELSE '__market_id__:' || COALESCE(CAST(market_id AS TEXT), '')
+                        END,
+                        CASE
+                            WHEN trim(COALESCE(system, '')) != '' AND trim(COALESCE(station, '')) != ''
+                                THEN lower(trim(station))
+                            ELSE '__market_id__:' || COALESCE(CAST(market_id AS TEXT), '')
+                        END
+                    ORDER BY
+                        market_updated IS NULL,
+                        market_updated DESC,
+                        station_visit IS NULL,
+                        station_visit DESC,
+                        best_buy_score IS NULL,
+                        best_buy_score DESC,
+                        CASE WHEN source = 'local_visit' THEN 0 ELSE 1 END,
+                        market_id DESC
+                ) AS station_rank
+            FROM station_rows
         )
+        SELECT *, COUNT(*) OVER() AS total_count
+        FROM ranked_rows
+        WHERE station_rank = 1
+        ORDER BY
+            market_updated IS NULL,
+            market_updated DESC,
+            station_visit IS NULL,
+            station_visit DESC,
+            best_buy_score IS NULL,
+            best_buy_score DESC,
+            system ASC,
+            station ASC
+        LIMIT ? OFFSET ?
+    """
+    with connect() as conn:
+        page_rows = [row_to_dict(r) for r in conn.execute(paged_sql, [*params, lim, off]).fetchall()]
 
-    deduped = {}
-    for row in raw_rows:
-        key = station_key(row)
-        if not key[0] or not key[1]:
-            key = ("__market_id__", str(row.get("market_id") or id(row)))
-        prev = deduped.get(key)
-        if prev is None or row_rank(row) > row_rank(prev):
-            deduped[key] = row
-    rows = list(deduped.values())
-
-    # Keep the defensive post-dedupe ordering in sync with the SQL order:
-    # newest market updates first, then newest station visits, then strongest
-    # best-buy score, followed by stable alphabetical station identity.
-    # Use stable sorts so each priority can use its natural direction.
-    rows.sort(key=lambda r: (str(r.get("system") or "").casefold(), str(r.get("station") or "").casefold()))
-    rows.sort(key=lambda r: float(r.get("best_buy_score") or -1), reverse=True)
-    rows.sort(key=lambda r: str(r.get("station_visit") or ""), reverse=True)
-    rows.sort(key=lambda r: str(r.get("market_updated") or ""), reverse=True)
-
-    return {"rows": rows, "count": len(rows), "raw_count": len(raw_rows), "display_columns": display_cols, "watched_commodities": watched}
+    total_count = int(page_rows[0].get("total_count") or 0) if page_rows else 0
+    rows = []
+    for row in page_rows:
+        row.pop("station_rank", None)
+        row.pop("total_count", None)
+        rows.append(row)
+    next_offset = off + len(rows)
+    return {
+        "rows": rows,
+        "count": len(rows),
+        "total_count": total_count,
+        "raw_count": total_count,
+        "limit": lim,
+        "offset": off,
+        "has_more": next_offset < total_count,
+        "next_offset": next_offset if next_offset < total_count else None,
+        "display_columns": display_cols,
+        "watched_commodities": watched,
+    }
 
 
 
