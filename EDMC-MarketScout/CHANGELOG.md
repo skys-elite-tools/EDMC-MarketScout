@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Moved legacy startup maintenance scans off the EDMC startup path so large local databases do not delay plugin loading.
+
 ## 0.5.0
 
 - Fixed Trip Planner progress so active routes can advance through already visited contiguous stops, including routes imported after early stops were visited.
