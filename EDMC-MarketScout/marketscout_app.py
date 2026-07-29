@@ -12,6 +12,7 @@ import math
 import os
 import sqlite3
 import sys
+import threading
 import traceback
 import importlib.util
 import webbrowser
@@ -184,8 +185,7 @@ def plugin_start3(plugin_dir: str) -> str:
     configure_sqlite_connection(CONN)
     init_db(CONN)
     refresh_rawdata_imports(CONN, plugin_dir)
-    deduplicate_market_price_commodities(CONN)
-    deduplicate_station_rows(CONN)
+    start_deferred_startup_maintenance(DB_PATH)
     try:
         load_web_module().start_update_check(plugin_dir, PLUGIN_VERSION)
     except Exception:
@@ -845,6 +845,60 @@ def setting_set(conn: sqlite3.Connection, key: str, value: Any) -> None:
             "INSERT INTO settings(key, value_json) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json",
             (key, payload),
         )
+
+
+def run_setting_once(conn: sqlite3.Connection, key: str, action) -> bool:
+    if setting_get(conn, key) is not None:
+        return False
+    action()
+    setting_set(conn, key, {"completed_at": now_utc_iso()})
+    conn.commit()
+    return True
+
+
+def run_startup_maintenance_once(conn: sqlite3.Connection) -> None:
+    """Run legacy cleanup tasks once, not on every EDMC startup.
+
+    These cleanups scan user-growth tables and can become expensive as a local
+    MarketScout database accumulates stations and market prices. They are kept
+    here instead of normal migrations because they repair legacy data content,
+    not schema.
+    """
+    run_setting_once(
+        conn,
+        "maintenance.market_price_commodity_dedupe.v1",
+        lambda: deduplicate_market_price_commodities(conn),
+    )
+    run_setting_once(
+        conn,
+        "maintenance.station_row_dedupe.v1",
+        lambda: deduplicate_station_rows(conn),
+    )
+
+
+def start_deferred_startup_maintenance(db_path: str) -> None:
+    thread = threading.Thread(
+        target=run_deferred_startup_maintenance,
+        args=(db_path,),
+        name="MarketScoutStartupMaintenance",
+        daemon=True,
+    )
+    thread.start()
+
+
+def run_deferred_startup_maintenance(db_path: str) -> None:
+    conn: Optional[sqlite3.Connection] = None
+    try:
+        conn = sqlite3.connect(db_path, timeout=10.0)
+        conn.row_factory = sqlite3.Row
+        configure_sqlite_connection(conn)
+        run_startup_maintenance_once(conn)
+    except Exception:
+        log_exception("deferred startup maintenance")
+    finally:
+        if conn is not None:
+            conn.close()
+
 
 def ensure_default_settings(conn: sqlite3.Connection) -> None:
     if setting_get(conn, "watched_commodities") is None:
@@ -1776,6 +1830,16 @@ def deduplicate_market_price_commodities(conn: sqlite3.Connection) -> int:
     rewrites it to the catalogue display name when available.
     """
     try:
+        catalog_by_key: Dict[str, str] = {}
+        for table in ("commodity_global_stats", "rare_commodities"):
+            try:
+                for row in conn.execute(f"SELECT commodity FROM {table}").fetchall():
+                    name = str(row["commodity"] or "")
+                    key = canonical_commodity_key(name)
+                    if key and key not in catalog_by_key:
+                        catalog_by_key[key] = name
+            except Exception:
+                pass
         rows = conn.execute(
             """
             SELECT market_id, commodity, buy_price, sell_price, supply, demand, market_price_update_datetime
@@ -1792,7 +1856,7 @@ def deduplicate_market_price_commodities(conn: sqlite3.Connection) -> int:
 
         changed = 0
         for (market_id, key), group in grouped.items():
-            canonical_name = commodity_display_from_catalog_key(key) or normalize_commodity_name(group[0]["commodity"]) or group[0]["commodity"]
+            canonical_name = catalog_by_key.get(key) or normalize_commodity_name(group[0]["commodity"]) or group[0]["commodity"]
             if len(group) == 1 and group[0]["commodity"] == canonical_name:
                 continue
 
