@@ -11,6 +11,7 @@
   "dependencies": {
     "@melloware/coloris": "^0.25.0",
     "@vitejs/plugin-vue": "latest",
+    "pinia": "^4.0.2",
     "qrcode": "^1.5.4",
     "vite": "latest",
     "vue": "latest"
