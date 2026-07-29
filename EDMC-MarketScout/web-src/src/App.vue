@@ -48,11 +48,15 @@ function persistCurrentView() {
 const currentView = ref(loadStoredView())
 const displayColumns = ref([])
 const watchedCommodities = ref(['Palladium', 'Gold', 'Silver'])
+const draftWatchedCommodities = ref(['Palladium', 'Gold', 'Silver'])
 const cachedStationScoutMode = dataStore.cached(STATION_SCOUT_MODE_STORAGE_KEY, 'buy', { legacyJson: false })
 const stationScoutMode = ref(VALID_STATION_SCOUT_MODES.has(cachedStationScoutMode) ? cachedStationScoutMode : 'buy')
 const bestBuyIgnoreCommodities = ref([])
+const draftBestBuyIgnoreCommodities = ref([])
 const bestBuySupplyCap = ref(1000)
+const draftBestBuySupplyCap = ref(1000)
 const minimumPotentialProfit = ref(10000)
+const draftMinimumPotentialProfit = ref(10000)
 const allCommodities = ref([])
 const commoditiesCatalogLoaded = ref(false)
 const settingsVisible = ref(false)
@@ -141,6 +145,24 @@ const stationModeDisplayColumns = computed(() => {
   const side = stationScoutMode.value === 'sell' ? 'sell' : 'buy'
   return watchedCommodities.value.map(commodity => ({ commodity, side }))
 })
+
+function normalizedList(value) {
+  return Array.from(new Set((Array.isArray(value) ? value : []).map(item => String(item || '').trim()).filter(Boolean)))
+}
+
+function sameList(left, right) {
+  const leftValues = normalizedList(left)
+  const rightValues = normalizedList(right)
+  if (leftValues.length !== rightValues.length) return false
+  return leftValues.every((value, index) => value === rightValues[index])
+}
+
+const watchedCommoditySettingsDirty = computed(() => !sameList(draftWatchedCommodities.value, watchedCommodities.value))
+const bestBuySettingsDirty = computed(() => (
+  !sameList(draftBestBuyIgnoreCommodities.value, bestBuyIgnoreCommodities.value)
+  || Number(draftBestBuySupplyCap.value) !== Number(bestBuySupplyCap.value)
+  || Number(draftMinimumPotentialProfit.value) !== Number(minimumPotentialProfit.value)
+))
 
 function stationParams() {
   return {
@@ -489,22 +511,26 @@ async function loadCommoditySettings() {
   const settingsRes = await fetch('/api/settings', { cache: 'no-store' })
   const settings = await settingsRes.json()
   watchedCommodities.value = settings.watched_commodities || ['Palladium', 'Gold', 'Silver']
+  draftWatchedCommodities.value = [...watchedCommodities.value]
   displayColumns.value = watchedCommodities.value.map(c => ({ commodity: c, side: 'buy' }))
   bestBuyIgnoreCommodities.value = settings.best_buy_ignore_commodities || []
+  draftBestBuyIgnoreCommodities.value = [...bestBuyIgnoreCommodities.value]
   bestBuySupplyCap.value = Number(settings.best_buy_supply_cap || 1000)
+  draftBestBuySupplyCap.value = bestBuySupplyCap.value
   minimumPotentialProfit.value = Number(settings.minimum_potential_profit || 10000)
+  draftMinimumPotentialProfit.value = minimumPotentialProfit.value
   if (!commoditiesCatalogLoaded.value) {
     const commoditiesRes = await fetch('/api/commodities', { cache: 'no-store' })
     const data = await commoditiesRes.json()
     allCommodities.value = data.commodities || []
     commoditiesCatalogLoaded.value = true
   }
-  allCommodities.value = Array.from(new Set([...allCommodities.value, ...watchedCommodities.value, ...bestBuyIgnoreCommodities.value])).sort()
+  allCommodities.value = Array.from(new Set([...allCommodities.value, ...watchedCommodities.value, ...bestBuyIgnoreCommodities.value, ...draftWatchedCommodities.value, ...draftBestBuyIgnoreCommodities.value])).sort()
 }
 
 const filteredCommodities = computed(() => {
   const filter = (commoditySearch.value || '').toLowerCase()
-  const selected = new Set(watchedCommodities.value)
+  const selected = new Set(draftWatchedCommodities.value)
   const selectedRows = allCommodities.value.filter(c => selected.has(c))
   const matchedRows = allCommodities.value.filter(c => !selected.has(c) && (!filter || c.toLowerCase().includes(filter)))
   return [...selectedRows, ...matchedRows.slice(0, COMMODITY_SELECTOR_LIMIT)]
@@ -512,24 +538,24 @@ const filteredCommodities = computed(() => {
 
 const filteredBestBuyIgnoreCommodities = computed(() => {
   const filter = (bestBuyIgnoreSearch.value || '').toLowerCase()
-  const selected = new Set(bestBuyIgnoreCommodities.value)
+  const selected = new Set(draftBestBuyIgnoreCommodities.value)
   const selectedRows = allCommodities.value.filter(c => selected.has(c))
   const matchedRows = allCommodities.value.filter(c => !selected.has(c) && (!filter || c.toLowerCase().includes(filter)))
   return [...selectedRows, ...matchedRows.slice(0, COMMODITY_SELECTOR_LIMIT)]
 })
 
 function setWatchedCommodity(commodity, checked) {
-  const set = new Set(watchedCommodities.value)
+  const set = new Set(draftWatchedCommodities.value)
   if (checked) set.add(commodity)
   else set.delete(commodity)
-  watchedCommodities.value = Array.from(set)
+  draftWatchedCommodities.value = Array.from(set)
 }
 
 function setBestBuyIgnoreCommodity(commodity, checked) {
-  const set = new Set(bestBuyIgnoreCommodities.value)
+  const set = new Set(draftBestBuyIgnoreCommodities.value)
   if (checked) set.add(commodity)
   else set.delete(commodity)
-  bestBuyIgnoreCommodities.value = Array.from(set)
+  draftBestBuyIgnoreCommodities.value = Array.from(set)
 }
 
 function setStationScoutMode(mode) {
@@ -538,27 +564,36 @@ function setStationScoutMode(mode) {
 }
 
 async function saveCommoditySettings() {
+  const nextWatched = normalizedList(draftWatchedCommodities.value)
   await fetch('/api/settings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      watched_commodities: watchedCommodities.value,
+      watched_commodities: nextWatched,
     }),
   })
+  watchedCommodities.value = nextWatched
+  displayColumns.value = watchedCommodities.value.map(c => ({ commodity: c, side: 'buy' }))
   settingsVisible.value = false
   await loadStations()
 }
 
 async function saveBestBuyIgnoreSettings() {
+  const nextIgnore = normalizedList(draftBestBuyIgnoreCommodities.value)
+  const nextSupplyCap = Math.max(1, Number(draftBestBuySupplyCap.value) || 1000)
+  const nextMinimumProfit = Math.max(0, Number(draftMinimumPotentialProfit.value) || 0)
   await fetch('/api/settings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      best_buy_ignore_commodities: bestBuyIgnoreCommodities.value,
-      best_buy_supply_cap: bestBuySupplyCap.value,
-      minimum_potential_profit: minimumPotentialProfit.value,
+      best_buy_ignore_commodities: nextIgnore,
+      best_buy_supply_cap: nextSupplyCap,
+      minimum_potential_profit: nextMinimumProfit,
     }),
   })
+  bestBuyIgnoreCommodities.value = nextIgnore
+  bestBuySupplyCap.value = nextSupplyCap
+  minimumPotentialProfit.value = nextMinimumProfit
   bestBuyIgnoreVisible.value = false
   await loadStations()
 }
@@ -858,8 +893,9 @@ onUnmounted(() => {
       title="Watched commodities"
       description="Watched commodities drive highlighting, details, and the Buy Scout / Sell Scout columns."
       save-label="Save commodity settings"
+      :save-disabled="!watchedCommoditySettingsDirty"
       :commodities="filteredCommodities"
-      :selected-commodities="watchedCommodities"
+      :selected-commodities="draftWatchedCommodities"
       :search="commoditySearch"
       @close="settingsVisible = false"
       @save="saveCommoditySettings"
@@ -872,14 +908,15 @@ onUnmounted(() => {
       title="Best Buy settings"
       description="Tune how MarketScout chooses Best Buy opportunities. Ignored commodities are excluded, the supply cap limits how much large supply affects scoring, and the minimum potential profit controls candidate eligibility and Potential Profit visibility."
       save-label="Save Best Buy settings"
+      :save-disabled="!bestBuySettingsDirty"
       :commodities="filteredBestBuyIgnoreCommodities"
-      :selected-commodities="bestBuyIgnoreCommodities"
+      :selected-commodities="draftBestBuyIgnoreCommodities"
       :search="bestBuyIgnoreSearch"
       :show-best-buy-settings="true"
       help-article="best-buy"
       help-title="How Best Buy works"
-      v-model:best-buy-supply-cap="bestBuySupplyCap"
-      v-model:minimum-potential-profit="minimumPotentialProfit"
+      v-model:best-buy-supply-cap="draftBestBuySupplyCap"
+      v-model:minimum-potential-profit="draftMinimumPotentialProfit"
       @close="bestBuyIgnoreVisible = false"
       @save="saveBestBuyIgnoreSettings"
       @update:search="bestBuyIgnoreSearch = $event"

@@ -10,6 +10,7 @@ const props = defineProps({
   commodities: { type: Array, default: () => [] },
   selectedCommodities: { type: Array, default: () => [] },
   search: { type: String, default: '' },
+  saveDisabled: { type: Boolean, default: false },
   showBestBuySettings: { type: Boolean, default: false },
   bestBuySupplyCap: { type: Number, default: 1000 },
   minimumPotentialProfit: { type: Number, default: 10000 },
@@ -44,7 +45,10 @@ const sortedCommodities = computed(() => {
         <span>{{ title }}</span>
         <InfoButton v-if="helpArticle" :title="helpTitle" @open="emit('open-help', helpArticle)" />
       </h2>
-      <button type="button" @click="emit('close')">Close</button>
+      <div class="settingsHeaderActions">
+        <button type="button" class="settingsSaveButton" :disabled="saveDisabled" @click="emit('save')">{{ saveLabel }}</button>
+        <button type="button" @click="emit('close')">Close</button>
+      </div>
     </div>
     <p class="subtitle">{{ description }}</p>
     <div v-if="showBestBuySettings" class="bestBuySettingsGrid">
@@ -76,6 +80,5 @@ const sortedCommodities = computed(() => {
         <label><input type="checkbox" :checked="selectedSet.has(commodity)" @change="emit('toggle-selected', commodity, $event.target.checked)" /> {{ commodity }}</label>
       </div>
     </div>
-    <button type="button" @click="emit('save')">{{ saveLabel }}</button>
   </section>
 </template>

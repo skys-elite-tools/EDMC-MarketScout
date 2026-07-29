@@ -4,6 +4,7 @@
 
 - Added a user-selectable Target State alert setting for current-system active and pending faction-state toasts.
 - Added expandable Target State toast details with detected factions, known owned stations, and a resettable 60-second countdown.
+- Kept Watched Commodities and Best Buy settings as draft changes until Save is clicked, with header Save buttons enabled only when settings changed.
 
 ## 0.6.0 Beta
 
