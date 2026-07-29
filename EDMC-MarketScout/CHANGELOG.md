@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0
 
 - Fixed Trip Planner progress so active routes can advance through already visited contiguous stops, including routes imported after early stops were visited.
 - Added short Trip Planner progress visibility and initial scroll-to-progress behavior for active routes loaded at startup.
