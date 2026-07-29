@@ -852,6 +852,7 @@ onUnmounted(() => {
       :status-text="statusText"
       :latest-journal-event="latestJournalEvent"
       :edmc-status="edmcStatus"
+      :busy-text="stationRowsLoading ? 'Loading stations...' : (stationRowsRendering ? 'Updating table...' : '')"
       :update-status="updateStatus"
       :update-busy="updateBusy"
       :edmc-discard-busy="edmcDiscardBusy"
@@ -998,10 +999,6 @@ onUnmounted(() => {
     <main :class="{ detailsOpen: selectedRow }">
       <section class="tablePanel">
         <template v-if="currentView === 'stations'">
-          <div v-if="stationRowsLoading || stationRowsRendering" class="stationTableBusy">
-            <div class="stationTableBusyIndicator"></div>
-            <span>{{ stationRowsLoading ? 'Loading stations...' : 'Updating table...' }}</span>
-          </div>
           <StationsTable
             :rows="rows"
             :selected-index="selectedIndex"

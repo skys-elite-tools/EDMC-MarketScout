@@ -461,21 +461,6 @@ main.detailsOpen {
   overflow: hidden;
   width: 100%;
 }
-.stationTableBusy {
-  position: sticky;
-  z-index: 18;
-  top: 0;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-height: 2.1rem;
-  padding: 7px 10px;
-  border-bottom: 1px solid rgba(140, 200, 255, .2);
-  background: rgba(10, 15, 22, .94);
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 800;
-}
 .stationTableBusyIndicator {
   width: 1rem;
   height: 1rem;
@@ -1079,9 +1064,33 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   gap: 10px;
   min-width: 0;
 }
+.journalStatus .statusValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .viewStatus {
   justify-content: flex-end;
   white-space: nowrap;
+}
+.topBusyStatus {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 1.35rem;
+  padding: 1px 7px;
+  border: 1px solid rgba(140, 200, 255, .35);
+  border-radius: 999px;
+  color: var(--accent);
+  background: rgba(140, 200, 255, .08);
+  font-weight: 800;
+  white-space: nowrap;
+}
+.topBusyStatus .stationTableBusyIndicator {
+  width: .85rem;
+  height: .85rem;
+  border-width: 2px;
 }
 .edmcSettingStatus {
   display: inline-flex;
