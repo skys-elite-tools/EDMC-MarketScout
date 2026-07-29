@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.1 Beta
 
 - Added a user-selectable Target State alert setting for current-system active and pending faction-state toasts.
 - Added expandable Target State toast details with detected factions, known owned stations, and a resettable 60-second countdown.
