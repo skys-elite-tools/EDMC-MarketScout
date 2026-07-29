@@ -1101,6 +1101,19 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
   transform: translateX(-50%);
   cursor: pointer;
   text-align: left;
+  overflow: hidden;
+}
+.targetStateToast::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: auto;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, .72);
+  transform-origin: left center;
+  animation: targetStateToastCountdown 60s linear forwards;
 }
 .targetStateToast:hover {
   border-color: rgba(234, 204, 255, .86);
@@ -1117,6 +1130,10 @@ tr.engineeringRare { background: rgba(140,200,255,.045); }
 .targetStateToastPending:hover {
   border-color: rgba(123, 198, 255, .68);
   background: linear-gradient(180deg, rgba(41, 82, 121, .99), rgba(29, 54, 82, .99));
+}
+@keyframes targetStateToastCountdown {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
 }
 .targetStateToast strong {
   color: #ffffff;

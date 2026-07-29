@@ -29,6 +29,7 @@ const ACTIVE_VIEW_STORAGE_KEY = 'ui.activeView'
 const LEGACY_ACTIVE_VIEW_STORAGE_KEY = 'marketscout.activeView'
 const STATION_SCOUT_MODE_STORAGE_KEY = 'stations.scoutMode'
 const STATION_SCOUT_THRESHOLDS_STORAGE_KEY = 'stations.scoutThresholds'
+const TARGET_STATE_TOAST_TIMEOUT_MS = 60000
 const VALID_VIEWS = new Set(['stations', 'jackpots', 'ledger', 'commodities', 'rare', 'analyze', 'carrier', 'carrierCalc', 'config'])
 const VALID_STATION_SCOUT_MODES = new Set(['buy', 'sell'])
 
@@ -619,7 +620,7 @@ function updateTargetStateToast(alert) {
   }
   targetStateToast.value = alert
   clearTargetStateToastTimer()
-  targetStateToastTimer = setTimeout(expireTargetStateToast, 15000)
+  targetStateToastTimer = setTimeout(expireTargetStateToast, TARGET_STATE_TOAST_TIMEOUT_MS)
 }
 
 async function handleUpdateAction() {
