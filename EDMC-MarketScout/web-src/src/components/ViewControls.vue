@@ -12,12 +12,13 @@ const props = defineProps({
   watchedCount: { type: Number, default: 0 },
   bestBuyIgnoreCount: { type: Number, default: 0 },
   stationScoutMode: { type: String, default: 'buy' },
+  stationRowLimit: { type: Number, default: 30 },
   economyPresets: { type: Array, default: () => [] },
   economyPresetStatus: { type: String, default: '' },
   systemSuggestions: { type: Array, default: () => [] },
   stationSuggestions: { type: Array, default: () => [] },
 })
-const emit = defineEmits(['apply', 'clear-station-filters', 'open-commodities', 'open-best-buy-ignore-list', 'save-economy-preset', 'open-help', 'set-station-scout-mode'])
+const emit = defineEmits(['apply', 'clear-station-filters', 'open-commodities', 'open-best-buy-ignore-list', 'save-economy-preset', 'open-help', 'set-station-scout-mode', 'set-station-row-limit'])
 
 const pageMetaByView = {
   stations: {
@@ -131,7 +132,7 @@ const hasControls = computed(() => !['analyze', 'carrier', 'carrierCalc', 'confi
           <label v-else>Highlight price ≤ <input v-model.number="filters.priceThreshold" type="number" /></label>
           <label v-if="stationScoutMode === 'sell'">Strong demand ≥ <input v-model.number="filters.demandThreshold" type="number" /></label>
           <label v-else>Strong supply ≥ <input v-model.number="filters.supplyThreshold" type="number" /></label>
-          <label>Limit <input v-model.number="filters.limit" type="number" min="1" max="2000" /></label>
+          <label>Rows per load <input :value="stationRowLimit" type="number" min="30" max="2000" step="10" @change="emit('set-station-row-limit', Number($event.target.value || 30))" /></label>
           <label class="check includeFleetCarriers"><input v-model="filters.includeFc" type="checkbox" /> Include fleet carriers</label>
         </div>
         <div class="stationFilterActions">
