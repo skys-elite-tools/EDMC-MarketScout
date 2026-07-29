@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import datetime
 import json
+import logging
 import math
 import mimetypes
 import os
@@ -19,7 +20,6 @@ import socket
 import sqlite3
 import tempfile
 import threading
-import traceback
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -27,6 +27,11 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 import requests
+
+try:
+    from config import appname as EDMC_APPNAME
+except Exception:
+    EDMC_APPNAME = "EDMarketConnector"
 
 from marketscout_data import (
     delete_trip_route as data_delete_trip_route,
@@ -55,6 +60,7 @@ DEFAULT_MINIMUM_POTENTIAL_PROFIT = 10000
 GITHUB_REPO = "skys-elite-tools/EDMC-MarketScout"
 GITHUB_RELEASES_LATEST_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 PLUGIN_FOLDER_NAME = "EDMC-MarketScout"
+LOGGER = logging.getLogger(f"{EDMC_APPNAME}.{PLUGIN_FOLDER_NAME}")
 _PLUGIN_VERSION = "0.0.0"
 _UPDATE_LOCK = threading.Lock()
 _DATA_VERSION_LOCK = threading.Lock()
@@ -245,6 +251,7 @@ def start_server(
     if _SERVERS and _PORT is not None:
         return _PORT
 
+    configure_logger(plugin_dir)
     web_config = load_web_config(plugin_dir)
     _BIND_ADDRESS = str(web_config.get("bind_address") or DEFAULT_BIND_ADDRESS)
     _LAN_BIND_ADDRESS = str(web_config.get("lan_bind_address") or "").strip()
@@ -284,6 +291,23 @@ def start_server(
             _LAN_PORT = None
             _CONTEXT["lan_error"] = str(exc)
     return _PORT
+
+
+def configure_logger(plugin_dir: str) -> None:
+    global LOGGER
+    plugin_folder_name = os.path.basename(os.path.abspath(plugin_dir)) or PLUGIN_FOLDER_NAME
+    LOGGER = logging.getLogger(f"{EDMC_APPNAME}.{plugin_folder_name}")
+    if LOGGER.hasHandlers():
+        return
+    LOGGER.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(lineno)d:%(funcName)s: %(message)s"
+    )
+    formatter.default_time_format = "%Y-%m-%d %H:%M:%S"
+    formatter.default_msec_format = "%s.%03d"
+    handler.setFormatter(formatter)
+    LOGGER.addHandler(handler)
 
 
 def stop_server() -> None:
@@ -382,6 +406,7 @@ def github_request(url: str, timeout: int = 12) -> bytes:
 def start_update_check(plugin_dir: str, current_version: str) -> None:
     """Start a background GitHub release check without blocking EDMC startup."""
     global _PLUGIN_VERSION
+    configure_logger(plugin_dir)
     _PLUGIN_VERSION = normalize_version_tag(current_version) or "0.0.0"
     set_update_status(current_version=_PLUGIN_VERSION)
     snapshot = update_status_snapshot()
@@ -2204,22 +2229,13 @@ def api_ledger_summary(qs: Dict[str, List[str]]) -> Dict[str, Any]:
     return {"summary": summary, "open_lots": open_lots}
 
 def log_web_exception(exc: BaseException) -> None:
-    try:
-        path = os.path.join(_CONTEXT.get("plugin_dir") or os.getcwd(), "marketscout-web-error.log")
-        with open(path, "a", encoding="utf-8") as f:
-            f.write("----- web exception -----\n")
-            traceback.print_exc(file=f)
-            f.write("\n")
-    except Exception:
-        pass
+    LOGGER.error("web exception", exc_info=(type(exc), exc, exc.__traceback__))
 
 
 def log_sqlite_diagnostic(where: str, stage: str, exc: BaseException) -> None:
-    """Write a small local-only SQLite diagnostic for runtime-only failures."""
+    """Log a small SQLite diagnostic for runtime-only failures."""
     try:
-        plugin_dir = _CONTEXT.get("plugin_dir") or os.getcwd()
         db_path = str(_CONTEXT.get("db_path") or "")
-        path = os.path.join(plugin_dir, "marketscout-web-error.log")
         probes: Dict[str, Any] = {}
         if db_path:
             for suffix in ("", "-wal", "-shm"):
@@ -2245,15 +2261,16 @@ def log_sqlite_diagnostic(where: str, stage: str, exc: BaseException) -> None:
                 ).fetchone()[0]
         except Exception as probe_exc:
             probes["probe_error"] = str(probe_exc)
-        with open(path, "a", encoding="utf-8") as f:
-            f.write("----- sqlite diagnostic -----\n")
-            f.write(f"where={where}\n")
-            f.write(f"stage={stage}\n")
-            f.write(f"error={exc}\n")
-            f.write(f"db_path={db_path}\n")
-            f.write(f"cwd={os.getcwd()}\n")
-            f.write(f"sqlite_version={sqlite3.sqlite_version}\n")
-            f.write(json.dumps(probes, indent=2, default=str))
-            f.write("\n")
+        LOGGER.error(
+            "sqlite diagnostic where=%s stage=%s error=%s db_path=%s cwd=%s sqlite_version=%s probes=%s",
+            where,
+            stage,
+            exc,
+            db_path,
+            os.getcwd(),
+            sqlite3.sqlite_version,
+            json.dumps(probes, indent=2, default=str),
+            exc_info=(type(exc), exc, exc.__traceback__),
+        )
     except Exception:
-        pass
+        LOGGER.exception("sqlite diagnostic logging failed")

@@ -8,12 +8,12 @@ Install: copy the MarketScout folder into EDMC's plugins directory and restart E
 from __future__ import annotations
 
 import json
+import logging
 import math
 import os
 import sqlite3
 import sys
 import threading
-import traceback
 import importlib.util
 import webbrowser
 from pathlib import Path as _Path
@@ -22,12 +22,14 @@ from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 try:
-    from config import config as EDMC_CONFIG
+    from config import appname as EDMC_APPNAME, config as EDMC_CONFIG
 except Exception:
+    EDMC_APPNAME = "EDMarketConnector"
     EDMC_CONFIG = None
 
 PLUGIN_NAME = "EDMC-MarketScout"
 PLUGIN_VERSION = "0.2.4"
+LOGGER = logging.getLogger(f"{EDMC_APPNAME}.{PLUGIN_NAME}")
 
 DEFAULT_HIGHLIGHT_PRICE = 6000
 DEFAULT_HIGHLIGHT_SUPPLY = 10000
@@ -64,11 +66,14 @@ LAST_CURRENT_SYSTEM: Optional[str] = None
 
 
 def load_web_module():
-    """Load the local web helper module without relying on sys.path."""
+    """Load the local web helper module and make sibling imports resolvable."""
     global WEB_MODULE
     if WEB_MODULE is not None:
         return WEB_MODULE
     path = os.path.join(os.path.dirname(__file__), "marketscout_web.py")
+    module_dir = os.path.dirname(path)
+    if module_dir not in sys.path:
+        sys.path.insert(0, module_dir)
     spec = importlib.util.spec_from_file_location("marketscout_web_local", path)
     if spec is None or spec.loader is None:
         raise ImportError("Could not load marketscout_web.py")
@@ -179,6 +184,7 @@ def plugin_start3(plugin_dir: str) -> str:
     """EDMC plugin entry point."""
     global DB_PATH, CONN, PLUGIN_DIR
     PLUGIN_DIR = plugin_dir
+    configure_logger(plugin_dir)
     DB_PATH = os.path.join(plugin_dir, "marketscout.sqlite3")
     CONN = sqlite3.connect(DB_PATH, timeout=10.0)
     CONN.row_factory = sqlite3.Row
@@ -191,6 +197,23 @@ def plugin_start3(plugin_dir: str) -> str:
     except Exception:
         log_exception("start_update_check")
     return PLUGIN_NAME
+
+
+def configure_logger(plugin_dir: str) -> None:
+    global LOGGER
+    plugin_folder_name = os.path.basename(os.path.abspath(plugin_dir)) or PLUGIN_NAME
+    LOGGER = logging.getLogger(f"{EDMC_APPNAME}.{plugin_folder_name}")
+    if LOGGER.hasHandlers():
+        return
+    LOGGER.setLevel(logging.INFO)
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(lineno)d:%(funcName)s: %(message)s"
+    )
+    formatter.default_time_format = "%Y-%m-%d %H:%M:%S"
+    formatter.default_msec_format = "%s.%03d"
+    handler.setFormatter(formatter)
+    LOGGER.addHandler(handler)
 
 
 def configure_sqlite_connection(conn: sqlite3.Connection) -> None:
@@ -1231,15 +1254,10 @@ def find_market_json_path(entry: Dict[str, Any]) -> Optional[str]:
 
 
 def log_market_debug(where: str, payload: Any = None) -> None:
-    try:
-        path = plugin_config_path("marketscout-market-debug.log")
-        with open(path, "a", encoding="utf-8") as f:
-            f.write(f"----- {now_utc_iso()} {where} -----\n")
-            if payload is not None:
-                f.write(safe_json_dumps(payload))
-                f.write("\n")
-    except Exception:
-        pass
+    if payload is None:
+        LOGGER.debug(where)
+    else:
+        LOGGER.debug("%s: %s", where, safe_json_dumps(payload))
 
 
 def safe_json_dumps(value: Any) -> str:
@@ -1813,7 +1831,7 @@ def deduplicate_station_rows(conn: sqlite3.Connection) -> int:
                 changed += 1
         if changed:
             conn.commit()
-            log_market_debug("station duplicate dedupe", {"stations_merged": changed})
+            LOGGER.info("station duplicate dedupe: %s", safe_json_dumps({"stations_merged": changed}))
         return changed
     except Exception:
         log_exception("deduplicate_station_rows")
@@ -1898,7 +1916,7 @@ def deduplicate_market_price_commodities(conn: sqlite3.Connection) -> int:
             changed += 1
         if changed:
             conn.commit()
-            log_market_debug("market_prices legacy commodity dedupe", {"groups_merged": changed})
+            LOGGER.info("market_prices legacy commodity dedupe: %s", safe_json_dumps({"groups_merged": changed}))
         return changed
     except Exception:
         log_exception("deduplicate_market_price_commodities")
@@ -2041,11 +2059,4 @@ def open_modern_ui() -> None:
 
 
 def log_exception(where: str) -> None:
-    try:
-        path = os.path.join(os.path.dirname(DB_PATH or os.getcwd()), "marketscout-error.log")
-        with open(path, "a", encoding="utf-8") as f:
-            f.write(f"----- {now_utc_iso()} {where} -----\n")
-            f.write(traceback.format_exc())
-            f.write("\n")
-    except Exception:
-        pass
+    LOGGER.exception(where)

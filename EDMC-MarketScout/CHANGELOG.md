@@ -2,10 +2,11 @@
 
 ## Unreleased
 
+- Routed MarketScout runtime diagnostics through EDMC-compatible plugin loggers instead of writing separate plugin log files.
 - Added EDMC Plugin Registry-compatible version metadata and switched update HTTP requests from `urllib` to `requests`.
 - Moved legacy startup maintenance scans off the EDMC startup path so large local databases do not delay plugin loading.
 
-## 0.5.0
+## 0.5.0 Beta
 
 - Fixed Trip Planner progress so active routes can advance through already visited contiguous stops, including routes imported after early stops were visited.
 - Added short Trip Planner progress visibility and initial scroll-to-progress behavior for active routes loaded at startup.
