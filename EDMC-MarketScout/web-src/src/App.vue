@@ -79,11 +79,13 @@ onUnmounted(() => {
 
 <template>
   <div class="appShell">
-    <StatusStrip />
+    <div class="appHeaderSticky">
+      <StatusStrip />
+
+      <TopBar />
+    </div>
 
     <TargetStateToast />
-
-    <TopBar />
 
     <main :class="{ detailsOpen }">
       <section class="tablePanel">
