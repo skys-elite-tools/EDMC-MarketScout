@@ -13,6 +13,11 @@
   --accent2: #eaccff;
 }
 * { box-sizing: border-box; }
+html,
+body,
+#app {
+  height: 100%;
+}
 body {
   margin: 0;
   font: 14px/1.35 system-ui, -apple-system, Segoe UI, sans-serif;
@@ -21,8 +26,15 @@ body {
 }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
-.appShell { min-height: 100vh; display: flex; flex-direction: column; }
+.appShell {
+  height: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .appHeaderSticky {
+  flex: 0 0 auto;
   position: sticky;
   top: 0;
   z-index: 70;
@@ -448,14 +460,15 @@ button:hover { border-color: var(--accent); }
 main {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  min-height: calc(100vh - 176px);
   flex: 1 1 auto;
+  min-height: 0;
 }
 main.detailsOpen {
   grid-template-columns: minmax(0, 1fr);
 }
 .tablePanel {
   position: relative;
+  min-height: 0;
   overflow: auto;
 }
 .stationScoutModeButtons {

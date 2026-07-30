@@ -94,7 +94,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleDocumentClick)
       <img class="appLogo" :src="logoUrl" alt="MarketScout logo" />
       <div>
         <h1>EDMC-MarketScout</h1>
-        <p class="subtitle">Local-only scouting database. No uploads, no external scripts.</p>
+        <p class="subtitle">Local-only scouting database.</p>
       </div>
     </div>
 
