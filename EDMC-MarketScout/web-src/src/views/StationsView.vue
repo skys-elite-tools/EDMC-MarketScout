@@ -20,7 +20,6 @@ const viewRefreshStore = useViewRefreshStore()
 const {
   filters,
   stationScoutMode,
-  stationRowLimit,
   initialized,
 } = storeToRefs(stationViewStore)
 const {
@@ -76,14 +75,7 @@ watch(
 
   <BestBuySettings :after-save="stationViewStore.loadStations" />
 
-  <StationsTable
-    :scout-mode="stationScoutMode"
-    :price-threshold="filters.priceThreshold"
-    :supply-threshold="filters.supplyThreshold"
-    :sell-price-threshold="filters.sellPriceThreshold"
-    :demand-threshold="filters.demandThreshold"
-    :load-options="{ rowLimit: stationRowLimit, params: stationViewStore.stationParams }"
-  />
+  <StationsTable />
 
   <StationDetails
     v-if="selectedRow"

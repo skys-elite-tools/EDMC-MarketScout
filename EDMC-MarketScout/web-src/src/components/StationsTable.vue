@@ -3,20 +3,14 @@ import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 import InfoButton from './InfoButton.vue'
 import { useCommoditySettingsStore } from '../stores/commoditySettingsStore.js'
+import { useStationViewStore } from '../stores/stationViewStore.js'
 import { useStatusStore } from '../stores/statusStore.js'
 import { useStationsStore } from '../stores/stationsStore.js'
 import { useSystemStore } from '../stores/systemStore.js'
 import { columnKey, commodityCellParts, compactDateTime, fmt, inaraCommoditySellUrl, localDateTime, money, potentialProfitClass, potentialProfitTooltip, quantityClass, rowFlag, shouldDisplayPotentialProfit } from '../utils.js'
 
-const props = defineProps({
-  scoutMode: { type: String, default: 'buy' },
-  priceThreshold: { type: Number, default: 6000 },
-  supplyThreshold: { type: Number, default: 10000 },
-  sellPriceThreshold: { type: Number, default: 40000 },
-  demandThreshold: { type: Number, default: 10000 },
-  loadOptions: { type: Object, default: () => ({}) },
-})
 const stationsStore = useStationsStore()
+const stationViewStore = useStationViewStore()
 const commoditySettingsStore = useCommoditySettingsStore()
 const statusStore = useStatusStore()
 const systemStore = useSystemStore()
@@ -31,14 +25,27 @@ const {
   watchedCommodities,
   minimumPotentialProfit,
 } = storeToRefs(commoditySettingsStore)
+const {
+  filters,
+  stationScoutMode,
+  stationRowLimit,
+} = storeToRefs(stationViewStore)
 const { latestJournalEvent } = storeToRefs(statusStore)
 const displayColumns = computed(() => {
-  const side = props.scoutMode === 'sell' ? 'sell' : 'buy'
+  const side = stationScoutMode.value === 'sell' ? 'sell' : 'buy'
   return watchedCommodities.value.map(commodity => ({ commodity, side }))
 })
 
 function flag(row) {
-  return rowFlag(row, watchedCommodities.value, props.priceThreshold, props.supplyThreshold, props.scoutMode, props.sellPriceThreshold, props.demandThreshold)
+  return rowFlag(
+    row,
+    watchedCommodities.value,
+    filters.value.priceThreshold,
+    filters.value.supplyThreshold,
+    stationScoutMode.value,
+    filters.value.sellPriceThreshold,
+    filters.value.demandThreshold,
+  )
 }
 
 function searchSystem(row) {
@@ -129,7 +136,7 @@ function stateDisplayName(state) {
       type="button"
       class="loadMoreButton"
       :disabled="stationRowsLoading || !stationPage.hasMore"
-      @click="stationsStore.loadMoreStations(loadOptions)"
+      @click="stationsStore.loadMoreStations({ rowLimit: stationRowLimit, params: stationViewStore.stationParams })"
     >
       {{ loadMoreLabel }}
     </button>
