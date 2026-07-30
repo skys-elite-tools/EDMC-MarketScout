@@ -30,9 +30,9 @@ Users only need EDMC and the files in `EDMC-MarketScout/`. The Web UI is served 
 
 Do not make EDMC runtime depend on Node/npm or network-hosted JavaScript libraries.
 
-## Web UI development
+## Web UI Development
 
-The Web UI source lives in `EDMC-MarketScout/web-src/` and is built with Vue 3 + Vite.
+The Web UI source lives in `EDMC-MarketScout/web-src/` and is built with Vue 3, Vite, Pinia, and Vue Router.
 
 Install frontend dependencies once:
 
@@ -76,7 +76,42 @@ Current top-level Web UI views are:
 - Carrier Trade Calculator
 - Config
 
+Routing is handled by Vue Router using hash history, so the static plugin server does not need URL fallback behavior. Route definitions and page meta live in `web-src/src/router/index.js`. Use `route.meta.title`, `route.meta.description`, and `route.meta.helpArticle` through `ViewHeader.vue` instead of adding another App-level page-meta map.
+
+`App.vue` should stay a thin shell: status strip, toasts, top navigation, `<RouterView />`, footer, and shared global modals. It should not own page filters, table rows, or view-switching branches. `TopBar.vue` navigates with the router; clicking the already-active route requests a refresh through `viewRefreshStore`.
+
+Page controls are owned by the relevant view/component. The former catch-all `ViewControls.vue` was removed. Current focused controls include:
+
+- `components/StationsFilterBar.vue`
+- `components/JackpotFilterBar.vue`
+- `components/LedgerFilterBar.vue`
+- `components/RareCommoditiesFilterBar.vue`
+- `components/CommoditiesFilterBar.vue`
+- `components/ViewHeader.vue`
+
+Use Pinia stores by concern and avoid prop plumbing when a child component can read the appropriate store itself. Current frontend stores include:
+
+- `statusStore`: journal/status strip state, EDMC delayed-message discard, update status flags.
+- `systemStore`: help/support/update modal actions.
+- `tripPlannerStore`: trip route import/start/selection/skip/delete state and actions.
+- `stationViewStore`: Stations filters, row limit, station filter options, economy presets, station route selection, and Stations filter/settings persistence.
+- `stationsStore`: loaded station rows, selected station row, station paging, table loading/rendering flags.
+- `commoditySettingsStore`: watched commodities, Best Buy ignore/settings drafts, dialogs, and settings saves.
+- `notificationStore`: Target State toast lifecycle.
+- `viewRefreshStore`: active-route refresh requests shared by `TopBar`, App status polling, and route views.
+
+The Stations route is intentionally split this way:
+
+- `views/StationsView.vue`: page composition plus route-mounted refresh/initial-load hooks only.
+- `components/StationsFilterBar.vue`: station filters/settings controls; reads `stationViewStore` and `commoditySettingsStore` directly.
+- `components/StationsTable.vue`: station table; reads `stationsStore`, `stationViewStore`, `commoditySettingsStore`, `statusStore`, and `systemStore` directly. Render it as `<StationsTable />`.
+- `components/WatchedCommoditySettings.vue` and `components/BestBuySettings.vue`: save their own settings and then call `stationViewStore.loadStations()` directly.
+
+Stations persistence side effects belong in `stationViewStore`, not in visual view watchers. `stationScoutMode`, threshold values, and `stationRowLimit` are stored through the Web UI data store. Stations, Jackpots, Ledger, and Rare Commodities each have their own row-limit setting, defaulting to `30`.
+
 Personal Web UI state should go through `web-src/src/services/dataStoreService.js`. The service uses browser localStorage immediately for standalone/public-tool compatibility and synchronizes timestamped values with the plugin backend through `/api/user-data` when available. This keeps custom values available across browsers/devices on the same MarketScout instance without making public website builds require accounts or a database.
+
+Current route/view preference keys include `ui.activeView`, `stations.scoutMode`, `stations.scoutThresholds`, `stations.rowLimit`, `jackpots.rowLimit`, `ledger.rowLimit`, `rareCommodities.rowLimit`, and `alerts.targetState`. New per-user UI preferences should use similarly scoped keys and should remain local to MarketScout.
 
 The Web UI has a responsive top navigation. Commodities, Rare Commodities, and Analyze Commodities are grouped under the Commodities menu on wider layouts; the navigation collapses to a hamburger menu on narrower windows. The footer provides About and Help modals.
 

@@ -42,10 +42,15 @@ After frontend changes:
 
 ## UX conventions
 - Keep the Web UI modular Vue components.
+- Web UI navigation uses Vue Router with hash history. Route definitions and page meta live in `EDMC-MarketScout/web-src/src/router/index.js`; do not reintroduce App-level `currentView` switching or a centralized page-meta map.
+- Use Pinia stores by concern. Views should not pass store state down and back into child components as prop plumbing when the child can read the same concern store directly.
+- Keep page-specific filters/controls local to the owning view or focused child components. The old central `ViewControls.vue` was removed; do not recreate a catch-all controls component.
 - Keep filters simple for general users.
 - Prefer visible highlights over extra sort-mode toggles.
 - Default Stations sort is newest `market_updated`, then newest `station_visit`, then best buy score, then system/station.
-- The Stations page has typeahead text filters for visited systems/stations, current and pending Station Owner State filters, a Clear action that restores default station filters, watched commodity settings, and a Best Buy ignore list.
+- The Stations page composes `TripRouteBar`, `StationsFilterBar`, `WatchedCommoditySettings`, `BestBuySettings`, `StationsTable`, and `StationDetails`. Stations settings/filter persistence belongs in `stationViewStore`; `StationsTable` reads `stationViewStore` directly and should be rendered as `<StationsTable />`.
+- The Stations page has typeahead text filters for visited systems/stations, current and pending Station Owner State filters, per-view row limits defaulting to 30, a Clear action that restores default station filters without resetting the row limit, watched commodity settings, and a Best Buy ignore list.
+- The StatusStrip station busy pill reads `stationsStore.stationRowsLoading` and `stationRowsRendering` directly. It shows immediately and stays visible for at least one second to avoid flicker.
 - Trip Planner progress advances through contiguous visited or soft-skipped stops. Keep right-click copy/skip actions and `Go to Progress` behavior available when changing the route UI.
 - Carrier Trade Announcements is local-only: drafts, uploaded images, and custom text layouts use browser localStorage first and synchronize to the local MarketScout database through `/api/user-data` when the backend is available.
 

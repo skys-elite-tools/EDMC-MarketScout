@@ -109,24 +109,46 @@ EDMC-MarketScout/
       main.js
       style.css
       utils.js
+      router/
+        index.js
+      stores/
+        commoditySettingsStore.js
+        notificationStore.js
+        stationViewStore.js
+        stationsStore.js
+        statusStore.js
+        systemStore.js
+        tripPlannerStore.js
+        viewRefreshStore.js
+      services/
+        dataStoreService.js
       views/
         AnalyzeCommoditiesView.vue
         CarrierTradeAnnouncementsView.vue
         CarrierTradeCalculatorView.vue
         CommoditiesView.vue
         ConfigurationView.vue
+        JackpotsView.vue
         LedgerView.vue
         RareCommoditiesView.vue
+        StationsView.vue
       components/
+        BestBuySettings.vue
+        CommoditiesFilterBar.vue
+        CommodityChecklist.vue
+        JackpotFilterBar.vue
+        LedgerFilterBar.vue
+        RareCommoditiesFilterBar.vue
         StatusStrip.vue
+        StationsFilterBar.vue
+        StationsTable.vue
+        StationDetails.vue
         TripRouteBar.vue
         StationOwnerStateInput.vue
         TopBar.vue
-        ViewControls.vue
-        StationsTable.vue
-        StationDetails.vue
-        CommoditySettings.vue
         JackpotHistory.vue
+        TargetStateToast.vue
+        ViewHeader.vue
         CarrierTradeForm.vue
         TradePosterEditor.vue
         AnnouncementOutputs.vue
@@ -160,14 +182,29 @@ Legacy data cleanup that scans user-growth tables, such as station or market-pri
 
 ## Web UI architecture
 
-The Web UI is Vue 3 + Vite, built into static files in `web/`.
+The Web UI is Vue 3 + Vite + Pinia + Vue Router, built into static files in `web/`.
 
 Layout structure:
 
 1. Top bar: logo/title, responsive navigation, and refresh action.
-2. View controls: controls/filters/settings for the active view.
+2. Route-owned controls: controls/filters/settings owned by the active view or focused child components.
 3. Main view: active content.
 4. Footer: About and Help modal links.
+
+Routing uses Vue Router hash history so the local static server does not need history fallback handling. Route definitions and page metadata live in `web-src/src/router/index.js`. Shared page headings/descriptions read `route.meta` through `ViewHeader.vue`; avoid adding another central page-meta map.
+
+`App.vue` is intended to remain a shell: `StatusStrip`, `TargetStateToast`, `TopBar`, `<RouterView />`, footer, and global support/update modals. It should not own page-specific rows, filters, or view-switching branches. `TopBar.vue` navigates through Vue Router; clicking the already-active route emits a refresh request through `viewRefreshStore`.
+
+The former centralized `ViewControls.vue` was removed. Page-specific controls should live with their owning route or focused child components:
+
+- Stations: `StationsFilterBar.vue`
+- Jackpots: `JackpotFilterBar.vue`
+- Ledger: `LedgerFilterBar.vue`
+- Commodities: `CommoditiesFilterBar.vue`
+- Rare Commodities: `RareCommoditiesFilterBar.vue`
+- Shared route header/meta display: `ViewHeader.vue`
+
+Use Pinia stores by concern and avoid prop plumbing that simply extracts store state from a view and passes it to a child that can read the same store directly. This is especially important in Stations, where `StationsTable` reads `stationViewStore` and `stationsStore` directly and is rendered as `<StationsTable />`.
 
 The top navigation groups regular commodity tools under a Commodities menu and collapses to a hamburger menu on narrower windows. Hidden donation/link placeholders may remain in markup for future use, but they should not be visible in beta builds.
 
@@ -185,6 +222,39 @@ Current views:
 
 The Python local web server provides JSON endpoints; Vue should not know about SQLite directly.
 
+### Pinia Stores
+
+Current Web UI state is separated into focused Pinia stores:
+
+- `statusStore`: status text, latest Journal event, EDMC EDDN station-data status, delayed-message discard, and update status flags.
+- `systemStore`: help article state, support modal state, update action, and update-result modal state.
+- `tripPlannerStore`: trip route import/start/delete/selection/skip state and actions.
+- `stationViewStore`: Stations filters, station row limit, station filter options, economy presets, station route-selection application, and Stations settings persistence.
+- `stationsStore`: loaded station rows, selected station row, paging, loading flag, rendering flag, and load-more actions.
+- `commoditySettingsStore`: watched commodities, Best Buy ignore/settings drafts, dialogs, and settings saves.
+- `notificationStore`: Target State toast state, details state, timer reset/disposal, and formatting-independent lifecycle.
+- `viewRefreshStore`: active-route refresh requests from navigation/status polling to the mounted route view.
+
+Store-side persistence is preferred for store-owned values. For example, `stationViewStore` internally persists `stationScoutMode`, station threshold values, and `stationRowLimit` through `dataStoreService`; visual views should not watch these fields only to call persistence methods.
+
+### Stations View Architecture
+
+`StationsView.vue` should stay focused on page composition and route-mounted lifecycle hooks. It currently composes:
+
+- `TripRouteBar`
+- `ViewHeader`
+- `StationsFilterBar`
+- `WatchedCommoditySettings`
+- `BestBuySettings`
+- `StationsTable`
+- `StationDetails`
+
+`StationsFilterBar.vue` reads `stationViewStore` and `commoditySettingsStore` directly. `StationsTable.vue` reads `stationsStore`, `stationViewStore`, `commoditySettingsStore`, `statusStore`, and `systemStore` directly; its usage in the view should remain `<StationsTable />`. `WatchedCommoditySettings.vue` and `BestBuySettings.vue` save their own settings and then call `stationViewStore.loadStations()` directly.
+
+The only remaining watchers in `StationsView.vue` should be view lifecycle coordination: responding to `viewRefreshStore.refreshSerial` while the Stations route is mounted, and loading station rows once `stationViewStore.initialized` is true. Persistence watchers belong in `stationViewStore`.
+
+Stations table loading feedback is shown in `StatusStrip.vue` via `stationsStore.stationRowsLoading` and `stationRowsRendering`. The busy pill appears immediately when loading/rendering starts and remains visible for at least one second, avoiding flicker while still acknowledging fast actions.
+
 ### Web UI style ownership
 
 `web-src/src/style.css` should stay focused on shared app-level styling: app shell, navigation/status/footer, common controls, tables, modals, and global/vendor overlays. Feature-specific layouts and visual details should live in scoped `<style>` blocks on the owning view/component. Current examples include Trip Planner styles in `TripRouteBar.vue`, Carrier Trade Announcements styles in its announcement/editor components, Carrier Trade Calculator styles in its calculator components, and autocomplete styling in `AutocompleteDropdown.vue`.
@@ -198,6 +268,13 @@ Personal Web UI data is centralized through `web-src/src/services/dataStoreServi
 Current shared keys:
 
 - `ui.activeView`: currently selected top-level Web UI view, restored after browser refresh.
+- `stations.scoutMode`: Stations Buy/Sell Scout mode.
+- `stations.scoutThresholds`: Stations highlight thresholds for buy/sell price and supply/demand.
+- `stations.rowLimit`: Stations rows per load, defaulting to `30`.
+- `jackpots.rowLimit`: Jackpots rows per load, defaulting to `30`.
+- `ledger.rowLimit`: Ledger rows per load, defaulting to `30`.
+- `rareCommodities.rowLimit`: Rare Commodities rows per load, defaulting to `30`.
+- `alerts.targetState`: Target State alert state name, defaulting to `Infrastructure Failure`.
 - `analyzeCommodities.text`: last Analyze Commodities pasted list.
 - `carrierTradeAnnouncements.draft`: Carrier Trade Announcements form values, text color, active layout, text positions/font sizes, custom announcement templates, and uploaded image data URL when storage quota allows.
 - `carrierTradeAnnouncements.layouts`: user-saved Carrier Trade Announcements text layouts.
