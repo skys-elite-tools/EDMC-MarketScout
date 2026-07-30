@@ -4,12 +4,9 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import StatusStrip from './components/StatusStrip.vue'
 import TopBar from './components/TopBar.vue'
 import ViewControls from './components/ViewControls.vue'
-import WatchedCommoditySettings from './components/WatchedCommoditySettings.vue'
-import BestBuySettings from './components/BestBuySettings.vue'
-import TripRouteBar from './components/TripRouteBar.vue'
-import StationsTable from './components/StationsTable.vue'
 import StationDetails from './components/StationDetails.vue'
 import JackpotHistory from './components/JackpotHistory.vue'
+import StationsView from './views/StationsView.vue'
 import LedgerView from './views/LedgerView.vue'
 import RareCommoditiesView from './views/RareCommoditiesView.vue'
 import CommoditiesView from './views/CommoditiesView.vue'
@@ -20,6 +17,7 @@ import ConfigurationView from './views/ConfigurationView.vue'
 import FooterBar from './components/FooterBar.vue'
 import ModalShell from './components/ModalShell.vue'
 import { useCommoditySettingsStore } from './stores/commoditySettingsStore.js'
+import { useStationViewStore } from './stores/stationViewStore.js'
 import { useStatusStore } from './stores/statusStore.js'
 import { useStationsStore } from './stores/stationsStore.js'
 import { useSystemStore } from './stores/systemStore.js'
@@ -40,10 +38,7 @@ const { helpArticle, helpRequestId, supportOpen } = storeToRefs(systemStore)
 const { openHelp } = systemStore
 const tripPlannerStore = useTripPlannerStore()
 const commoditySettingsStore = useCommoditySettingsStore()
-const {
-  watchedCommodities,
-  bestBuyIgnoreCommodities,
-} = storeToRefs(commoditySettingsStore)
+const stationViewStore = useStationViewStore()
 const stationsStore = useStationsStore()
 const {
   stationRowsLoading,
@@ -57,13 +52,8 @@ const selectedRow = computed(() => selectedIndex.value >= 0 ? rows.value[selecte
 let latestRowsRequestId = 0
 const ACTIVE_VIEW_STORAGE_KEY = 'ui.activeView'
 const LEGACY_ACTIVE_VIEW_STORAGE_KEY = 'marketscout.activeView'
-const STATION_SCOUT_MODE_STORAGE_KEY = 'stations.scoutMode'
-const STATION_SCOUT_THRESHOLDS_STORAGE_KEY = 'stations.scoutThresholds'
-const STATION_ROW_LIMIT_STORAGE_KEY = 'stations.rowLimit'
-const DEFAULT_STATION_ROW_LIMIT = 30
 const TARGET_STATE_TOAST_TIMEOUT_MS = 60000
 const VALID_VIEWS = new Set(['stations', 'jackpots', 'ledger', 'commodities', 'rare', 'analyze', 'carrier', 'carrierCalc', 'config'])
-const VALID_STATION_SCOUT_MODES = new Set(['buy', 'sell'])
 
 function loadStoredView() {
   const stored = dataStore.cached(ACTIVE_VIEW_STORAGE_KEY, 'stations', {
@@ -78,9 +68,6 @@ function persistCurrentView() {
 }
 
 const currentView = ref(loadStoredView())
-const cachedStationScoutMode = dataStore.cached(STATION_SCOUT_MODE_STORAGE_KEY, 'buy', { legacyJson: false })
-const stationScoutMode = ref(VALID_STATION_SCOUT_MODES.has(cachedStationScoutMode) ? cachedStationScoutMode : 'buy')
-const stationRowLimit = ref(clampStationRowLimit(dataStore.cached(STATION_ROW_LIMIT_STORAGE_KEY, DEFAULT_STATION_ROW_LIMIT)))
 const updateModal = ref({
   visible: false,
   title: '',
@@ -88,51 +75,13 @@ const updateModal = ref({
   backupPath: '',
   pluginDir: '',
 })
-const economyPresets = ref([])
-const economyPresetStatus = ref('')
-const stationFilterOptions = ref({ systems: [], stations: [] })
 const targetStateToast = ref(null)
 const targetStateDetailsOpen = ref(false)
 const targetStateToastCountdownKey = ref(0)
 const dismissedTargetStateAlertKey = ref('')
 let targetStateToastTimer = null
 
-const DEFAULT_STATION_FILTERS = {
-  system: '',
-  station: '',
-  economy: '',
-  stationFactionState: '',
-  pendingStationFactionState: '',
-  source: 'Any',
-  includeFc: false,
-  priceThreshold: 6000,
-  supplyThreshold: 10000,
-  sellPriceThreshold: 40000,
-  demandThreshold: 10000,
-}
-
-function clampStationRowLimit(value) {
-  const number = Number(value)
-  if (!Number.isFinite(number)) return DEFAULT_STATION_ROW_LIMIT
-  return Math.max(30, Math.min(Math.round(number), 2000))
-}
-
-function stationThresholdsFrom(value) {
-  const source = value && typeof value === 'object' ? value : {}
-  return {
-    priceThreshold: Number.isFinite(Number(source.priceThreshold)) ? Number(source.priceThreshold) : DEFAULT_STATION_FILTERS.priceThreshold,
-    supplyThreshold: Number.isFinite(Number(source.supplyThreshold)) ? Number(source.supplyThreshold) : DEFAULT_STATION_FILTERS.supplyThreshold,
-    sellPriceThreshold: Number.isFinite(Number(source.sellPriceThreshold)) ? Number(source.sellPriceThreshold) : DEFAULT_STATION_FILTERS.sellPriceThreshold,
-    demandThreshold: Number.isFinite(Number(source.demandThreshold)) ? Number(source.demandThreshold) : DEFAULT_STATION_FILTERS.demandThreshold,
-  }
-}
-
-function currentStationThresholds() {
-  return stationThresholdsFrom(filters.value)
-}
-
-const cachedStationThresholds = stationThresholdsFrom(dataStore.cached(STATION_SCOUT_THRESHOLDS_STORAGE_KEY, {}))
-const filters = ref({ ...DEFAULT_STATION_FILTERS, ...cachedStationThresholds })
+const filters = ref({})
 
 const ledgerFilters = ref({
   commodity: '',
@@ -149,29 +98,11 @@ const commodityFilters = ref({
   sort: 'commodity_asc',
 })
 
-function stationParams(offset = 0, limit = stationRowLimit.value) {
-  return {
-    system: filters.value.system,
-    station: filters.value.station,
-    economy: filters.value.economy,
-    station_faction_state: filters.value.stationFactionState,
-    pending_station_faction_state: filters.value.pendingStationFactionState,
-    source: filters.value.source,
-    include_fc: filters.value.includeFc ? '1' : '0',
-    limit,
-    offset,
-  }
-}
-
 function setSelected(idx) {
   selectedIndex.value = idx
 }
 
 function closeDetails() {
-  if (currentView.value === 'stations') {
-    stationsStore.closeDetails()
-    return
-  }
   selectedIndex.value = -1
 }
 
@@ -192,20 +123,8 @@ function isActiveRowsLoad(viewName, requestId) {
   return currentView.value === viewName && requestId === latestRowsRequestId
 }
 
-async function clearStationFilters() {
-  filters.value = {
-    ...DEFAULT_STATION_FILTERS,
-    ...currentStationThresholds(),
-  }
-  await loadStations()
-}
-
 async function loadStations(options = {}) {
-  await stationsStore.loadStations({
-    ...options,
-    rowLimit: stationRowLimit.value,
-    params: stationParams,
-  })
+  await stationViewStore.loadStations(options)
 }
 
 async function loadJackpots(options = {}) {
@@ -294,27 +213,6 @@ watch(currentView, () => {
   applyCurrentView()
 })
 
-watch(stationScoutMode, (value) => {
-  const mode = VALID_STATION_SCOUT_MODES.has(value) ? value : 'buy'
-  if (mode !== value) {
-    stationScoutMode.value = mode
-    return
-  }
-  dataStore.set(STATION_SCOUT_MODE_STORAGE_KEY, mode)
-})
-
-watch(
-  () => [
-    filters.value.priceThreshold,
-    filters.value.supplyThreshold,
-    filters.value.sellPriceThreshold,
-    filters.value.demandThreshold,
-  ],
-  () => {
-    dataStore.set(STATION_SCOUT_THRESHOLDS_STORAGE_KEY, currentStationThresholds())
-  }
-)
-
 watch(
   () => [rareFilters.value.sort, rareFilters.value.engineeringOnly],
   () => {
@@ -330,79 +228,11 @@ watch(
 )
 
 
-async function loadEconomyPresets() {
-  const res = await fetch('/api/economy-presets', { cache: 'no-store' })
-  const data = await res.json()
-  economyPresets.value = data.presets || []
-}
-
-async function loadStationFilterOptions() {
-  const res = await fetch('/api/station-filter-options', { cache: 'no-store' })
-  const data = await res.json()
-  stationFilterOptions.value = {
-    systems: data.systems || [],
-    stations: data.stations || [],
-  }
-}
-
-async function applyTripRouteStopSelection(stop) {
-  const stopSystem = String(stop.system_name || '').trim()
-  const stopStation = String(stop.station_hint_name || '').trim()
-  const currentSystemFilter = String(filters.value.system || '').trim()
-  const currentStationFilter = String(filters.value.station || '').trim()
-  const sameSystem = currentSystemFilter.localeCompare(stopSystem, undefined, { sensitivity: 'accent' }) === 0
-  const sameStation = !stopStation || currentStationFilter.localeCompare(stopStation, undefined, { sensitivity: 'accent' }) === 0
-  if (sameSystem && sameStation) {
-    filters.value.system = ''
-    if (stopStation) filters.value.station = ''
-  } else {
-    filters.value.system = stopSystem
-    if (stopStation) filters.value.station = stopStation
-  }
-  await loadStations()
-}
-
-async function saveEconomyPreset() {
-  const value = (filters.value.economy || '').trim()
-  if (!value) {
-    economyPresetStatus.value = 'Nothing to save'
-    setTimeout(() => { economyPresetStatus.value = '' }, 2200)
-    return
-  }
-  const res = await fetch('/api/economy-presets', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ preset: value }),
-  })
-  const data = await res.json()
-  economyPresets.value = data.presets || economyPresets.value
-  economyPresetStatus.value = data.created ? 'Saved preset' : 'Preset already saved'
-  setTimeout(() => { economyPresetStatus.value = '' }, 2200)
-}
-
-async function setStationScoutMode(mode) {
-  if (!VALID_STATION_SCOUT_MODES.has(mode)) return
-  if (stationScoutMode.value === mode) return
-  if (currentView.value === 'stations') {
-    await stationsStore.renderStationRows(() => { stationScoutMode.value = mode })
-    return
-  }
-  stationScoutMode.value = mode
-}
-
-function setStationRowLimit(value) {
-  const nextLimit = clampStationRowLimit(value)
-  if (stationRowLimit.value === nextLimit) return
-  stationRowLimit.value = nextLimit
-  dataStore.set(STATION_ROW_LIMIT_STORAGE_KEY, nextLimit, { debounceMs: 0 })
-  if (currentView.value === 'stations') loadStations()
-}
-
 async function pollStatus() {
   return statusStore.pollStatus({
     onTargetStateAlert: updateTargetStateToast,
     onDataVersionChanged: async () => {
-      await Promise.all([applyCurrentView({ preserveRows: true }), loadStationFilterOptions()])
+      await Promise.all([applyCurrentView({ preserveRows: true }), stationViewStore.loadStationFilterOptions()])
     },
   })
 }
@@ -481,21 +311,13 @@ async function discardEdmcDelayedStationMessages() {
 
 let pollTimer = null
 onMounted(async () => {
-  tripPlannerStore.setTripRouteStopSelectionHandler(applyTripRouteStopSelection)
+  tripPlannerStore.setTripRouteStopSelectionHandler(stationViewStore.applyTripRouteStopSelection)
   const storedView = await dataStore.get(ACTIVE_VIEW_STORAGE_KEY, currentView.value, {
     legacyKey: LEGACY_ACTIVE_VIEW_STORAGE_KEY,
     legacyJson: false,
   })
   if (VALID_VIEWS.has(storedView)) currentView.value = storedView
-  const storedStationScoutMode = await dataStore.get(STATION_SCOUT_MODE_STORAGE_KEY, stationScoutMode.value, { legacyJson: false })
-  if (VALID_STATION_SCOUT_MODES.has(storedStationScoutMode)) stationScoutMode.value = storedStationScoutMode
-  stationRowLimit.value = clampStationRowLimit(await dataStore.get(STATION_ROW_LIMIT_STORAGE_KEY, stationRowLimit.value))
-  const storedStationThresholds = await dataStore.get(STATION_SCOUT_THRESHOLDS_STORAGE_KEY, currentStationThresholds())
-  filters.value = {
-    ...filters.value,
-    ...stationThresholdsFrom(storedStationThresholds),
-  }
-  await Promise.all([commoditySettingsStore.loadCommoditySettings(), loadEconomyPresets(), loadStationFilterOptions(), tripPlannerStore.loadTripRoutes()])
+  await Promise.all([commoditySettingsStore.loadCommoditySettings(), stationViewStore.initialize(), tripPlannerStore.loadTripRoutes()])
   await pollStatus()
   await applyCurrentView()
   pollTimer = setInterval(pollStatus, 2000)
@@ -574,50 +396,20 @@ onUnmounted(() => {
       @refresh="applyCurrentView"
     />
 
-    <TripRouteBar
-      v-if="currentView === 'stations'"
-    />
-
     <ViewControls
+      v-if="currentView !== 'stations'"
       :current-view="currentView"
       :filters="filters"
       :ledger-filters="ledgerFilters"
       :rare-filters="rareFilters"
       :commodity-filters="commodityFilters"
-      :watched-count="watchedCommodities.length"
-      :best-buy-ignore-count="bestBuyIgnoreCommodities.length"
-      :station-scout-mode="stationScoutMode"
-      :station-row-limit="stationRowLimit"
-      :economy-presets="economyPresets"
-      :economy-preset-status="economyPresetStatus"
-      :system-suggestions="stationFilterOptions.systems"
-      :station-suggestions="stationFilterOptions.stations"
       @apply="applyCurrentView"
-      @open-commodities="commoditySettingsStore.openWatchedCommoditySettings"
-      @open-best-buy-ignore-list="commoditySettingsStore.openBestBuySettings"
-      @save-economy-preset="saveEconomyPreset"
       @open-help="openHelp"
-      @clear-station-filters="clearStationFilters"
-      @set-station-scout-mode="setStationScoutMode"
-      @set-station-row-limit="setStationRowLimit"
     />
 
-    <WatchedCommoditySettings :after-save="loadStations" />
-
-    <BestBuySettings :after-save="loadStations" />
-
-    <main :class="{ detailsOpen: (currentView === 'stations' ? selectedStationRow : selectedRow) }">
+    <main :class="{ detailsOpen: currentView === 'stations' ? selectedStationRow : selectedRow }">
       <section class="tablePanel">
-        <template v-if="currentView === 'stations'">
-          <StationsTable
-            :scout-mode="stationScoutMode"
-            :price-threshold="filters.priceThreshold"
-            :supply-threshold="filters.supplyThreshold"
-            :sell-price-threshold="filters.sellPriceThreshold"
-            :demand-threshold="filters.demandThreshold"
-            :load-options="{ rowLimit: stationRowLimit, params: stationParams }"
-          />
-        </template>
+        <StationsView v-if="currentView === 'stations'" />
         <JackpotHistory
           v-else-if="currentView === 'jackpots'"
           :rows="rows"
@@ -655,7 +447,7 @@ onUnmounted(() => {
       </section>
 
       <StationDetails
-        v-if="(currentView === 'stations' ? selectedStationRow : selectedRow) && currentView !== 'rare'"
+        v-if="selectedRow && currentView !== 'rare'"
         :row="selectedRow"
         :current-view="currentView"
         @close="closeDetails"
