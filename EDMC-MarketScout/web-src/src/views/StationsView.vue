@@ -18,8 +18,6 @@ const stationsStore = useStationsStore()
 const commoditySettingsStore = useCommoditySettingsStore()
 const viewRefreshStore = useViewRefreshStore()
 const {
-  filters,
-  stationScoutMode,
   initialized,
 } = storeToRefs(stationViewStore)
 const {
@@ -43,21 +41,6 @@ watch(
   { immediate: true },
 )
 
-watch(stationScoutMode, value => {
-  stationViewStore.persistStationScoutMode(value)
-})
-
-watch(
-  () => [
-    filters.value.priceThreshold,
-    filters.value.supplyThreshold,
-    filters.value.sellPriceThreshold,
-    filters.value.demandThreshold,
-  ],
-  () => {
-    stationViewStore.persistStationThresholds()
-  },
-)
 </script>
 
 <template>

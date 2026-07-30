@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { dataStore } from '../services/dataStoreService.js'
 import { useStationsStore } from './stationsStore.js'
 
@@ -49,6 +49,22 @@ export const useStationViewStore = defineStore('stationView', () => {
   const economyPresetStatus = ref('')
   const stationFilterOptions = ref({ systems: [], stations: [] })
   const initialized = ref(false)
+
+  watch(stationScoutMode, value => {
+    persistStationScoutMode(value)
+  })
+
+  watch(
+    () => [
+      filters.value.priceThreshold,
+      filters.value.supplyThreshold,
+      filters.value.sellPriceThreshold,
+      filters.value.demandThreshold,
+    ],
+    () => {
+      persistStationThresholds()
+    },
+  )
 
   function currentStationThresholds() {
     return stationThresholdsFrom(filters.value)
@@ -192,8 +208,6 @@ export const useStationViewStore = defineStore('stationView', () => {
     setStationScoutMode,
     setStationRowLimit,
     applyTripRouteStopSelection,
-    persistStationScoutMode,
-    persistStationThresholds,
     stationParams,
   }
 })
