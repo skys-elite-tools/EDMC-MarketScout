@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Sticky StatusStrip and TopBar
+- Sticky table headings for better UX
+- Improved the UX for the load-more-stations feature
+
 ## 0.7.0 Beta
 
 - Refactored the Web UI around Pinia stores, Vue Router route views, and route meta.
