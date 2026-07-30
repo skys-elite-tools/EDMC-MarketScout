@@ -75,6 +75,10 @@ function pendingStateTitle(row) {
 function stateDisplayName(state) {
   return String(state || '').replace(/([a-z])([A-Z])/g, '$1 $2')
 }
+
+function loadMoreStations() {
+  stationsStore.loadMoreStations({ rowLimit: stationRowLimit.value, params: stationViewStore.stationParams })
+}
 </script>
 
 <template>
@@ -135,10 +139,13 @@ function stateDisplayName(state) {
     <button
       type="button"
       class="loadMoreButton"
+      :class="{ loading: stationRowsLoading }"
       :disabled="stationRowsLoading || !stationPage.hasMore"
-      @click="stationsStore.loadMoreStations({ rowLimit: stationRowLimit, params: stationViewStore.stationParams })"
+      :aria-busy="stationRowsLoading ? 'true' : 'false'"
+      @click="loadMoreStations"
     >
-      {{ loadMoreLabel }}
+      <span v-if="stationRowsLoading" class="loadMoreSpinner" aria-hidden="true"></span>
+      <span>{{ stationRowsLoading ? 'Loading more stations...' : loadMoreLabel }}</span>
     </button>
   </div>
 </template>

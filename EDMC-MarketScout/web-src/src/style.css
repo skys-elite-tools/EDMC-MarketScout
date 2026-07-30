@@ -500,8 +500,28 @@ main.detailsOpen {
   background: rgba(10, 15, 22, .9);
 }
 .loadMoreButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   min-width: min(18rem, 100%);
   font-weight: 900;
+}
+.loadMoreButton:disabled {
+  cursor: wait;
+  opacity: .78;
+}
+.loadMoreButton:disabled:not(.loading) {
+  cursor: default;
+}
+.loadMoreSpinner {
+  flex: 0 0 auto;
+  width: .95rem;
+  height: .95rem;
+  border: 2px solid rgba(220, 236, 255, .3);
+  border-top-color: var(--accent);
+  border-radius: 999px;
+  animation: stationBusySpin .75s linear infinite;
 }
 .stationScoutModeButtons button {
   border: 0;
