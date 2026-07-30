@@ -1,15 +1,13 @@
 <script setup>
 import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { useStationsStore } from '../stores/stationsStore.js'
 import { useStatusStore } from '../stores/statusStore.js'
 import { useSystemStore } from '../stores/systemStore.js'
 import { shortTime } from '../utils.js'
 
-const props = defineProps({
-  busyText: { type: String, default: '' },
-})
-const emit = defineEmits(['run-update', 'discard-edmc-delayed', 'open-support'])
 const statusStore = useStatusStore()
+const stationsStore = useStationsStore()
 const {
   autoRefresh,
   statusText,
@@ -19,11 +17,18 @@ const {
   updateBusy,
   edmcDiscardBusy,
 } = storeToRefs(statusStore)
+const {
+  stationRowsLoading,
+  stationRowsRendering,
+} = storeToRefs(stationsStore)
 
 const systemStore = useSystemStore()
 
 const displayedBusyText = ref('')
 let busyTextTimer = null
+const busyText = computed(() => (
+  stationRowsLoading.value ? 'Loading stations...' : (stationRowsRendering.value ? 'Updating table...' : '')
+))
 
 function clearBusyTextTimer() {
   if (!busyTextTimer) return
@@ -32,19 +37,19 @@ function clearBusyTextTimer() {
 }
 
 watch(
-  () => props.busyText,
-  (busyText) => {
+  busyText,
+  (nextBusyText) => {
     clearBusyTextTimer()
-    if (!busyText) {
+    if (!nextBusyText) {
       displayedBusyText.value = ''
       return
     }
     if (displayedBusyText.value) {
-      displayedBusyText.value = busyText
+      displayedBusyText.value = nextBusyText
       return
     }
     busyTextTimer = setTimeout(() => {
-      if (props.busyText) displayedBusyText.value = props.busyText
+      if (busyText.value) displayedBusyText.value = busyText.value
       busyTextTimer = null
     }, 1000)
   },
@@ -144,7 +149,7 @@ const firstDelayedMessageLabel = computed(() => {
         class="edmcDiscardButton"
         :disabled="edmcDiscardBusy"
         :title="delayedMessagesTitle"
-        @click="emit('discard-edmc-delayed')"
+        @click="statusStore.discardEdmcDelayedStationMessages()"
       >
         {{ edmcDiscardBusy ? 'Clearing...' : `Clear delayed (${edmcStatus.delayed_station_messages_pending})` }}
       </button>

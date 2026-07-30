@@ -30,13 +30,10 @@ import { dataStore } from './services/dataStoreService.js'
 const statusStore = useStatusStore()
 const {
   statusText,
-  latestJournalEvent,
-  updateStatus,
-  updateBusy,
 } = storeToRefs(statusStore)
 
 const systemStore = useSystemStore()
-const { helpArticle, helpRequestId, supportOpen } = storeToRefs(systemStore)
+const { helpArticle, helpRequestId, supportOpen, updateModal } = storeToRefs(systemStore)
 const { openHelp } = systemStore
 const tripPlannerStore = useTripPlannerStore()
 const commoditySettingsStore = useCommoditySettingsStore()
@@ -44,8 +41,6 @@ const stationViewStore = useStationViewStore()
 const notificationStore = useNotificationStore()
 const stationsStore = useStationsStore()
 const {
-  stationRowsLoading,
-  stationRowsRendering,
   selectedRow: selectedStationRow,
 } = storeToRefs(stationsStore)
 
@@ -70,13 +65,6 @@ function persistCurrentView() {
 }
 
 const currentView = ref(loadStoredView())
-const updateModal = ref({
-  visible: false,
-  title: '',
-  message: '',
-  backupPath: '',
-  pluginDir: '',
-})
 const filters = ref({})
 
 const ledgerFilters = ref({
@@ -233,12 +221,9 @@ async function pollStatus() {
   })
 }
 
-async function discardEdmcDelayedStationMessages() {
-  await statusStore.discardEdmcDelayedStationMessages({ refresh: pollStatus })
-}
-
 let pollTimer = null
 onMounted(async () => {
+  statusStore.setStatusRefreshHandler(pollStatus)
   tripPlannerStore.setTripRouteStopSelectionHandler(stationViewStore.applyTripRouteStopSelection)
   const storedView = await dataStore.get(ACTIVE_VIEW_STORAGE_KEY, currentView.value, {
     legacyKey: LEGACY_ACTIVE_VIEW_STORAGE_KEY,
@@ -252,6 +237,7 @@ onMounted(async () => {
 })
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
+  statusStore.setStatusRefreshHandler(null)
   tripPlannerStore.setTripRouteStopSelectionHandler(null)
   notificationStore.disposeNotifications()
 })
@@ -259,12 +245,7 @@ onUnmounted(() => {
 
 <template>
   <div class="appShell">
-    <StatusStrip
-      :busy-text="stationRowsLoading ? 'Loading stations...' : (stationRowsRendering ? 'Updating table...' : '')"
-      @run-update="handleUpdateAction"
-      @discard-edmc-delayed="discardEdmcDelayedStationMessages"
-      @open-support="systemStore.openSupport()"
-    />
+    <StatusStrip />
 
     <TargetStateToast />
 
@@ -344,17 +325,17 @@ onUnmounted(() => {
       <p>Thank you for helping keep MarketScout moving forward. o7 commanders.</p>
     </ModalShell>
 
-    <div v-if="updateModal.visible" class="modalBackdrop" @click.self="updateModal.visible = false">
+    <div v-if="updateModal.visible" class="modalBackdrop" @click.self="systemStore.closeUpdateModal()">
       <section class="aboutModal updateModal" role="dialog" aria-modal="true" aria-labelledby="update-modal-title">
         <div class="modalHeader">
           <h2 id="update-modal-title">{{ updateModal.title }}</h2>
-          <button type="button" class="iconButton" aria-label="Close" @click="updateModal.visible = false">×</button>
+          <button type="button" class="iconButton" aria-label="Close" @click="systemStore.closeUpdateModal()">×</button>
         </div>
         <p>{{ updateModal.message }}</p>
         <p v-if="updateModal.backupPath" class="modalPath"><strong>Backup:</strong> {{ updateModal.backupPath }}</p>
         <p v-if="updateModal.pluginDir" class="modalPath"><strong>Plugin:</strong> {{ updateModal.pluginDir }}</p>
         <div class="modalActions">
-          <button type="button" @click="updateModal.visible = false">Close</button>
+          <button type="button" @click="systemStore.closeUpdateModal()">Close</button>
         </div>
       </section>
     </div>

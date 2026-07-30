@@ -10,6 +10,11 @@ export const useStatusStore = defineStore('status', () => {
   const updateBusy = ref(false)
   const edmcDiscardBusy = ref(false)
   const lastDataVersion = ref(null)
+  let statusRefreshHandler = null
+
+  function setStatusRefreshHandler(handler) {
+    statusRefreshHandler = typeof handler === 'function' ? handler : null
+  }
 
   async function pollStatus(options = {}) {
     const res = await fetch('/api/status', { cache: 'no-store' })
@@ -46,7 +51,8 @@ export const useStatusStore = defineStore('status', () => {
       const data = await res.json()
       if (!data.ok) throw new Error(data.error || 'Could not clear delayed EDDN station messages')
       statusText.value = `Cleared ${Number(data.discarded || 0)} delayed EDDN station message(s) · ${new Date().toLocaleTimeString()}`
-      if (typeof options.refresh === 'function') await options.refresh()
+      const refresh = typeof options.refresh === 'function' ? options.refresh : statusRefreshHandler
+      if (typeof refresh === 'function') await refresh()
     } catch (err) {
       statusText.value = `${err?.message || err} · ${new Date().toLocaleTimeString()}`
     } finally {
@@ -62,6 +68,7 @@ export const useStatusStore = defineStore('status', () => {
     updateStatus,
     updateBusy,
     edmcDiscardBusy,
+    setStatusRefreshHandler,
     pollStatus,
     discardEdmcDelayedStationMessages,
   }
