@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Refactored the Web UI around Pinia stores, Vue Router route views, and route meta.
+- Removed the central `ViewControls` component in favor of view-owned filter bars.
+- Simplified Stations components so table/settings components read the relevant stores directly.
+- Improved Stations loading feedback and per-view row-limit persistence defaults.
+
 ## 0.6.1 Beta
 
 - Added a user-selectable Target State alert setting for current-system active and pending faction-state toasts.
