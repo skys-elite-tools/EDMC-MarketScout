@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.0 Beta
 
 - Refactored the Web UI around Pinia stores, Vue Router route views, and route meta.
 - Removed the central `ViewControls` component in favor of view-owned filter bars.
