@@ -1,6 +1,10 @@
 <script setup>
+import { storeToRefs } from 'pinia'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import InfoButton from './InfoButton.vue'
+import { useStatusStore } from '../stores/statusStore.js'
+import { useSystemStore } from '../stores/systemStore.js'
+import { useTripPlannerStore } from '../stores/tripPlannerStore.js'
 import { compactDateTime, localDateTime } from '../utils.js'
 import { dataStore } from '../services/dataStoreService.js'
 
@@ -8,15 +12,16 @@ const EXPANDED_STORAGE_KEY = 'tripPlanner.expanded'
 const LARGE_ROUTE_STOP_THRESHOLD = 120
 const LARGE_ROUTE_WINDOW_SIZE = 8
 
-const props = defineProps({
-  routes: { type: Array, default: () => [] },
-  activeRoute: { type: Object, default: null },
-  busy: { type: Boolean, default: false },
-  status: { type: String, default: '' },
-  currentSystem: { type: String, default: '' },
-  currentPosition: { type: Object, default: null },
-})
-const emit = defineEmits(['import-route', 'import-station-hints', 'start-route', 'set-stop-skipped', 'delete-route', 'select-stop', 'open-help'])
+const statusStore = useStatusStore()
+const systemStore = useSystemStore()
+const tripPlannerStore = useTripPlannerStore()
+const { latestJournalEvent } = storeToRefs(statusStore)
+const {
+  tripRoutes,
+  activeTripRoute,
+  tripRouteBusy,
+  tripRouteStatus,
+} = storeToRefs(tripPlannerStore)
 
 const fileInput = ref(null)
 const hintFileInput = ref(null)
@@ -34,22 +39,22 @@ const expanded = ref(Boolean(dataStore.cached(EXPANDED_STORAGE_KEY, false)))
 const focusedStopIndex = ref(0)
 const visibleStopIndexes = ref([])
 
-const hasActiveRoute = computed(() => props.activeRoute?.route_id != null)
-const stops = computed(() => props.activeRoute?.stops || [])
+const hasActiveRoute = computed(() => activeTripRoute.value?.route_id != null)
+const stops = computed(() => activeTripRoute.value?.stops || [])
 const currentStopIndex = computed(() => {
-  const current = props.currentSystem.trim().toLocaleLowerCase()
+  const current = String(latestJournalEvent.value?.system || '').trim().toLocaleLowerCase()
   if (!current) return -1
   return stops.value.findIndex(stop => String(stop.system_name || '').trim().toLocaleLowerCase() === current)
 })
 const progressStopIndex = computed(() => {
   if (!stops.value.length) return 0
-  const rawIndex = Number(props.activeRoute?.progress_stop_index)
+  const rawIndex = Number(activeTripRoute.value?.progress_stop_index)
   if (!Number.isFinite(rawIndex)) return 0
   return Math.max(0, Math.min(stops.value.length - 1, rawIndex))
 })
 const preferredStopIndex = computed(() => currentStopIndex.value >= 0 ? currentStopIndex.value : progressStopIndex.value)
 const activeDotIndex = computed(() => Math.max(0, Math.min(stops.value.length - 1, focusedStopIndex.value)))
-const currentCoords = computed(() => coordsFrom(props.currentPosition))
+const currentCoords = computed(() => coordsFrom(latestJournalEvent.value))
 const isLargeRoute = computed(() => stops.value.length > LARGE_ROUTE_STOP_THRESHOLD)
 const routeWindowStart = computed(() => {
   if (!isLargeRoute.value) return 0
@@ -79,7 +84,7 @@ const progressSummary = computed(() => {
   return `${progress} · Current stop ${(currentStopIndex.value + 1).toLocaleString()}`
 })
 const routeSummary = computed(() => {
-  const route = props.activeRoute
+  const route = activeTripRoute.value
   if (!route) return ''
   const parts = []
   if (Number(route.stop_count)) parts.push(`${Number(route.stop_count)} stops`)
@@ -115,7 +120,7 @@ async function importFile(event) {
   event.target.value = ''
   if (!file) return
   const content = await file.text()
-  emit('import-route', { filename: file.name, content })
+  await tripPlannerStore.importTripRoute({ filename: file.name, content })
 }
 
 async function importHintFile(event) {
@@ -123,7 +128,7 @@ async function importHintFile(event) {
   event.target.value = ''
   if (!file || !hasActiveRoute.value) return
   const content = await file.text()
-  emit('import-station-hints', { filename: file.name, content, route_id: props.activeRoute?.route_id })
+  await tripPlannerStore.importTripRouteStationHints({ filename: file.name, content, route_id: activeTripRoute.value?.route_id })
 }
 
 function toggleMenu(event) {
@@ -187,7 +192,7 @@ function stopLegLabel(stop, index) {
   if (index === 0 && currentStopIndex.value !== 0) {
     const distance = distanceLy(currentCoords.value, coordsFrom(stop))
     if (distance == null) return '-'
-    const jumpRange = Number(props.activeRoute?.jump_range_ly)
+    const jumpRange = Number(activeTripRoute.value?.jump_range_ly)
     const jumps = jumpRange > 0 ? Math.ceil(distance / jumpRange) : null
     return `${jumps == null ? '-' : jumps} jumps · ${distance.toFixed(1)} Ly from current`
   }
@@ -198,7 +203,7 @@ function firstStopEstimateParts(stop, index) {
   if (index !== 0 || currentStopIndex.value === 0) return null
   const distance = distanceLy(currentCoords.value, coordsFrom(stop))
   if (distance == null) return null
-  const jumpRange = Number(props.activeRoute?.jump_range_ly)
+  const jumpRange = Number(activeTripRoute.value?.jump_range_ly)
   const jumps = jumpRange > 0 ? Math.ceil(distance / jumpRange) : null
   return {
     jumps: jumps == null ? '-' : `${jumps} jumps`,
@@ -314,8 +319,8 @@ function beginStopSkipHold(event) {
     stopSkipHoldActive.value = false
     stopContextMenuOpen.value = false
     if (!stop) return
-    emit('set-stop-skipped', {
-      route_id: stop.route_id || props.activeRoute?.route_id,
+    tripPlannerStore.setTripRouteStopSkipped({
+      route_id: stop.route_id || activeTripRoute.value?.route_id,
       stop_index: stop.stop_index,
       skipped: !isStopSkipped(stop),
     })
@@ -391,7 +396,7 @@ function onDocumentClick(event) {
   }
 }
 
-watch(() => props.activeRoute?.route_id, async () => {
+watch(() => activeTripRoute.value?.route_id, async () => {
   stopEls.value = []
   focusedStopIndex.value = progressStopIndex.value
   visibleStopIndexes.value = []
@@ -455,7 +460,7 @@ onBeforeUnmount(() => {
       </button>
       <div v-if="expanded" class="tripRouteTopTitle">
         <span>Trip Route</span>
-        <InfoButton title="Spansh Tourist Route imports" @open="emit('open-help', 'spansh-tourist-route')" />
+        <InfoButton title="Spansh Tourist Route imports" @open="systemStore.openHelp('spansh-tourist-route')" />
       </div>
     </div>
 
@@ -466,7 +471,7 @@ onBeforeUnmount(() => {
             <button
               type="button"
               class="tripRouteImportButton"
-              :disabled="busy"
+              :disabled="tripRouteBusy"
               title="Import a .json file downloaded from the Spansh Tourist Route planner."
               @click="chooseFile"
             >
@@ -476,7 +481,7 @@ onBeforeUnmount(() => {
             <button
               type="button"
               class="tripRouteImportButton"
-              :disabled="busy || !hasActiveRoute"
+              :disabled="tripRouteBusy || !hasActiveRoute"
               title="Import a Spansh station/search CSV to add station hints to the active route."
               @click="chooseHintFile"
             >
@@ -486,33 +491,33 @@ onBeforeUnmount(() => {
             <button
               type="button"
               class="tripRouteProgressButton"
-              :disabled="busy || !hasActiveRoute || !stops.length"
+              :disabled="tripRouteBusy || !hasActiveRoute || !stops.length"
               title="Scroll the route to the highest stop reached with all previous stops visited since the last progress marker."
               @click="goToProgress"
             >
               Go to Progress
             </button>
             <div ref="menuEl" class="tripRouteMenuWrap">
-              <button type="button" class="tripRouteMenuButton" :disabled="busy || !routes.length" @click.stop="toggleMenu">
+              <button type="button" class="tripRouteMenuButton" :disabled="tripRouteBusy || !tripRoutes.length" @click.stop="toggleMenu">
                 Routes
-                <span class="buttonCount">{{ routes.length }}</span>
+                <span class="buttonCount">{{ tripRoutes.length }}</span>
               </button>
               <div v-if="menuOpen" class="tripRouteMenu" :style="menuStyle">
-                <div v-for="route in routes" :key="route.route_id" class="tripRouteMenuItem">
-                  <button type="button" class="tripRoutePickButton" :title="routeTitle(route)" @click="emit('start-route', route.route_id); menuOpen = false">
+                <div v-for="route in tripRoutes" :key="route.route_id" class="tripRouteMenuItem">
+                  <button type="button" class="tripRoutePickButton" :title="routeTitle(route)" @click="tripPlannerStore.startTripRoute(route.route_id); menuOpen = false">
                     <span>{{ route.route_name }}</span>
                     <span>{{ routeTitle(route) }}</span>
                   </button>
-                  <button type="button" class="tripRouteDeleteButton" title="Delete route" @click.stop="emit('delete-route', route.route_id)">×</button>
+                  <button type="button" class="tripRouteDeleteButton" title="Delete route" @click.stop="tripPlannerStore.deleteTripRoute(route.route_id)">×</button>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <p v-if="status" class="tripRouteStatus">{{ status }}</p>
-        <div v-else-if="activeRoute" class="tripRouteActiveMeta">
-          <strong>{{ activeRoute.route_name }}</strong>
+        <p v-if="tripRouteStatus" class="tripRouteStatus">{{ tripRouteStatus }}</p>
+        <div v-else-if="activeTripRoute" class="tripRouteActiveMeta">
+          <strong>{{ activeTripRoute.route_name }}</strong>
           <span v-if="routeSummary">{{ routeSummary }}</span>
         </div>
         <p v-else class="tripRouteEmpty">
@@ -520,7 +525,7 @@ onBeforeUnmount(() => {
         </p>
       </div>
 
-      <div v-if="activeRoute" class="tripStopsPane">
+      <div v-if="activeTripRoute" class="tripStopsPane">
         <div
           ref="stopsEl"
           class="tripStops"
@@ -537,7 +542,7 @@ onBeforeUnmount(() => {
             :class="{ tripStopCurrent: index === currentStopIndex, tripStopProgress: index === progressStopIndex, tripStopSkipped: isStopSkipped(stop) }"
             role="listitem"
             :title="stopTitle(stop)"
-            @click="emit('select-stop', stop)"
+            @click="tripPlannerStore.selectTripRouteStop(stop)"
             @contextmenu.prevent.stop="openStopContextMenu($event, stop)"
           >
             <span v-if="isStopSkipped(stop)" class="tripStopMarker tripStopSkippedMarker">Skipped</span>

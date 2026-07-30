@@ -20,6 +20,7 @@ import FooterBar from './components/FooterBar.vue'
 import ModalShell from './components/ModalShell.vue'
 import { useStatusStore } from './stores/statusStore.js'
 import { useSystemStore } from './stores/systemStore.js'
+import { useTripPlannerStore } from './stores/tripPlannerStore.js'
 import { dedupeStationRows, query } from './utils.js'
 import { dataStore } from './services/dataStoreService.js'
 
@@ -32,6 +33,9 @@ const {
 } = storeToRefs(statusStore)
 
 const systemStore = useSystemStore()
+const { helpArticle, helpRequestId, supportOpen } = storeToRefs(systemStore)
+const { openHelp } = systemStore
+const tripPlannerStore = useTripPlannerStore()
 
 const rows = ref([])
 const selectedIndex = ref(-1)
@@ -76,8 +80,6 @@ const allCommodities = ref([])
 const commoditiesCatalogLoaded = ref(false)
 const settingsVisible = ref(false)
 const bestBuyIgnoreVisible = ref(false)
-const helpArticle = ref('')
-const helpRequestId = ref(0)
 const commoditySearch = ref('')
 const bestBuyIgnoreSearch = ref('')
 const stationRowsLoading = ref(false)
@@ -93,10 +95,6 @@ const updateModal = ref({
 const economyPresets = ref([])
 const economyPresetStatus = ref('')
 const stationFilterOptions = ref({ systems: [], stations: [] })
-const tripRoutes = ref([])
-const activeTripRoute = ref(null)
-const tripRouteBusy = ref(false)
-const tripRouteStatus = ref('')
 const targetStateToast = ref(null)
 const targetStateDetailsOpen = ref(false)
 const targetStateToastCountdownKey = ref(0)
@@ -212,11 +210,6 @@ function setSelected(idx) {
 
 function closeDetails() {
   selectedIndex.value = -1
-}
-
-function openHelp(article = '') {
-  helpArticle.value = article
-  helpRequestId.value += 1
 }
 
 function beginRowsLoad(viewName, options = {}) {
@@ -419,116 +412,7 @@ async function loadStationFilterOptions() {
   }
 }
 
-async function loadTripRoutes() {
-  const res = await fetch('/api/trip-routes', { cache: 'no-store' })
-  const data = await res.json()
-  tripRoutes.value = data.routes || []
-  activeTripRoute.value = data.active_route || null
-}
-
-async function importTripRoute(file) {
-  tripRouteBusy.value = true
-  tripRouteStatus.value = 'Importing route...'
-  try {
-    const res = await fetch('/api/trip-routes/import', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(file),
-    })
-    const data = await res.json()
-    if (!data.ok) throw new Error(data.error || 'Could not import route')
-    await loadTripRoutes()
-    tripRouteStatus.value = `Imported ${data.imported_stops || 0} route stops.`
-    setTimeout(() => { tripRouteStatus.value = '' }, 3200)
-  } catch (err) {
-    tripRouteStatus.value = err?.message || String(err)
-  } finally {
-    tripRouteBusy.value = false
-  }
-}
-
-async function importTripRouteStationHints(file) {
-  tripRouteBusy.value = true
-  tripRouteStatus.value = 'Importing station hints...'
-  try {
-    const res = await fetch('/api/trip-routes/import-station-hints', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(file),
-    })
-    const data = await res.json()
-    if (!data.ok) throw new Error(data.error || 'Could not import station hints')
-    tripRoutes.value = data.routes || []
-    activeTripRoute.value = data.active_route || null
-    tripRouteStatus.value = `Added station hints to ${data.matched_stops || 0} route stops.`
-    setTimeout(() => { tripRouteStatus.value = '' }, 3200)
-  } catch (err) {
-    tripRouteStatus.value = err?.message || String(err)
-  } finally {
-    tripRouteBusy.value = false
-  }
-}
-
-async function startTripRoute(routeId) {
-  tripRouteBusy.value = true
-  try {
-    const res = await fetch('/api/trip-routes/start', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ route_id: routeId }),
-    })
-    const data = await res.json()
-    if (!data.ok) throw new Error(data.error || 'Could not start route')
-    tripRoutes.value = data.routes || []
-    activeTripRoute.value = data.active_route || null
-  } catch (err) {
-    tripRouteStatus.value = err?.message || String(err)
-  } finally {
-    tripRouteBusy.value = false
-  }
-}
-
-async function deleteTripRoute(routeId) {
-  tripRouteBusy.value = true
-  try {
-    const res = await fetch('/api/trip-routes/delete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ route_id: routeId }),
-    })
-    const data = await res.json()
-    if (!data.ok) throw new Error(data.error || 'Could not delete route')
-    tripRoutes.value = data.routes || []
-    activeTripRoute.value = data.active_route || null
-  } catch (err) {
-    tripRouteStatus.value = err?.message || String(err)
-  } finally {
-    tripRouteBusy.value = false
-  }
-}
-
-async function setTripRouteStopSkipped(payload) {
-  tripRouteBusy.value = true
-  try {
-    const res = await fetch('/api/trip-routes/skip-stop', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    const data = await res.json()
-    if (!data.ok) throw new Error(data.error || 'Could not update route stop')
-    tripRoutes.value = data.routes || []
-    activeTripRoute.value = data.active_route || null
-    tripRouteStatus.value = payload?.skipped ? 'Route stop skipped.' : 'Route stop restored.'
-    setTimeout(() => { tripRouteStatus.value = '' }, 2600)
-  } catch (err) {
-    tripRouteStatus.value = err?.message || String(err)
-  } finally {
-    tripRouteBusy.value = false
-  }
-}
-
-async function selectTripRouteStop(stop) {
+async function applyTripRouteStopSelection(stop) {
   const stopSystem = String(stop.system_name || '').trim()
   const stopStation = String(stop.station_hint_name || '').trim()
   const currentSystemFilter = String(filters.value.system || '').trim()
@@ -765,6 +649,7 @@ async function discardEdmcDelayedStationMessages() {
 
 let pollTimer = null
 onMounted(async () => {
+  tripPlannerStore.setTripRouteStopSelectionHandler(applyTripRouteStopSelection)
   const storedView = await dataStore.get(ACTIVE_VIEW_STORAGE_KEY, currentView.value, {
     legacyKey: LEGACY_ACTIVE_VIEW_STORAGE_KEY,
     legacyJson: false,
@@ -778,13 +663,14 @@ onMounted(async () => {
     ...filters.value,
     ...stationThresholdsFrom(storedStationThresholds),
   }
-  await Promise.all([loadCommoditySettings(), loadEconomyPresets(), loadStationFilterOptions(), loadTripRoutes()])
+  await Promise.all([loadCommoditySettings(), loadEconomyPresets(), loadStationFilterOptions(), tripPlannerStore.loadTripRoutes()])
   await pollStatus()
   await applyCurrentView()
   pollTimer = setInterval(pollStatus, 2000)
 })
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
+  tripPlannerStore.setTripRouteStopSelectionHandler(null)
   clearTargetStateToastTimer()
 })
 </script>
@@ -793,7 +679,9 @@ onUnmounted(() => {
   <div class="appShell">
     <StatusStrip
       :busy-text="stationRowsLoading ? 'Loading stations...' : (stationRowsRendering ? 'Updating table...' : '')"
+      @run-update="handleUpdateAction"
       @discard-edmc-delayed="discardEdmcDelayedStationMessages"
+      @open-support="systemStore.openSupport()"
     />
 
     <section
@@ -856,19 +744,6 @@ onUnmounted(() => {
 
     <TripRouteBar
       v-if="currentView === 'stations'"
-      :routes="tripRoutes"
-      :active-route="activeTripRoute"
-      :busy="tripRouteBusy"
-      :status="tripRouteStatus"
-      :current-system="latestJournalEvent?.system || ''"
-      :current-position="latestJournalEvent"
-      @import-route="importTripRoute"
-      @import-station-hints="importTripRouteStationHints"
-      @start-route="startTripRoute"
-      @set-stop-skipped="setTripRouteStopSkipped"
-      @delete-route="deleteTripRoute"
-      @select-stop="selectTripRouteStop"
-      @open-help="openHelp"
     />
 
     <ViewControls
@@ -1011,7 +886,7 @@ onUnmounted(() => {
       :help-request-id="helpRequestId"
     />
 
-    <ModalShell v-if="systemStore.supportOpen" title="Support MarketScout" title-id="supportTitle" panel-class="aboutModal" @close="systemStore.closeSupport()">
+    <ModalShell v-if="supportOpen" title="Support MarketScout" title-id="supportTitle" panel-class="aboutModal" @close="systemStore.closeSupport()">
       <p>MarketScout is free and open source. If you find it useful and would like to support development, you can do so here:</p>
       <p>
         <a href="https://oriondreams.gumroad.com/l/MarketScout/" target="_blank" rel="noreferrer">Support MarketScout on Gumroad</a>
