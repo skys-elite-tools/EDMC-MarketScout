@@ -24,8 +24,10 @@ const {
 
 const systemStore = useSystemStore()
 
+const MIN_BUSY_VISIBLE_MS = 1000
 const displayedBusyText = ref('')
 let busyTextTimer = null
+let busyTextShownAt = 0
 const busyText = computed(() => (
   stationRowsLoading.value ? 'Loading stations...' : (stationRowsRendering.value ? 'Updating table...' : '')
 ))
@@ -40,18 +42,28 @@ watch(
   busyText,
   (nextBusyText) => {
     clearBusyTextTimer()
-    if (!nextBusyText) {
-      displayedBusyText.value = ''
-      return
-    }
-    if (displayedBusyText.value) {
+    if (nextBusyText) {
+      if (!displayedBusyText.value) busyTextShownAt = Date.now()
       displayedBusyText.value = nextBusyText
       return
     }
+
+    if (!displayedBusyText.value) return
+
+    const visibleFor = Date.now() - busyTextShownAt
+    const remaining = MIN_BUSY_VISIBLE_MS - visibleFor
+    if (remaining <= 0) {
+      displayedBusyText.value = ''
+      return
+    }
     busyTextTimer = setTimeout(() => {
-      if (busyText.value) displayedBusyText.value = busyText.value
+      if (busyText.value) {
+        displayedBusyText.value = busyText.value
+      } else {
+        displayedBusyText.value = ''
+      }
       busyTextTimer = null
-    }, 1000)
+    }, remaining)
   },
   { immediate: true },
 )

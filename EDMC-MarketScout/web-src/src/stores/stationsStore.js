@@ -67,7 +67,6 @@ export const useStationsStore = defineStore('stations', () => {
     if (!append) {
       stationPage.value = { totalCount: 0, hasMore: false, nextOffset: null, limit: requestLimit, offset: 0 }
     }
-    statusStore.statusText = append ? `${stationStatusLabel.value} · Loading more...` : 'Loading stations...'
     try {
       const params = typeof options.params === 'function' ? options.params(offset, requestLimit) : { ...(options.params || {}), offset, limit: requestLimit }
       const res = await fetch(`/api/stations?${query(params)}`, { cache: 'no-store' })
