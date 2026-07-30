@@ -2,6 +2,7 @@
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import StatusStrip from './components/StatusStrip.vue'
+import TargetStateToast from './components/TargetStateToast.vue'
 import TopBar from './components/TopBar.vue'
 import ViewControls from './components/ViewControls.vue'
 import StationDetails from './components/StationDetails.vue'
@@ -17,6 +18,7 @@ import ConfigurationView from './views/ConfigurationView.vue'
 import FooterBar from './components/FooterBar.vue'
 import ModalShell from './components/ModalShell.vue'
 import { useCommoditySettingsStore } from './stores/commoditySettingsStore.js'
+import { useNotificationStore } from './stores/notificationStore.js'
 import { useStationViewStore } from './stores/stationViewStore.js'
 import { useStatusStore } from './stores/statusStore.js'
 import { useStationsStore } from './stores/stationsStore.js'
@@ -39,6 +41,7 @@ const { openHelp } = systemStore
 const tripPlannerStore = useTripPlannerStore()
 const commoditySettingsStore = useCommoditySettingsStore()
 const stationViewStore = useStationViewStore()
+const notificationStore = useNotificationStore()
 const stationsStore = useStationsStore()
 const {
   stationRowsLoading,
@@ -52,7 +55,6 @@ const selectedRow = computed(() => selectedIndex.value >= 0 ? rows.value[selecte
 let latestRowsRequestId = 0
 const ACTIVE_VIEW_STORAGE_KEY = 'ui.activeView'
 const LEGACY_ACTIVE_VIEW_STORAGE_KEY = 'marketscout.activeView'
-const TARGET_STATE_TOAST_TIMEOUT_MS = 60000
 const VALID_VIEWS = new Set(['stations', 'jackpots', 'ledger', 'commodities', 'rare', 'analyze', 'carrier', 'carrierCalc', 'config'])
 
 function loadStoredView() {
@@ -75,12 +77,6 @@ const updateModal = ref({
   backupPath: '',
   pluginDir: '',
 })
-const targetStateToast = ref(null)
-const targetStateDetailsOpen = ref(false)
-const targetStateToastCountdownKey = ref(0)
-const dismissedTargetStateAlertKey = ref('')
-let targetStateToastTimer = null
-
 const filters = ref({})
 
 const ledgerFilters = ref({
@@ -230,80 +226,12 @@ watch(
 
 async function pollStatus() {
   return statusStore.pollStatus({
-    onTargetStateAlert: updateTargetStateToast,
+    onTargetStateAlert: notificationStore.updateTargetStateToast,
     onDataVersionChanged: async () => {
       await Promise.all([applyCurrentView({ preserveRows: true }), stationViewStore.loadStationFilterOptions()])
     },
   })
 }
-
-function clearTargetStateToastTimer() {
-  if (targetStateToastTimer) {
-    clearTimeout(targetStateToastTimer)
-    targetStateToastTimer = null
-  }
-}
-
-function dismissTargetStateToast() {
-  if (targetStateToast.value?.key) dismissedTargetStateAlertKey.value = targetStateToast.value.key
-  targetStateToast.value = null
-  targetStateDetailsOpen.value = false
-  clearTargetStateToastTimer()
-}
-
-function expireTargetStateToast() {
-  if (targetStateToast.value?.key) dismissedTargetStateAlertKey.value = targetStateToast.value.key
-  targetStateToast.value = null
-  targetStateDetailsOpen.value = false
-  targetStateToastTimer = null
-}
-
-function resetTargetStateToastTimer() {
-  if (!targetStateToast.value?.key) return
-  clearTargetStateToastTimer()
-  targetStateToastCountdownKey.value += 1
-  targetStateToastTimer = setTimeout(expireTargetStateToast, TARGET_STATE_TOAST_TIMEOUT_MS)
-}
-
-function openTargetStateDetails() {
-  targetStateDetailsOpen.value = true
-  resetTargetStateToastTimer()
-}
-
-function formatTargetStateTimestamp(value) {
-  if (!value) return ''
-  const time = Date.parse(value)
-  if (!Number.isFinite(time)) return String(value)
-  return new Date(time).toLocaleString()
-}
-
-function formatInfluence(value) {
-  const number = Number(value)
-  if (!Number.isFinite(number)) return ''
-  return `${(number * 100).toFixed(1)}%`
-}
-
-function targetStateStationSummary(station) {
-  const parts = [station.station_type, station.largest_pad ? `${station.largest_pad}-Pad` : ''].filter(Boolean)
-  return parts.join(' · ')
-}
-
-function updateTargetStateToast(alert) {
-  if (!alert?.key) {
-    targetStateToast.value = null
-    targetStateDetailsOpen.value = false
-    clearTargetStateToastTimer()
-    return
-  }
-  if (targetStateToast.value?.key === alert.key || dismissedTargetStateAlertKey.value === alert.key) {
-    return
-  }
-  targetStateToast.value = alert
-  targetStateDetailsOpen.value = false
-  resetTargetStateToastTimer()
-}
-
-
 
 async function discardEdmcDelayedStationMessages() {
   await statusStore.discardEdmcDelayedStationMessages({ refresh: pollStatus })
@@ -325,7 +253,7 @@ onMounted(async () => {
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
   tripPlannerStore.setTripRouteStopSelectionHandler(null)
-  clearTargetStateToastTimer()
+  notificationStore.disposeNotifications()
 })
 </script>
 
@@ -338,58 +266,7 @@ onUnmounted(() => {
       @open-support="systemStore.openSupport()"
     />
 
-    <section
-      v-if="targetStateToast"
-      class="targetStateToast"
-      :class="{ targetStateToastPending: targetStateToast.tone === 'pending', targetStateToastOpen: targetStateDetailsOpen }"
-      :title="targetStateToast.faction_names?.length ? targetStateToast.faction_names.join(', ') : targetStateToast.message"
-      role="button"
-      tabindex="0"
-      @click="openTargetStateDetails"
-      @keydown.enter.prevent="openTargetStateDetails"
-      @keydown.space.prevent="openTargetStateDetails"
-      @mouseenter="resetTargetStateToastTimer"
-    >
-      <div class="targetStateToastSummary">
-        <strong>{{ targetStateToast.state }}</strong>
-        <span>{{ targetStateToast.message }}</span>
-        <small>{{ targetStateDetailsOpen ? 'Details open' : 'Click for details' }}</small>
-        <button
-          type="button"
-          class="targetStateToastClose"
-          aria-label="Dismiss target state alert"
-          title="Dismiss"
-          @click.stop="dismissTargetStateToast"
-        >×</button>
-      </div>
-      <div v-if="targetStateDetailsOpen" class="targetStateToastDetails" @click.stop>
-        <div class="targetStateToastDetailBlock">
-          <h3>Detected Factions</h3>
-          <ul>
-            <li v-for="detection in targetStateToast.detections || []" :key="`${detection.state_kind}-${detection.faction_name}-${detection.updated_at}`">
-              <strong>{{ detection.faction_name }}</strong>
-              <span>{{ detection.state_kind === 'pending' ? 'Pending' : 'Active' }}</span>
-              <span v-if="formatInfluence(detection.influence)">{{ formatInfluence(detection.influence) }}</span>
-              <span v-if="formatTargetStateTimestamp(detection.updated_at)">{{ formatTargetStateTimestamp(detection.updated_at) }}</span>
-            </li>
-          </ul>
-        </div>
-        <div class="targetStateToastDetailBlock">
-          <h3>Known Stations</h3>
-          <ul v-if="targetStateToast.stations?.length">
-            <li v-for="station in targetStateToast.stations" :key="`${station.station_faction_name}-${station.station_name}`">
-              <strong>{{ station.station_name }}</strong>
-              <span>{{ station.station_faction_name }}</span>
-              <span v-if="targetStateStationSummary(station)">{{ targetStateStationSummary(station) }}</span>
-              <span v-if="formatTargetStateTimestamp(station.last_station_visit_datetime)">Visited {{ formatTargetStateTimestamp(station.last_station_visit_datetime) }}</span>
-            </li>
-          </ul>
-          <p v-else>No known stations owned by the detected faction in this system.</p>
-          <p v-if="targetStateToast.station_ownership_note" class="targetStateToastNote">Station ownership is based on previously recorded MarketScout data and may have changed.</p>
-        </div>
-      </div>
-      <span :key="targetStateToastCountdownKey" class="targetStateToastCountdown" aria-hidden="true"></span>
-    </section>
+    <TargetStateToast />
 
     <TopBar
       v-model:current-view="currentView"
