@@ -3,13 +3,11 @@ import { storeToRefs } from 'pinia'
 import CommodityChecklist from './CommodityChecklist.vue'
 import InfoButton from './InfoButton.vue'
 import { useCommoditySettingsStore } from '../stores/commoditySettingsStore.js'
+import { useStationViewStore } from '../stores/stationViewStore.js'
 import { useSystemStore } from '../stores/systemStore.js'
 
-const props = defineProps({
-  afterSave: { type: Function, default: null },
-})
-
 const commoditySettingsStore = useCommoditySettingsStore()
+const stationViewStore = useStationViewStore()
 const systemStore = useSystemStore()
 const {
   bestBuySettingsVisible,
@@ -22,7 +20,8 @@ const {
 } = storeToRefs(commoditySettingsStore)
 
 async function save() {
-  await commoditySettingsStore.saveBestBuySettings({ afterSave: props.afterSave })
+  await commoditySettingsStore.saveBestBuySettings()
+  await stationViewStore.loadStations()
 }
 </script>
 

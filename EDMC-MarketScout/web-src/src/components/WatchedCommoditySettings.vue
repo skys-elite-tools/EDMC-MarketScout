@@ -2,12 +2,10 @@
 import { storeToRefs } from 'pinia'
 import CommodityChecklist from './CommodityChecklist.vue'
 import { useCommoditySettingsStore } from '../stores/commoditySettingsStore.js'
-
-const props = defineProps({
-  afterSave: { type: Function, default: null },
-})
+import { useStationViewStore } from '../stores/stationViewStore.js'
 
 const commoditySettingsStore = useCommoditySettingsStore()
+const stationViewStore = useStationViewStore()
 const {
   watchedSettingsVisible,
   watchedSearch,
@@ -17,7 +15,8 @@ const {
 } = storeToRefs(commoditySettingsStore)
 
 async function save() {
-  await commoditySettingsStore.saveWatchedCommoditySettings({ afterSave: props.afterSave })
+  await commoditySettingsStore.saveWatchedCommoditySettings()
+  await stationViewStore.loadStations()
 }
 </script>
 

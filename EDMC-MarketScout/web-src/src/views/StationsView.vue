@@ -71,9 +71,9 @@ watch(
     />
   </section>
 
-  <WatchedCommoditySettings :after-save="stationViewStore.loadStations" />
+  <WatchedCommoditySettings />
 
-  <BestBuySettings :after-save="stationViewStore.loadStations" />
+  <BestBuySettings />
 
   <StationsTable />
 

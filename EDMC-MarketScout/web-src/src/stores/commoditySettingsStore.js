@@ -123,7 +123,7 @@ export const useCommoditySettingsStore = defineStore('commoditySettings', () => 
     }
   }
 
-  async function saveWatchedCommoditySettings(options = {}) {
+  async function saveWatchedCommoditySettings() {
     const nextWatched = normalizedList(draftWatchedCommodities.value)
     await fetch('/api/settings', {
       method: 'POST',
@@ -133,10 +133,9 @@ export const useCommoditySettingsStore = defineStore('commoditySettings', () => 
     watchedCommodities.value = nextWatched
     watchedSettingsVisible.value = false
     mergeKnownCommodities()
-    if (typeof options.afterSave === 'function') await options.afterSave()
   }
 
-  async function saveBestBuySettings(options = {}) {
+  async function saveBestBuySettings() {
     const nextIgnore = normalizedList(draftBestBuyIgnoreCommodities.value)
     const nextSupplyCap = Math.max(1, Number(draftBestBuySupplyCap.value) || 1000)
     const nextMinimumProfit = Math.max(0, Number(draftMinimumPotentialProfit.value) || 0)
@@ -154,7 +153,6 @@ export const useCommoditySettingsStore = defineStore('commoditySettings', () => 
     minimumPotentialProfit.value = nextMinimumProfit
     bestBuySettingsVisible.value = false
     mergeKnownCommodities()
-    if (typeof options.afterSave === 'function') await options.afterSave()
   }
 
   return {
