@@ -1,32 +1,52 @@
 <script setup>
+import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
 import InfoButton from './InfoButton.vue'
+import { useCommoditySettingsStore } from '../stores/commoditySettingsStore.js'
+import { useStatusStore } from '../stores/statusStore.js'
+import { useStationsStore } from '../stores/stationsStore.js'
+import { useSystemStore } from '../stores/systemStore.js'
 import { columnKey, commodityCellParts, compactDateTime, fmt, inaraCommoditySellUrl, localDateTime, money, potentialProfitClass, potentialProfitTooltip, quantityClass, rowFlag, shouldDisplayPotentialProfit } from '../utils.js'
 
 const props = defineProps({
-  rows: { type: Array, default: () => [] },
-  selectedIndex: { type: Number, default: -1 },
-  displayColumns: { type: Array, default: () => [] },
-  watchedCommodities: { type: Array, default: () => [] },
   scoutMode: { type: String, default: 'buy' },
   priceThreshold: { type: Number, default: 6000 },
   supplyThreshold: { type: Number, default: 10000 },
   sellPriceThreshold: { type: Number, default: 40000 },
   demandThreshold: { type: Number, default: 10000 },
-  minimumPotentialProfit: { type: Number, default: 10000 },
-  currentSystem: { type: String, default: '' },
+  loadOptions: { type: Object, default: () => ({}) },
 })
-const emit = defineEmits(['select', 'open-help'])
+const stationsStore = useStationsStore()
+const commoditySettingsStore = useCommoditySettingsStore()
+const statusStore = useStatusStore()
+const systemStore = useSystemStore()
+const {
+  rows,
+  selectedIndex,
+  stationRowsLoading,
+  stationPage,
+  loadMoreLabel,
+} = storeToRefs(stationsStore)
+const {
+  watchedCommodities,
+  minimumPotentialProfit,
+} = storeToRefs(commoditySettingsStore)
+const { latestJournalEvent } = storeToRefs(statusStore)
+const displayColumns = computed(() => {
+  const side = props.scoutMode === 'sell' ? 'sell' : 'buy'
+  return watchedCommodities.value.map(commodity => ({ commodity, side }))
+})
 
 function flag(row) {
-  return rowFlag(row, props.watchedCommodities, props.priceThreshold, props.supplyThreshold, props.scoutMode, props.sellPriceThreshold, props.demandThreshold)
+  return rowFlag(row, watchedCommodities.value, props.priceThreshold, props.supplyThreshold, props.scoutMode, props.sellPriceThreshold, props.demandThreshold)
 }
 
 function searchSystem(row) {
-  return props.currentSystem || row.system || ''
+  return latestJournalEvent.value?.system || row.system || ''
 }
 
 function cellParts(row, col) {
-  return commodityCellParts(row, col.commodity, col.side, props.minimumPotentialProfit)
+  return commodityCellParts(row, col.commodity, col.side, minimumPotentialProfit.value)
 }
 
 function pendingStates(row) {
@@ -63,13 +83,13 @@ function stateDisplayName(state) {
     <thead>
       <tr>
         <th>Flag</th><th>System / Station</th><th>Owner State / Economy</th>
-        <th><span class="headerWithInfo">Best Buy <InfoButton title="How Best Buy works" @open="emit('open-help', 'best-buy')" /></span></th>
+        <th><span class="headerWithInfo">Best Buy <InfoButton title="How Best Buy works" @open="systemStore.openHelp('best-buy')" /></span></th>
         <th v-for="col in displayColumns" :key="columnKey(col)">{{ col.commodity }} {{ col.side === 'buy' ? 'Buy' : 'Sell' }}</th>
         <th>Updated</th>
       </tr>
     </thead>
     <tbody>
-      <tr v-for="(row, idx) in rows" :key="`${row.market_id || idx}-${row.system}-${row.station}`" :class="[flag(row).cls, { selected: idx === selectedIndex }]" @click="emit('select', idx)">
+      <tr v-for="(row, idx) in rows" :key="`${row.market_id || idx}-${row.system}-${row.station}`" :class="[flag(row).cls, { selected: idx === selectedIndex }]" @click="stationsStore.setSelectedIndex(idx)">
         <td class="flag">
           <div v-for="item in flag(row).items" :key="item" class="flagItem">{{ flag(row).marker }} {{ item }}</div>
         </td>
@@ -104,4 +124,14 @@ function stateDisplayName(state) {
       </tr>
     </tbody>
   </table>
+  <div class="stationLoadMoreBar">
+    <button
+      type="button"
+      class="loadMoreButton"
+      :disabled="stationRowsLoading || !stationPage.hasMore"
+      @click="stationsStore.loadMoreStations(loadOptions)"
+    >
+      {{ loadMoreLabel }}
+    </button>
+  </div>
 </template>

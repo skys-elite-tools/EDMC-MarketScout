@@ -1,6 +1,6 @@
 <script setup>
 import { storeToRefs } from 'pinia'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import StatusStrip from './components/StatusStrip.vue'
 import TopBar from './components/TopBar.vue'
 import ViewControls from './components/ViewControls.vue'
@@ -21,9 +21,10 @@ import FooterBar from './components/FooterBar.vue'
 import ModalShell from './components/ModalShell.vue'
 import { useCommoditySettingsStore } from './stores/commoditySettingsStore.js'
 import { useStatusStore } from './stores/statusStore.js'
+import { useStationsStore } from './stores/stationsStore.js'
 import { useSystemStore } from './stores/systemStore.js'
 import { useTripPlannerStore } from './stores/tripPlannerStore.js'
-import { dedupeStationRows, query } from './utils.js'
+import { query } from './utils.js'
 import { dataStore } from './services/dataStoreService.js'
 
 const statusStore = useStatusStore()
@@ -42,8 +43,13 @@ const commoditySettingsStore = useCommoditySettingsStore()
 const {
   watchedCommodities,
   bestBuyIgnoreCommodities,
-  minimumPotentialProfit,
 } = storeToRefs(commoditySettingsStore)
+const stationsStore = useStationsStore()
+const {
+  stationRowsLoading,
+  stationRowsRendering,
+  selectedRow: selectedStationRow,
+} = storeToRefs(stationsStore)
 
 const rows = ref([])
 const selectedIndex = ref(-1)
@@ -72,13 +78,9 @@ function persistCurrentView() {
 }
 
 const currentView = ref(loadStoredView())
-const displayColumns = ref([])
 const cachedStationScoutMode = dataStore.cached(STATION_SCOUT_MODE_STORAGE_KEY, 'buy', { legacyJson: false })
 const stationScoutMode = ref(VALID_STATION_SCOUT_MODES.has(cachedStationScoutMode) ? cachedStationScoutMode : 'buy')
 const stationRowLimit = ref(clampStationRowLimit(dataStore.cached(STATION_ROW_LIMIT_STORAGE_KEY, DEFAULT_STATION_ROW_LIMIT)))
-const stationRowsLoading = ref(false)
-const stationRowsRendering = ref(false)
-const stationPage = ref({ totalCount: 0, hasMore: false, nextOffset: null, limit: DEFAULT_STATION_ROW_LIMIT, offset: 0 })
 const updateModal = ref({
   visible: false,
   title: '',
@@ -147,11 +149,6 @@ const commodityFilters = ref({
   sort: 'commodity_asc',
 })
 
-const stationModeDisplayColumns = computed(() => {
-  const side = stationScoutMode.value === 'sell' ? 'sell' : 'buy'
-  return watchedCommodities.value.map(commodity => ({ commodity, side }))
-})
-
 function stationParams(offset = 0, limit = stationRowLimit.value) {
   return {
     system: filters.value.system,
@@ -166,24 +163,15 @@ function stationParams(offset = 0, limit = stationRowLimit.value) {
   }
 }
 
-function afterBrowserPaint() {
-  return new Promise(resolve => {
-    requestAnimationFrame(() => requestAnimationFrame(resolve))
-  })
-}
-
-function stationStatusLabel() {
-  const total = Number(stationPage.value.totalCount || rows.value.length)
-  const shown = rows.value.length
-  if (total && shown < total) return `Showing ${shown.toLocaleString()} of ${total.toLocaleString()} stations`
-  return `${shown.toLocaleString()} stations`
-}
-
 function setSelected(idx) {
   selectedIndex.value = idx
 }
 
 function closeDetails() {
+  if (currentView.value === 'stations') {
+    stationsStore.closeDetails()
+    return
+  }
   selectedIndex.value = -1
 }
 
@@ -213,41 +201,11 @@ async function clearStationFilters() {
 }
 
 async function loadStations(options = {}) {
-  const append = options.append === true
-  const offset = append ? Number(stationPage.value.nextOffset || rows.value.length || 0) : 0
-  const requestLimit = append ? stationRowLimit.value : (options.preserveRows ? Math.max(stationRowLimit.value, rows.value.length || 0) : stationRowLimit.value)
-  const requestId = beginRowsLoad('stations', { ...options, preserveRows: append || options.preserveRows })
-  stationRowsLoading.value = true
-  if (!append) {
-    stationPage.value = { totalCount: 0, hasMore: false, nextOffset: null, limit: requestLimit, offset: 0 }
-  }
-  statusText.value = append ? `${stationStatusLabel()} · Loading more...` : 'Loading stations...'
-  try {
-    const res = await fetch(`/api/stations?${query(stationParams(offset, requestLimit))}`, { cache: 'no-store' })
-    const data = await res.json()
-    if (!isActiveRowsLoad('stations', requestId)) return
-    const nextRows = data.rows || []
-    rows.value = append ? dedupeStationRows([...rows.value, ...nextRows]) : dedupeStationRows(nextRows)
-    displayColumns.value = data.display_columns || []
-    commoditySettingsStore.applyWatchedCommoditiesFromStations(data.watched_commodities)
-    stationPage.value = {
-      totalCount: Number(data.total_count || rows.value.length),
-      hasMore: Boolean(data.has_more),
-      nextOffset: data.next_offset ?? null,
-      limit: Number(data.limit || stationRowLimit.value),
-      offset: Number(data.offset || offset),
-    }
-    await nextTick()
-    await afterBrowserPaint()
-    statusText.value = `${stationStatusLabel()} · ${new Date().toLocaleTimeString()}`
-  } finally {
-    if (isActiveRowsLoad('stations', requestId)) stationRowsLoading.value = false
-  }
-}
-
-async function loadMoreStations() {
-  if (!stationPage.value.hasMore || stationRowsLoading.value) return
-  await loadStations({ append: true })
+  await stationsStore.loadStations({
+    ...options,
+    rowLimit: stationRowLimit.value,
+    params: stationParams,
+  })
 }
 
 async function loadJackpots(options = {}) {
@@ -425,14 +383,11 @@ async function saveEconomyPreset() {
 async function setStationScoutMode(mode) {
   if (!VALID_STATION_SCOUT_MODES.has(mode)) return
   if (stationScoutMode.value === mode) return
-  stationRowsRendering.value = currentView.value === 'stations'
-  stationScoutMode.value = mode
-  try {
-    await nextTick()
-    await afterBrowserPaint()
-  } finally {
-    stationRowsRendering.value = false
+  if (currentView.value === 'stations') {
+    await stationsStore.renderStationRows(() => { stationScoutMode.value = mode })
+    return
   }
+  stationScoutMode.value = mode
 }
 
 function setStationRowLimit(value) {
@@ -651,34 +606,17 @@ onUnmounted(() => {
 
     <BestBuySettings :after-save="loadStations" />
 
-    <main :class="{ detailsOpen: selectedRow }">
+    <main :class="{ detailsOpen: (currentView === 'stations' ? selectedStationRow : selectedRow) }">
       <section class="tablePanel">
         <template v-if="currentView === 'stations'">
           <StationsTable
-            :rows="rows"
-            :selected-index="selectedIndex"
-            :display-columns="stationModeDisplayColumns"
-            :watched-commodities="watchedCommodities"
             :scout-mode="stationScoutMode"
             :price-threshold="filters.priceThreshold"
             :supply-threshold="filters.supplyThreshold"
             :sell-price-threshold="filters.sellPriceThreshold"
             :demand-threshold="filters.demandThreshold"
-            :minimum-potential-profit="minimumPotentialProfit"
-            :current-system="latestJournalEvent?.system || ''"
-            @select="setSelected"
-            @open-help="openHelp"
+            :load-options="{ rowLimit: stationRowLimit, params: stationParams }"
           />
-          <div class="stationLoadMoreBar">
-            <button
-              type="button"
-              class="loadMoreButton"
-              :disabled="stationRowsLoading || !stationPage.hasMore"
-              @click="loadMoreStations"
-            >
-              {{ stationPage.hasMore ? `Load More (${rows.length.toLocaleString()} of ${Number(stationPage.totalCount || 0).toLocaleString()})` : `Showing ${rows.length.toLocaleString()} station${rows.length === 1 ? '' : 's'}` }}
-            </button>
-          </div>
         </template>
         <JackpotHistory
           v-else-if="currentView === 'jackpots'"
@@ -717,11 +655,9 @@ onUnmounted(() => {
       </section>
 
       <StationDetails
-        v-if="selectedRow && currentView !== 'rare'"
+        v-if="(currentView === 'stations' ? selectedStationRow : selectedRow) && currentView !== 'rare'"
         :row="selectedRow"
         :current-view="currentView"
-        :watched-commodities="watchedCommodities"
-        :display-columns="currentView === 'stations' ? stationModeDisplayColumns : displayColumns"
         @close="closeDetails"
       />
     </main>
