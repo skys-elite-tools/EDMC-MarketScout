@@ -1,10 +1,45 @@
 <script setup>
-import { fmt, ly, money, num, rareDateTime } from '../utils.js'
+import { onMounted, ref, watch } from 'vue'
+import RareCommoditiesFilterBar from '../components/RareCommoditiesFilterBar.vue'
+import ViewHeader from '../components/ViewHeader.vue'
+import { useStatusStore } from '../stores/statusStore.js'
+import { useViewRefreshStore } from '../stores/viewRefreshStore.js'
+import { fmt, ly, money, num, query, rareDateTime } from '../utils.js'
 
-defineProps({
-  rows: { type: Array, default: () => [] },
-  selectedIndex: { type: Number, default: -1 },
+const statusStore = useStatusStore()
+const viewRefreshStore = useViewRefreshStore()
+const filters = ref({
+  sort: 'profit_desc',
+  engineeringOnly: false,
+  limit: 1000,
 })
+const rows = ref([])
+let latestRequestId = 0
+
+async function loadRareCommodities(options = {}) {
+  const requestId = ++latestRequestId
+  if (!options.preserveRows) rows.value = []
+  else if (statusStore.statusText && !statusStore.statusText.endsWith(' · Refreshing...')) {
+    statusStore.statusText = `${statusStore.statusText} · Refreshing...`
+  }
+  const params = {
+    sort: filters.value.sort || 'profit_desc',
+    engineering_only: filters.value.engineeringOnly ? '1' : '0',
+    limit: filters.value.limit || '1000',
+  }
+  const res = await fetch(`/api/rare-commodities?${query(params)}`, { cache: 'no-store' })
+  const data = await res.json()
+  if (requestId !== latestRequestId) return
+  rows.value = data.rows || []
+  statusStore.statusText = `${rows.value.length} rare commodities · ${new Date().toLocaleTimeString()}`
+}
+
+watch(
+  () => viewRefreshStore.refreshSerial,
+  () => loadRareCommodities(viewRefreshStore.refreshOptions),
+)
+
+onMounted(() => loadRareCommodities())
 
 function profitTitle(row) {
   const avg = money(row.galactic_average_price)
@@ -22,6 +57,11 @@ function profitClass(row) {
 </script>
 
 <template>
+  <section class="viewControls">
+    <ViewHeader />
+    <RareCommoditiesFilterBar :filters="filters" @apply="loadRareCommodities" />
+  </section>
+
   <table class="rareTable">
     <thead>
       <tr>
@@ -44,7 +84,7 @@ function profitClass(row) {
       <tr
         v-for="(row, idx) in rows"
         :key="row.commodity || idx"
-        :class="[{ selected: idx === selectedIndex, engineeringRare: row.is_engineering_rare }]"
+        :class="[{ engineeringRare: row.is_engineering_rare }]"
       >
         <td><div class="cellMain">{{ fmt(row.commodity) }}</div><div v-if="row.is_engineering_rare" class="cellSub" :title="row.engineering_unlocks_title || ''">{{ fmt(row.engineering_unlocks) }}</div></td>
         <td>{{ fmt(row.system_name) }}</td>

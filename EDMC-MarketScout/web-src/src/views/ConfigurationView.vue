@@ -2,6 +2,7 @@
 import QRCode from 'qrcode'
 import { computed, onMounted, ref, watch } from 'vue'
 import StationOwnerStateInput from '../components/StationOwnerStateInput.vue'
+import ViewHeader from '../components/ViewHeader.vue'
 import { dataStore } from '../services/dataStoreService.js'
 
 const ALERT_TARGET_STATE_STORAGE_KEY = 'alerts.targetState'
@@ -171,6 +172,10 @@ async function copyShareUrl() {
 </script>
 
 <template>
+  <section class="viewControls">
+    <ViewHeader />
+  </section>
+
   <section class="configurationView">
     <fieldset class="configurationPanel listenerConfigurationPanel">
       <legend>Configuration</legend>

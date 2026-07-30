@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import ViewHeader from '../components/ViewHeader.vue'
 import { fmt, ly, money, num } from '../utils.js'
 import { dataStore } from '../services/dataStoreService.js'
 
@@ -79,6 +80,10 @@ async function analyze() {
 </script>
 
 <template>
+  <section class="viewControls">
+    <ViewHeader />
+  </section>
+
   <div class="analyzeCommodities">
     <div class="analyzeInput">
       <textarea v-model="text" rows="4" placeholder="Ultra-Compact Processor Prototypes, Eden Apples Of Aerial, Aganippe Rush"></textarea>

@@ -5,6 +5,7 @@ import AnnouncementOutputs from '../components/AnnouncementOutputs.vue'
 import AnnouncementTemplateEditor from '../components/AnnouncementTemplateEditor.vue'
 import CarrierTradeForm from '../components/CarrierTradeForm.vue'
 import TradePosterEditor from '../components/TradePosterEditor.vue'
+import ViewHeader from '../components/ViewHeader.vue'
 import { dataStore } from '../services/dataStoreService'
 
 const LAYOUT_STORAGE_KEY = 'carrierTradeAnnouncements.layouts'
@@ -639,6 +640,10 @@ onMounted(refreshStoredAnnouncementData)
 </script>
 
 <template>
+  <section class="viewControls">
+    <ViewHeader />
+  </section>
+
   <div class="carrierTradeAlert">
     <div class="carrierLeftPane">
       <TradePosterEditor

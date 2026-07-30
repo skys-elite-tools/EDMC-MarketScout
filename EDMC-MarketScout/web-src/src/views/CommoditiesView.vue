@@ -1,12 +1,49 @@
 <script setup>
-import { fmt, money } from '../utils.js'
+import { onMounted, ref, watch } from 'vue'
+import CommoditiesFilterBar from '../components/CommoditiesFilterBar.vue'
+import ViewHeader from '../components/ViewHeader.vue'
+import { useStatusStore } from '../stores/statusStore.js'
+import { useViewRefreshStore } from '../stores/viewRefreshStore.js'
+import { fmt, money, query } from '../utils.js'
 
-defineProps({
-  rows: { type: Array, default: () => [] },
+const statusStore = useStatusStore()
+const viewRefreshStore = useViewRefreshStore()
+const filters = ref({
+  sort: 'commodity_asc',
 })
+const rows = ref([])
+let latestRequestId = 0
+
+async function loadCommodityStats(options = {}) {
+  const requestId = ++latestRequestId
+  if (!options.preserveRows) rows.value = []
+  else if (statusStore.statusText && !statusStore.statusText.endsWith(' · Refreshing...')) {
+    statusStore.statusText = `${statusStore.statusText} · Refreshing...`
+  }
+  const params = {
+    sort: filters.value.sort || 'commodity_asc',
+  }
+  const res = await fetch(`/api/commodity-stats?${query(params)}`, { cache: 'no-store' })
+  const data = await res.json()
+  if (requestId !== latestRequestId) return
+  rows.value = data.rows || []
+  statusStore.statusText = `${rows.value.length} commodities · ${new Date().toLocaleTimeString()}`
+}
+
+watch(
+  () => viewRefreshStore.refreshSerial,
+  () => loadCommodityStats(viewRefreshStore.refreshOptions),
+)
+
+onMounted(() => loadCommodityStats())
 </script>
 
 <template>
+  <section class="viewControls">
+    <ViewHeader />
+    <CommoditiesFilterBar :filters="filters" @apply="loadCommodityStats" />
+  </section>
+
   <table class="commoditiesTable">
     <thead>
       <tr>

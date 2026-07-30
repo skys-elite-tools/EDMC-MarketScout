@@ -9,11 +9,10 @@ import rareIcon from '../assets/buttons/rare-commodities.png'
 import stationIcon from '../assets/buttons/station.png'
 import carrierIcon from '../assets/buttons/trade-carrier-announcements.png'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { viewPathByName } from '../router/index.js'
+import { useViewRefreshStore } from '../stores/viewRefreshStore.js'
 
-const props = defineProps({
-  currentView: { type: String, required: true },
-})
-const emit = defineEmits(['update:currentView', 'refresh'])
 const navItems = [
   { view: 'stations', label: 'Stations', icon: stationIcon },
   { view: 'jackpots', label: 'Jackpots', icon: jackpotsIcon },
@@ -35,8 +34,12 @@ const mobileMenuOpen = ref(false)
 const commoditiesMenuRef = ref(null)
 const carrierMenuRef = ref(null)
 const mobileMenuRef = ref(null)
-const commoditiesActive = computed(() => commodityItems.some((item) => item.view === props.currentView))
-const carrierActive = computed(() => carrierItems.some((item) => item.view === props.currentView))
+const route = useRoute()
+const router = useRouter()
+const viewRefreshStore = useViewRefreshStore()
+const currentView = computed(() => route.name || 'stations')
+const commoditiesActive = computed(() => commodityItems.some((item) => item.view === currentView.value))
+const carrierActive = computed(() => carrierItems.some((item) => item.view === currentView.value))
 const mobileNavGroups = computed(() => [
   navItems.slice(0, 3),
   commodityItems,
@@ -48,8 +51,11 @@ function choose(view) {
   commoditiesMenuOpen.value = false
   carrierMenuOpen.value = false
   mobileMenuOpen.value = false
-  if (view === props.currentView) emit('refresh')
-  else emit('update:currentView', view)
+  if (view === currentView.value) {
+    viewRefreshStore.requestRefresh({ preserveRows: true, reason: 'nav' })
+    return
+  }
+  router.push(viewPathByName[view] || '/stations')
 }
 
 function toggleCommoditiesMenu() {

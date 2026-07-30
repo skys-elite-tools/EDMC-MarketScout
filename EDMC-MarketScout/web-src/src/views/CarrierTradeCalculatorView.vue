@@ -3,6 +3,7 @@ import { onMounted, ref, watch } from 'vue'
 import CarrierTradeRareCalculator from '../components/CarrierTradeRareCalculator.vue'
 import CarrierTradeRareStationCalculator from '../components/CarrierTradeRareStationCalculator.vue'
 import CarrierTradeStationCalculator from '../components/CarrierTradeStationCalculator.vue'
+import ViewHeader from '../components/ViewHeader.vue'
 import { dataStore } from '../services/dataStoreService.js'
 
 const STORAGE_KEY = 'carrierTradeCalculator.draft'
@@ -80,6 +81,10 @@ watch([activeTab, stationInputs, rareInputs, rareStationInputs, costInputs], sav
 </script>
 
 <template>
+  <section class="viewControls">
+    <ViewHeader />
+  </section>
+
   <div class="carrierTradeCalculator">
     <div class="calculatorTabs" role="tablist" aria-label="Carrier trade calculator sections">
       <button type="button" :class="{ active: activeTab === 'station' }" @click="activeTab = 'station'">Station to Station</button>
