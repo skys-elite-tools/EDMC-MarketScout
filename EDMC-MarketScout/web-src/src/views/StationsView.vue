@@ -21,6 +21,7 @@ const {
   filters,
   stationScoutMode,
   stationRowLimit,
+  initialized,
 } = storeToRefs(stationViewStore)
 const {
   watchedCommodities,
@@ -33,6 +34,14 @@ watch(
   () => {
     stationViewStore.loadStations(viewRefreshStore.refreshOptions)
   },
+)
+
+watch(
+  initialized,
+  (ready) => {
+    if (ready) stationViewStore.loadStations()
+  },
+  { immediate: true },
 )
 
 watch(stationScoutMode, value => {

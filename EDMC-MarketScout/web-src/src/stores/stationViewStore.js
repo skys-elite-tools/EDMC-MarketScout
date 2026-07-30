@@ -48,6 +48,7 @@ export const useStationViewStore = defineStore('stationView', () => {
   const economyPresets = ref([])
   const economyPresetStatus = ref('')
   const stationFilterOptions = ref({ systems: [], stations: [] })
+  const initialized = ref(false)
 
   function currentStationThresholds() {
     return stationThresholdsFrom(filters.value)
@@ -77,6 +78,7 @@ export const useStationViewStore = defineStore('stationView', () => {
       ...stationThresholdsFrom(storedStationThresholds),
     }
     await Promise.all([loadEconomyPresets(), loadStationFilterOptions()])
+    initialized.value = true
   }
 
   async function loadStations(options = {}) {
@@ -181,6 +183,7 @@ export const useStationViewStore = defineStore('stationView', () => {
     economyPresets,
     economyPresetStatus,
     stationFilterOptions,
+    initialized,
     initialize,
     loadStations,
     clearStationFilters,

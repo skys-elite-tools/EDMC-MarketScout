@@ -3,9 +3,19 @@ import { computed, onMounted, ref, watch } from 'vue'
 import LedgerFilterBar from '../components/LedgerFilterBar.vue'
 import StationDetails from '../components/StationDetails.vue'
 import ViewHeader from '../components/ViewHeader.vue'
+import { dataStore } from '../services/dataStoreService.js'
 import { useStatusStore } from '../stores/statusStore.js'
 import { useViewRefreshStore } from '../stores/viewRefreshStore.js'
 import { fmt, money, num, query, shortTime } from '../utils.js'
+
+const LIMIT_STORAGE_KEY = 'ledger.rowLimit'
+const DEFAULT_LIMIT = 30
+
+function rowLimit(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return DEFAULT_LIMIT
+  return Math.max(1, Math.min(Math.round(number), 2000))
+}
 
 const statusStore = useStatusStore()
 const viewRefreshStore = useViewRefreshStore()
@@ -13,7 +23,7 @@ const filters = ref({
   commodity: '',
   eventType: 'Any',
   showLifo: false,
-  limit: 1000,
+  limit: rowLimit(dataStore.cached(LIMIT_STORAGE_KEY, DEFAULT_LIMIT)),
 })
 const rows = ref([])
 const selectedIndex = ref(-1)
@@ -31,8 +41,10 @@ async function loadLedger(options = {}) {
   const params = {
     commodity: filters.value.commodity || '',
     event_type: filters.value.eventType || 'Any',
-    limit: filters.value.limit || '1000',
+    limit: rowLimit(filters.value.limit),
   }
+  filters.value.limit = params.limit
+  dataStore.set(LIMIT_STORAGE_KEY, params.limit, { debounceMs: 0 })
   const res = await fetch(`/api/ledger?${query(params)}`, { cache: 'no-store' })
   const data = await res.json()
   if (requestId !== latestRequestId) return
@@ -49,7 +61,10 @@ watch(
   () => loadLedger(viewRefreshStore.refreshOptions),
 )
 
-onMounted(() => loadLedger())
+onMounted(async () => {
+  filters.value.limit = rowLimit(await dataStore.get(LIMIT_STORAGE_KEY, filters.value.limit))
+  loadLedger()
+})
 </script>
 
 <template>

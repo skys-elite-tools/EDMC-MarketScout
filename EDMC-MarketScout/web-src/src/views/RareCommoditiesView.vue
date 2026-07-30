@@ -2,16 +2,26 @@
 import { onMounted, ref, watch } from 'vue'
 import RareCommoditiesFilterBar from '../components/RareCommoditiesFilterBar.vue'
 import ViewHeader from '../components/ViewHeader.vue'
+import { dataStore } from '../services/dataStoreService.js'
 import { useStatusStore } from '../stores/statusStore.js'
 import { useViewRefreshStore } from '../stores/viewRefreshStore.js'
 import { fmt, ly, money, num, query, rareDateTime } from '../utils.js'
+
+const LIMIT_STORAGE_KEY = 'rareCommodities.rowLimit'
+const DEFAULT_LIMIT = 30
+
+function rowLimit(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return DEFAULT_LIMIT
+  return Math.max(1, Math.min(Math.round(number), 2000))
+}
 
 const statusStore = useStatusStore()
 const viewRefreshStore = useViewRefreshStore()
 const filters = ref({
   sort: 'profit_desc',
   engineeringOnly: false,
-  limit: 1000,
+  limit: rowLimit(dataStore.cached(LIMIT_STORAGE_KEY, DEFAULT_LIMIT)),
 })
 const rows = ref([])
 let latestRequestId = 0
@@ -25,8 +35,10 @@ async function loadRareCommodities(options = {}) {
   const params = {
     sort: filters.value.sort || 'profit_desc',
     engineering_only: filters.value.engineeringOnly ? '1' : '0',
-    limit: filters.value.limit || '1000',
+    limit: rowLimit(filters.value.limit),
   }
+  filters.value.limit = params.limit
+  dataStore.set(LIMIT_STORAGE_KEY, params.limit, { debounceMs: 0 })
   const res = await fetch(`/api/rare-commodities?${query(params)}`, { cache: 'no-store' })
   const data = await res.json()
   if (requestId !== latestRequestId) return
@@ -39,7 +51,10 @@ watch(
   () => loadRareCommodities(viewRefreshStore.refreshOptions),
 )
 
-onMounted(() => loadRareCommodities())
+onMounted(async () => {
+  filters.value.limit = rowLimit(await dataStore.get(LIMIT_STORAGE_KEY, filters.value.limit))
+  loadRareCommodities()
+})
 
 function profitTitle(row) {
   const avg = money(row.galactic_average_price)
