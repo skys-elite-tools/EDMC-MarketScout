@@ -123,16 +123,8 @@ onMounted(async () => {
 
   <div class="carrierTripPlannerView">
     <div class="carrierTripTopGrid">
-      <CarrierTripImport :busy="carrierTripBusy" @import="importRoute" />
-
-      <section class="carrierTripRoutesPanel" aria-labelledby="carrier-trip-routes-title">
-        <div class="carrierTripPanelHeader">
-          <div>
-            <h2 id="carrier-trip-routes-title">Imported Carrier Trips</h2>
-            <p>Imported routes remain available here for later use</p>
-          </div>
-          <span class="routeCount">{{ carrierTripRoutes.length }}</span>
-        </div>
+      <section class="carrierTripsPanel" aria-labelledby="carrier-trip-import-title">
+        <CarrierTripImport :busy="carrierTripBusy" @import="importRoute" />
 
         <div v-if="!carrierTripRoutes.length" class="placeholderBox">No Fleet Carrier routes imported yet.</div>
         <div v-else class="carrierTripRouteList">
@@ -177,7 +169,7 @@ onMounted(async () => {
       <section class="carrierLivePanel" aria-labelledby="carrier-live-title">
         <div class="carrierTripPanelHeader">
           <div>
-            <h2 id="carrier-live-title">Live Journal Context</h2>
+            <h2 id="carrier-live-title">Live Journal</h2>
             <p>Values appear when EDMC receives a relevant Journal event.</p>
           </div>
         </div>
@@ -188,11 +180,11 @@ onMounted(async () => {
           <div><span>Body</span><strong>{{ liveCarrier?.body || '—' }}</strong></div>
         </div>
       </section>
+
+      <CarrierTripSummary :route="activeCarrierTrip" />
     </div>
 
     <p v-if="carrierTripStatus" class="carrierTripStatus" role="status">{{ carrierTripStatus }}</p>
-
-    <CarrierTripSummary :route="activeCarrierTrip" />
 
     <section v-if="activeCarrierTrip" class="carrierTripStopsPanel" aria-labelledby="carrier-trip-stops-title">
       <div class="carrierTripPanelHeader">
@@ -232,7 +224,7 @@ onMounted(async () => {
   font-size: 12px;
 }
 
-.carrierTripRoutesPanel,
+.carrierTripsPanel,
 .carrierLivePanel,
 .carrierTripStopsPanel {
   display: grid;
@@ -243,7 +235,7 @@ onMounted(async () => {
   background: rgba(255,255,255,.025);
 }
 
-.carrierTripRoutesPanel,
+.carrierTripsPanel,
 .carrierLivePanel {
   min-width: 0;
 }

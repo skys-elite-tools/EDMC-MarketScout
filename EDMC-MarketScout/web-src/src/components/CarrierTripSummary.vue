@@ -43,6 +43,8 @@ function number(value, digits = 0) {
 .carrierTripSummary {
   display: grid;
   gap: 12px;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 6px;

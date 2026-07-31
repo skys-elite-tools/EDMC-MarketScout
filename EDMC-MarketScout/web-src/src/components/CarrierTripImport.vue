@@ -18,9 +18,9 @@ async function chooseFile(event) {
 </script>
 
 <template>
-  <section class="carrierTripImport" aria-labelledby="carrier-trip-import-title">
+  <div class="carrierTripImport">
     <div>
-      <h2 id="carrier-trip-import-title">Import Spansh Fleet Carrier Route</h2>
+      <h2 id="carrier-trip-import-title">Trips</h2>
       <p>
         Choose a CSV or JSON Spansh export
         <span
@@ -32,22 +32,20 @@ async function chooseFile(event) {
     </div>
     <label class="carrierTripImportButton">
       <input type="file" accept=".csv,.json,text/csv,application/json" :disabled="busy" @change="chooseFile" />
-      <span>{{ busy ? 'Importing...' : 'Choose CSV or JSON' }}</span>
+      <span>{{ busy ? 'Importing...' : 'Import CSV/JSON' }}</span>
     </label>
-  </section>
+  </div>
 </template>
 
 <style scoped>
 .carrierTripImport {
   display: grid;
-  align-content: space-between;
-  gap: 16px;
-  height: 100%;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
   box-sizing: border-box;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: rgba(255,255,255,.03);
+  padding: 0 0 12px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
 }
 
 .carrierTripImport h2 {
@@ -79,6 +77,7 @@ async function chooseFile(event) {
 
 .carrierTripImportButton {
   flex: none;
+  white-space: nowrap;
   color: var(--text);
   cursor: pointer;
   border: 1px solid var(--line);
@@ -102,10 +101,11 @@ async function chooseFile(event) {
 
 @media (max-width: 700px) {
   .carrierTripImport {
-    align-items: stretch;
+    grid-template-columns: 1fr;
   }
 
   .carrierTripImportButton {
+    justify-self: start;
     text-align: center;
   }
 }
