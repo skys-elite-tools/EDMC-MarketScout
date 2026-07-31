@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps({
   stops: { type: Array, default: () => [] },
@@ -9,6 +9,13 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle-skip'])
 const normalizedCurrentSystem = computed(() => props.currentSystem.trim().toLocaleLowerCase())
+const showPrevious = ref(false)
+
+const routeKey = computed(() => props.stops[0]?.carrier_trip_id || null)
+
+watch(routeKey, () => {
+  showPrevious.value = false
+})
 
 function number(value, digits = 0) {
   const parsed = Number(value)
@@ -19,8 +26,44 @@ function systemIsCurrent(stop) {
   return normalizedCurrentSystem.value && stop.system_name?.trim().toLocaleLowerCase() === normalizedCurrentSystem.value
 }
 
-function flag(value, label) {
-  return value ? label : ''
+function visitedAt(stop) {
+  return stop.visited_datetime || stop.last_system_visit_datetime || ''
+}
+
+function stopWasVisited(stop) {
+  return Boolean(visitedAt(stop))
+}
+
+const currentStopIndex = computed(() => {
+  const progressStop = props.stops.find(
+    stop => stop.stop_index === props.progressStopIndex && systemIsCurrent(stop),
+  )
+  const currentStop = progressStop || props.stops.find(stop => systemIsCurrent(stop))
+  return currentStop?.stop_index ?? props.progressStopIndex
+})
+
+const collapsedVisitedStops = computed(() => (
+  props.stops.filter(
+    stop => stop.stop_index < currentStopIndex.value - 1 && stopWasVisited(stop),
+  )
+))
+
+const visibleStops = computed(() => {
+  if (showPrevious.value || !collapsedVisitedStops.value.length) return props.stops
+  const collapsedIds = new Set(collapsedVisitedStops.value.map(stop => stop.stop_index))
+  return props.stops.filter(stop => !collapsedIds.has(stop.stop_index))
+})
+
+function formatDateTime(value) {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return value
+  return parsed.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 </script>
 
@@ -32,18 +75,27 @@ function flag(value, label) {
         <thead>
           <tr>
             <th>#</th>
-            <th>System</th>
-            <th>Body</th>
+            <th class="systemColumn">System</th>
+            <th class="bodyColumn">Body</th>
             <th class="num">LY</th>
             <th class="num">Tritium</th>
             <th class="num">Tank</th>
-            <th>Notes</th>
+            <th class="notesColumn">Notes</th>
+            <th class="visitedColumn">Visited</th>
             <th class="actionCol">Action</th>
           </tr>
         </thead>
         <tbody>
+          <tr v-if="collapsedVisitedStops.length" class="previousStopsRow">
+            <td colspan="9">
+              <button type="button" class="showPreviousButton" @click="showPrevious = !showPrevious">
+                {{ showPrevious ? 'Hide Previous' : 'Show Previous' }}
+                <span>({{ collapsedVisitedStops.length }} visited)</span>
+              </button>
+            </td>
+          </tr>
           <tr
-            v-for="stop in stops"
+            v-for="stop in visibleStops"
             :key="`${stop.carrier_trip_id}-${stop.stop_index}`"
             :class="{
               current: systemIsCurrent(stop),
@@ -52,21 +104,29 @@ function flag(value, label) {
             }"
           >
             <td class="stopIndex">{{ stop.stop_index + 1 }}</td>
-            <td>
+            <td class="systemColumn">
               <strong>{{ stop.system_name }}</strong>
               <span v-if="systemIsCurrent(stop)" class="currentBadge">Current</span>
               <span v-if="stop.is_desired_destination" class="destinationBadge">Destination</span>
             </td>
-            <td>{{ stop.body_name || '—' }}</td>
+            <td class="bodyColumn">{{ stop.body_name || '—' }}</td>
             <td class="num">{{ number(stop.leg_distance_ly, 1) }}</td>
             <td class="num">{{ number(stop.tritium_used_t) }} t</td>
             <td class="num">{{ number(stop.tritium_in_tank_t) }} t</td>
-            <td>
+            <td class="notesColumn">
               <span v-if="stop.must_restock" class="routeFlag restockFlag">Restock<span v-if="stop.restock_amount_t"> {{ number(stop.restock_amount_t) }} t</span></span>
               <span v-if="stop.has_icy_ring" class="routeFlag">Icy ring</span>
               <span v-if="stop.is_system_pristine" class="routeFlag">Pristine</span>
               <span v-if="stop.stop_skipped" class="routeFlag skippedFlag">Skipped</span>
               <span v-if="!stop.must_restock && !stop.has_icy_ring && !stop.is_system_pristine && !stop.stop_skipped">—</span>
+            </td>
+            <td class="visitedColumn">
+              <time
+                v-if="visitedAt(stop)"
+                :datetime="visitedAt(stop)"
+                :title="visitedAt(stop)"
+              >{{ formatDateTime(visitedAt(stop)) }}</time>
+              <span v-else>—</span>
             </td>
             <td class="actionCol">
               <button type="button" class="smallActionButton" @click="emit('toggle-skip', stop)">
@@ -92,8 +152,24 @@ function flag(value, label) {
 }
 
 .carrierTripTable {
-  min-width: 850px;
-  table-layout: auto;
+  min-width: 960px;
+  table-layout: fixed;
+}
+
+.carrierTripTable .systemColumn {
+  width: 18%;
+}
+
+.carrierTripTable .bodyColumn {
+  width: 12%;
+}
+
+.carrierTripTable .notesColumn {
+  width: 12%;
+}
+
+.carrierTripTable .visitedColumn {
+  width: 10rem;
 }
 
 .carrierTripTable th {
@@ -119,6 +195,24 @@ function flag(value, label) {
   opacity: .62;
 }
 
+.carrierTripTable tr.previousStopsRow td {
+  padding: 5px;
+  background: rgba(140,200,255,.04);
+}
+
+.showPreviousButton {
+  width: 100%;
+  border-style: dashed;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.showPreviousButton span {
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .stopIndex {
   color: var(--muted);
   text-align: right;
@@ -127,6 +221,9 @@ function flag(value, label) {
 
 .carrierTripTable strong {
   display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--accent2);
 }
 
@@ -166,6 +263,17 @@ function flag(value, label) {
 .actionCol {
   width: 5.5rem;
   text-align: center;
+}
+
+.visitedColumn {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visitedColumn time {
+  color: var(--text);
+  font-size: 11px;
 }
 
 .smallActionButton {

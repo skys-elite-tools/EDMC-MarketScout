@@ -340,6 +340,27 @@ def upsert_route_stop_system_data(
     )
 
 
+def route_stop_existing_visit_datetime(
+    conn: sqlite3.Connection,
+    stop: Dict[str, Any],
+) -> Optional[str]:
+    row = conn.execute(
+        """
+        SELECT MAX(last_visit_datetime)
+        FROM systems_visited
+        WHERE (? IS NOT NULL AND system_address = ?)
+           OR (? != '' AND lower(system_name) = lower(?))
+        """,
+        (
+            stop.get("system_address"),
+            stop.get("system_address"),
+            clean_text(stop.get("system_name")),
+            clean_text(stop.get("system_name")),
+        ),
+    ).fetchone()
+    return (clean_text(row[0]) or None) if row else None
+
+
 def trip_route_rows(conn: sqlite3.Connection) -> List[Dict[str, Any]]:
     rows = conn.execute(
         """
@@ -934,6 +955,7 @@ def carrier_trip_stop_rows(conn: sqlite3.Connection, carrier_trip_id: int) -> Li
             cts.z,
             COALESCE(cts.stop_skipped, 0) AS stop_skipped,
             cts.stop_skipped_datetime,
+            cts.visited_datetime,
             (
                 SELECT MAX(sv.last_visit_datetime)
                 FROM systems_visited sv
@@ -960,14 +982,17 @@ def contiguous_carrier_trip_progress_index(
         SELECT
             cts.stop_index,
             COALESCE(cts.stop_skipped, 0) AS stop_skipped,
-            EXISTS (
-                SELECT 1
-                FROM systems_visited sv
-                WHERE sv.last_visit_datetime IS NOT NULL
-                  AND (
-                      (cts.system_address IS NOT NULL AND sv.system_address = cts.system_address)
-                      OR lower(sv.system_name) = lower(cts.system_name_snapshot)
-                  )
+            (
+                cts.visited_datetime IS NOT NULL
+                OR EXISTS (
+                    SELECT 1
+                    FROM systems_visited sv
+                    WHERE sv.last_visit_datetime IS NOT NULL
+                      AND (
+                          (cts.system_address IS NOT NULL AND sv.system_address = cts.system_address)
+                          OR lower(sv.system_name) = lower(cts.system_name_snapshot)
+                      )
+                )
             ) AS was_visited
         FROM carrier_trip_stops cts
         WHERE cts.carrier_trip_id = ?
@@ -1084,9 +1109,9 @@ def import_carrier_trip(conn: sqlite3.Connection, payload: Dict[str, Any], impor
                 body_name, leg_distance_ly, distance_remaining_ly, tritium_in_tank_t,
                 tritium_in_market_t, tritium_used_t, restock_amount_t, has_icy_ring,
                 is_system_pristine, must_restock, is_desired_destination, x, y, z,
-                source_row_json
+                source_row_json, visited_datetime
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 carrier_trip_id,
@@ -1108,6 +1133,7 @@ def import_carrier_trip(conn: sqlite3.Connection, payload: Dict[str, Any], impor
                 stop["y"],
                 stop["z"],
                 json.dumps(stop["source_row"], separators=(",", ":")),
+                route_stop_existing_visit_datetime(conn, stop),
             ),
         )
     conn.commit()
@@ -1267,11 +1293,12 @@ def advance_active_carrier_trip_progress(
         current_index = coerce_int(active["progress_stop_index"]) or 0
         event_stop = conn.execute(
             """
-            SELECT 1
+            SELECT stop_index
             FROM carrier_trip_stops
             WHERE carrier_trip_id=? AND stop_index>?
               AND ((? IS NOT NULL AND system_address=?)
                    OR (? != '' AND lower(system_name_snapshot)=lower(?)))
+            ORDER BY stop_index
             LIMIT 1
             """,
             (carrier_trip_id, current_index, address, address, name, name),
@@ -1288,6 +1315,27 @@ def advance_active_carrier_trip_progress(
             WHERE carrier_trip_id=?
             """,
             (next_index, clean_text(visited_at), carrier_trip_id),
+        )
+        conn.execute(
+            """
+            UPDATE carrier_trip_stops
+            SET visited_datetime = COALESCE(
+                visited_datetime,
+                (
+                    SELECT MAX(sv.last_visit_datetime)
+                    FROM systems_visited sv
+                    WHERE (carrier_trip_stops.system_address IS NOT NULL
+                           AND sv.system_address = carrier_trip_stops.system_address)
+                       OR lower(sv.system_name) = lower(carrier_trip_stops.system_name_snapshot)
+                ),
+                ?
+            )
+            WHERE carrier_trip_id=?
+              AND stop_index>?
+              AND stop_index<=?
+              AND COALESCE(stop_skipped, 0)=0
+            """,
+            (clean_text(visited_at), carrier_trip_id, current_index, next_index),
         )
         changed = True
     if changed:

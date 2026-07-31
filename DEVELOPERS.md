@@ -309,7 +309,9 @@ The Python adapter normalizes both source formats into the versioned model in
 system IDs, coordinates, fuel state, and restock quantities that are absent
 from CSV imports. Ordered duplicate system rows are preserved. Imported
 carrier routes are stored separately from Tourist routes in
-`carrier_trip_routes` / `carrier_trip_stops` and remain local-only. Multiple
+`carrier_trip_routes` / `carrier_trip_stops` and remain local-only. Each carrier
+stop stores its trip-specific `visited_datetime`, initialized from known local
+system visits and updated from matching Journal events. Multiple
 routes may be active at once; the API exposes the complete `active_routes`
 list while retaining `active_route` as the first-route compatibility field.
 The UI keeps active routes and newer imports visible, with older imports in a
