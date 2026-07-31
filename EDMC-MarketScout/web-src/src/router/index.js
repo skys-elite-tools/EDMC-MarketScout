@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import AnalyzeCommoditiesView from '../views/AnalyzeCommoditiesView.vue'
 import CarrierTradeAnnouncementsView from '../views/CarrierTradeAnnouncementsView.vue'
 import CarrierTradeCalculatorView from '../views/CarrierTradeCalculatorView.vue'
+import CarrierTripPlannerView from '../views/CarrierTripPlannerView.vue'
 import CommoditiesView from '../views/CommoditiesView.vue'
 import ConfigurationView from '../views/ConfigurationView.vue'
 import JackpotsView from '../views/JackpotsView.vue'
@@ -86,6 +87,15 @@ export const routes = [
       title: 'Carrier Trade Calculator',
       description: 'Calculates carrier buy/sell prices and profit splits for station trades and rare commodities.',
       helpArticle: 'carrier-calculator',
+    },
+  },
+  {
+    path: '/carrier-trip-planner',
+    name: 'carrierTripPlanner',
+    component: CarrierTripPlannerView,
+    meta: {
+      title: 'Carrier Trip Planner',
+      description: 'Imports and tracks Spansh Fleet Carrier routes with distance, tritium, and refueling details.',
     },
   },
   {

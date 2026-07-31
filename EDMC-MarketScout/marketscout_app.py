@@ -409,8 +409,9 @@ def journal_entry(cmdr: str, is_beta: bool, system: str, station: str, entry: Di
             record_system_from_event(entry, state)
             data_changed = record_system_faction_snapshots_from_event(entry, state) or data_changed
             data_changed = advance_active_trip_progress_from_event(entry, state) or data_changed
+            data_changed = advance_active_carrier_trip_progress_from_event(entry, state) or data_changed
 
-        update_web_latest_journal_event(name, system, station, entry, state)
+        update_web_latest_journal_event(cmdr, name, system, station, entry, state)
 
         if name in ("Location", "Docked", "StartUp"):
             # Location may include Docked:true. Docked has station details.
@@ -435,7 +436,14 @@ def journal_entry(cmdr: str, is_beta: bool, system: str, station: str, entry: Di
     return None
 
 
-def update_web_latest_journal_event(name: Any, system: str, station: str, entry: Dict[str, Any], state: Dict[str, Any]) -> None:
+def update_web_latest_journal_event(
+    cmdr: str,
+    name: Any,
+    system: str,
+    station: str,
+    entry: Dict[str, Any],
+    state: Dict[str, Any],
+) -> None:
     """Expose the latest Journal event metadata to the local Web UI.
 
     The web module stores this in memory only. It is shown in the status strip
@@ -445,8 +453,11 @@ def update_web_latest_journal_event(name: Any, system: str, station: str, entry:
         event_name = str(name or entry.get("event") or "")
         event_time = str(entry.get("timestamp") or now_utc_iso())
         event_system = first_text(system, entry.get("StarSystem"), state.get("SystemName"), state.get("StarSystem"), LAST_CURRENT_SYSTEM)
-        event_system_address = first_int(entry.get("SystemAddress"), state.get("SystemAddress"))
+        event_system_address = first_int(state.get("SystemAddress"), entry.get("SystemAddress"))
         event_station = first_text(station, entry.get("StationName"), state.get("StationName"))
+        target_system = first_text(entry.get("SystemName")) if event_name == "CarrierJumpRequest" else ""
+        target_system_address = first_int(entry.get("SystemAddress")) if event_name == "CarrierJumpRequest" else None
+        event_body = first_text(entry.get("Body"), state.get("Body"))
         pos = entry.get("StarPos") or state.get("StarPos") or LAST_CURRENT_POS
         x = y = z = None
         if isinstance(pos, (list, tuple)) and len(pos) >= 3:
@@ -457,6 +468,18 @@ def update_web_latest_journal_event(name: Any, system: str, station: str, entry:
             "system": event_system,
             "system_address": event_system_address,
             "station": event_station,
+            "body": event_body,
+            "body_id": first_int(entry.get("BodyID"), state.get("BodyID")),
+            "body_type": first_text(entry.get("BodyType"), state.get("BodyType")),
+            "target_system": target_system,
+            "target_system_address": target_system_address,
+            "commander_name": first_text(cmdr, state.get("CommanderName")),
+            "commander_id": first_text(state.get("FID"), entry.get("FID")),
+            "carrier_id": first_text(entry.get("CarrierID")),
+            "carrier_name": first_text(entry.get("Name")),
+            "carrier_callsign": first_text(entry.get("Callsign")),
+            "carrier_fuel_t": safe_float(entry.get("FuelLevel")),
+            "carrier_departure_time": first_text(entry.get("DepartureTime")),
             "x": x,
             "y": y,
             "z": z,
@@ -738,6 +761,27 @@ def advance_active_trip_progress_from_event(entry: Dict[str, Any], state: Dict[s
         )
     except Exception:
         log_exception("advance_active_trip_progress_from_event")
+        return False
+
+
+def advance_active_carrier_trip_progress_from_event(entry: Dict[str, Any], state: Dict[str, Any]) -> bool:
+    if CONN is None:
+        return False
+    system_name = first_text(entry.get("StarSystem"), state.get("SystemName"))
+    system_address = first_int(state.get("SystemAddress"), entry.get("SystemAddress"))
+    if not system_name and system_address is None:
+        return False
+    try:
+        return bool(
+            load_data_module().advance_active_carrier_trip_progress(
+                CONN,
+                system_name=system_name,
+                system_address=system_address,
+                visited_at=event_time(entry),
+            )
+        )
+    except Exception:
+        log_exception("advance_active_carrier_trip_progress_from_event")
         return False
 
 

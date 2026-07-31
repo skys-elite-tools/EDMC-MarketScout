@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://marketscout.local/schemas/carrier-trip-plan-1.json",
+  "title": "MarketScout Carrier Trip Plan",
+  "description": "Application-neutral normalized Fleet Carrier route data.",
+  "type": "object",
+  "required": ["model_version", "route_name", "source", "stops"],
+  "properties": {
+    "model_version": { "const": 1 },
+    "route_name": { "type": "string" },
+    "source": { "type": "string" },
+    "source_filename": { "type": ["string", "null"] },
+    "source_job_id": { "type": ["string", "null"] },
+    "source_system_name": { "type": ["string", "null"] },
+    "source_system_address": { "type": ["integer", "null"] },
+    "destination_systems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["system_name"],
+        "properties": {
+          "system_name": { "type": "string" },
+          "system_address": { "type": ["integer", "null"] }
+        }
+      }
+    },
+    "carrier_mass": { "type": ["number", "null"] },
+    "carrier_capacity": { "type": ["number", "null"] },
+    "capacity_used": { "type": ["number", "null"] },
+    "starting_fuel_t": { "type": ["number", "null"] },
+    "starting_tritium_t": { "type": ["number", "null"] },
+    "total_distance_ly": { "type": ["number", "null"] },
+    "total_tritium_t": { "type": ["number", "null"] },
+    "stops": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["stop_index", "system_name"],
+        "properties": {
+          "stop_index": { "type": "integer", "minimum": 0 },
+          "system_name": { "type": "string" },
+          "system_address": { "type": ["integer", "null"] },
+          "body_name": { "type": ["string", "null"] },
+          "leg_distance_ly": { "type": ["number", "null"] },
+          "distance_remaining_ly": { "type": ["number", "null"] },
+          "tritium_in_tank_t": { "type": ["number", "null"] },
+          "tritium_in_market_t": { "type": ["number", "null"] },
+          "tritium_used_t": { "type": ["number", "null"] },
+          "restock_amount_t": { "type": ["number", "null"] },
+          "has_icy_ring": { "type": ["boolean", "null"] },
+          "is_system_pristine": { "type": ["boolean", "null"] },
+          "must_restock": { "type": ["boolean", "null"] },
+          "is_desired_destination": { "type": "boolean" },
+          "x": { "type": ["number", "null"] },
+          "y": { "type": ["number", "null"] },
+          "z": { "type": ["number", "null"] }
+        }
+      }
+    }
+  }
+}

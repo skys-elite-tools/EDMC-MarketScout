@@ -35,10 +35,15 @@ except Exception:
     EDMC_CONFIG = None
 
 from marketscout_data import (
+    carrier_trip_routes_response as data_carrier_trip_routes_response,
+    delete_carrier_trip as data_delete_carrier_trip,
     delete_trip_route as data_delete_trip_route,
+    import_carrier_trip as data_import_carrier_trip,
     import_trip_route as data_import_trip_route,
     import_trip_route_station_hints as data_import_trip_route_station_hints,
+    set_carrier_trip_stop_skipped as data_set_carrier_trip_stop_skipped,
     set_trip_route_stop_skipped as data_set_trip_route_stop_skipped,
+    start_carrier_trip as data_start_carrier_trip,
     start_trip_route as data_start_trip_route,
     trip_routes_response as data_trip_routes_response,
 )
@@ -52,6 +57,7 @@ _LAN_PORT: Optional[int] = None
 _LAN_ENABLED = False
 _CONTEXT: Dict[str, Any] = {}
 _LATEST_JOURNAL_EVENT: Optional[Dict[str, Any]] = None
+_LATEST_CARRIER_CONTEXT: Dict[str, Any] = {}
 ECONOMY_PRESETS_FILE = "marketscout-economy-presets.json"
 CONFIG_FILE = "marketscout.config"
 CONFIG_SOURCE_EDMC = "EDMC config.toml"
@@ -479,8 +485,28 @@ def update_latest_journal_event(event: Dict[str, Any]) -> None:
     This intentionally stays in memory instead of writing to SQLite, so routine
     Journal traffic does not force table reloads or mutate the user database.
     """
-    global _LATEST_JOURNAL_EVENT
-    _LATEST_JOURNAL_EVENT = dict(event)
+    global _LATEST_JOURNAL_EVENT, _LATEST_CARRIER_CONTEXT
+    current = dict(event)
+    current_commander = current.get("commander_id") or current.get("commander_name")
+    saved_commander = _LATEST_CARRIER_CONTEXT.get("commander_id") or _LATEST_CARRIER_CONTEXT.get("commander_name")
+    if current_commander and saved_commander and str(current_commander) != str(saved_commander):
+        _LATEST_CARRIER_CONTEXT = {}
+
+    carrier_keys = (
+        "commander_name",
+        "commander_id",
+        "carrier_id",
+        "carrier_name",
+        "carrier_callsign",
+        "carrier_fuel_t",
+        "carrier_departure_time",
+    )
+    for key in carrier_keys:
+        value = current.get(key)
+        if value is not None and value != "":
+            _LATEST_CARRIER_CONTEXT[key] = value
+    current["carrier_context"] = dict(_LATEST_CARRIER_CONTEXT) if _LATEST_CARRIER_CONTEXT else None
+    _LATEST_JOURNAL_EVENT = current
 
 
 def notify_data_changed() -> int:
@@ -743,6 +769,8 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
                 return self.send_json(api_user_data(parse_qs(parsed.query)))
             if path == "/api/trip-routes":
                 return self.send_json(api_trip_routes())
+            if path == "/api/carrier-trips":
+                return self.send_json(api_carrier_trips())
             if path == "/api/config":
                 return self.send_json(api_config())
             return self.serve_static(path)
@@ -767,14 +795,22 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
                 return self.send_json(api_discard_edmc_delayed_station_messages())
             if parsed.path == "/api/trip-routes/import":
                 return self.send_json(api_import_trip_route(payload))
+            if parsed.path == "/api/carrier-trips/import":
+                return self.send_json(api_import_carrier_trip(payload))
             if parsed.path == "/api/trip-routes/import-station-hints":
                 return self.send_json(api_import_trip_route_station_hints(payload))
             if parsed.path == "/api/trip-routes/start":
                 return self.send_json(api_start_trip_route(payload))
+            if parsed.path == "/api/carrier-trips/start":
+                return self.send_json(api_start_carrier_trip(payload))
             if parsed.path == "/api/trip-routes/skip-stop":
                 return self.send_json(api_set_trip_route_stop_skipped(payload))
+            if parsed.path == "/api/carrier-trips/skip-stop":
+                return self.send_json(api_set_carrier_trip_stop_skipped(payload))
             if parsed.path == "/api/trip-routes/delete":
                 return self.send_json(api_delete_trip_route(payload))
+            if parsed.path == "/api/carrier-trips/delete":
+                return self.send_json(api_delete_carrier_trip(payload))
             if parsed.path == "/api/economy-presets":
                 return self.send_json(api_save_economy_preset(payload))
             if parsed.path == "/api/analyze-commodities":
@@ -1565,6 +1601,11 @@ def api_trip_routes() -> Dict[str, Any]:
         return data_trip_routes_response(conn)
 
 
+def api_carrier_trips() -> Dict[str, Any]:
+    with connect() as conn:
+        return data_carrier_trip_routes_response(conn)
+
+
 def api_import_trip_route(payload: Dict[str, Any]) -> Dict[str, Any]:
     imported_at = now_utc()
     with connect() as conn:
@@ -1573,10 +1614,28 @@ def api_import_trip_route(payload: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
+def api_import_carrier_trip(payload: Dict[str, Any]) -> Dict[str, Any]:
+    imported_at = now_utc()
+    with connect() as conn:
+        result = data_import_carrier_trip(conn, payload, imported_at)
+    if result.get("ok"):
+        notify_data_changed()
+    return result
+
+
 def api_import_trip_route_station_hints(payload: Dict[str, Any]) -> Dict[str, Any]:
     imported_at = now_utc()
     with connect() as conn:
         result = data_import_trip_route_station_hints(conn, payload, imported_at)
+    if result.get("ok"):
+        notify_data_changed()
+    return result
+
+
+def api_start_carrier_trip(payload: Dict[str, Any]) -> Dict[str, Any]:
+    started_at = now_utc()
+    with connect() as conn:
+        result = data_start_carrier_trip(conn, payload, started_at)
     if result.get("ok"):
         notify_data_changed()
     return result
@@ -1591,10 +1650,27 @@ def api_start_trip_route(payload: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
+def api_set_carrier_trip_stop_skipped(payload: Dict[str, Any]) -> Dict[str, Any]:
+    updated_at = now_utc()
+    with connect() as conn:
+        result = data_set_carrier_trip_stop_skipped(conn, payload, updated_at)
+    if result.get("ok"):
+        notify_data_changed()
+    return result
+
+
 def api_set_trip_route_stop_skipped(payload: Dict[str, Any]) -> Dict[str, Any]:
     updated_at = now_utc()
     with connect() as conn:
         result = data_set_trip_route_stop_skipped(conn, payload, updated_at)
+    if result.get("ok"):
+        notify_data_changed()
+    return result
+
+
+def api_delete_carrier_trip(payload: Dict[str, Any]) -> Dict[str, Any]:
+    with connect() as conn:
+        result = data_delete_carrier_trip(conn, payload)
     if result.get("ok"):
         notify_data_changed()
     return result

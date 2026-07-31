@@ -291,6 +291,25 @@ The Stations page can import Spansh Tourist Route JSON files through the local W
 
 Imported routes are stored in `trip_routes` / `trip_route_stops`. Each imported stop also upserts coordinates into `systems_data` so other MarketScout distance features can reuse them. Progress tracks the highest contiguous visited or soft-skipped stop; visits that happened before route import still count, so users can resume a route they partially scouted before importing it. The route UI provides `Go to Progress`, a visible Progress marker in both simple and large-route views, rounded distance-to-station values, and right-click actions for copying system/station names or holding to skip/restore a stop. Keep this import local-only; do not fetch route data directly from Spansh.
 
+## Carrier Trip Planner imports
+
+The Carrier Tools section includes a dedicated Carrier Trip Planner for local
+Spansh Fleet Carrier route exports. It accepts one file per import, either the
+Fleet Carrier planner CSV or JSON format:
+
+- `GET /api/carrier-trips`
+- `POST /api/carrier-trips/import`
+- `POST /api/carrier-trips/start`
+- `POST /api/carrier-trips/skip-stop`
+- `POST /api/carrier-trips/delete`
+
+The Python adapter normalizes both source formats into the versioned model in
+`EDMC-MarketScout/carrier_trip_plan.schema.json`. JSON imports may contain
+system IDs, coordinates, fuel state, and restock quantities that are absent
+from CSV imports. Ordered duplicate system rows are preserved. Imported
+carrier routes are stored separately from Tourist routes in
+`carrier_trip_routes` / `carrier_trip_stops` and remain local-only.
+
 ## Local release helper
 
 The repo includes a maintainer convenience script:

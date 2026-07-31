@@ -27,6 +27,7 @@ const commodityItems = [
 const carrierItems = [
   { view: 'carrier', label: 'Trade Announcements', icon: carrierIcon },
   { view: 'carrierCalc', label: 'Trade Calculator', icon: carrierIcon },
+  { view: 'carrierTripPlanner', label: 'Carrier Trip Planner', icon: carrierIcon },
 ]
 const commoditiesMenuOpen = ref(false)
 const carrierMenuOpen = ref(false)
