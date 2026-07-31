@@ -409,7 +409,8 @@ def journal_entry(cmdr: str, is_beta: bool, system: str, station: str, entry: Di
             record_system_from_event(entry, state)
             data_changed = record_system_faction_snapshots_from_event(entry, state) or data_changed
             data_changed = advance_active_trip_progress_from_event(entry, state) or data_changed
-            data_changed = advance_active_carrier_trip_progress_from_event(entry, state) or data_changed
+            if name in ("Location", "CarrierJump", "StartUp"):
+                data_changed = advance_active_carrier_trip_progress_from_event(entry, state) or data_changed
 
         update_web_latest_journal_event(cmdr, name, system, station, entry, state)
 

@@ -42,6 +42,7 @@ from marketscout_data import (
     import_trip_route as data_import_trip_route,
     import_trip_route_station_hints as data_import_trip_route_station_hints,
     set_carrier_trip_stop_skipped as data_set_carrier_trip_stop_skipped,
+    stop_carrier_trip as data_stop_carrier_trip,
     set_trip_route_stop_skipped as data_set_trip_route_stop_skipped,
     start_carrier_trip as data_start_carrier_trip,
     start_trip_route as data_start_trip_route,
@@ -803,6 +804,8 @@ class MarketScoutRequestHandler(BaseHTTPRequestHandler):
                 return self.send_json(api_start_trip_route(payload))
             if parsed.path == "/api/carrier-trips/start":
                 return self.send_json(api_start_carrier_trip(payload))
+            if parsed.path == "/api/carrier-trips/stop":
+                return self.send_json(api_stop_carrier_trip(payload))
             if parsed.path == "/api/trip-routes/skip-stop":
                 return self.send_json(api_set_trip_route_stop_skipped(payload))
             if parsed.path == "/api/carrier-trips/skip-stop":
@@ -1636,6 +1639,15 @@ def api_start_carrier_trip(payload: Dict[str, Any]) -> Dict[str, Any]:
     started_at = now_utc()
     with connect() as conn:
         result = data_start_carrier_trip(conn, payload, started_at)
+    if result.get("ok"):
+        notify_data_changed()
+    return result
+
+
+def api_stop_carrier_trip(payload: Dict[str, Any]) -> Dict[str, Any]:
+    stopped_at = now_utc()
+    with connect() as conn:
+        result = data_stop_carrier_trip(conn, payload, stopped_at)
     if result.get("ok"):
         notify_data_changed()
     return result

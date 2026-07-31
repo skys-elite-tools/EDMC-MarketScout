@@ -21,7 +21,14 @@ async function chooseFile(event) {
   <section class="carrierTripImport" aria-labelledby="carrier-trip-import-title">
     <div>
       <h2 id="carrier-trip-import-title">Import Spansh Fleet Carrier Route</h2>
-      <p>Choose one CSV or JSON export. JSON exports can include coordinates, fuel state, and restock quantities.</p>
+      <p>
+        Choose a CSV or JSON Spansh export
+        <span
+          class="infoTooltip"
+          title="JSON exports can include coordinates, fuel state, and restock quantities"
+          aria-label="JSON exports can include coordinates, fuel state, and restock quantities"
+        >?</span>
+      </p>
     </div>
     <label class="carrierTripImportButton">
       <input type="file" accept=".csv,.json,text/csv,application/json" :disabled="busy" @change="chooseFile" />
@@ -32,10 +39,11 @@ async function chooseFile(event) {
 
 <style scoped>
 .carrierTripImport {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  align-content: space-between;
   gap: 16px;
+  height: 100%;
+  box-sizing: border-box;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -52,6 +60,21 @@ async function chooseFile(event) {
   margin: 0;
   color: var(--muted);
   font-size: 12px;
+}
+
+.infoTooltip {
+  display: inline-grid;
+  width: 14px;
+  height: 14px;
+  margin-left: 3px;
+  place-items: center;
+  border: 1px solid rgba(140,200,255,.45);
+  border-radius: 50%;
+  color: var(--accent);
+  cursor: help;
+  font-size: 10px;
+  font-weight: 800;
+  vertical-align: -1px;
 }
 
 .carrierTripImportButton {
@@ -80,7 +103,6 @@ async function chooseFile(event) {
 @media (max-width: 700px) {
   .carrierTripImport {
     align-items: stretch;
-    flex-direction: column;
   }
 
   .carrierTripImportButton {

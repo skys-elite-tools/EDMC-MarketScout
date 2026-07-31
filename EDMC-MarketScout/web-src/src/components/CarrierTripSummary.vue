@@ -35,8 +35,6 @@ function number(value, digits = 0) {
       <div><span>Tritium required</span><strong>{{ number(route.total_tritium_t) }} t</strong></div>
       <div><span>Carrier mass</span><strong>{{ number(route.carrier_mass) }} t</strong></div>
       <div><span>Capacity used</span><strong>{{ number(route.capacity_used) }} t</strong></div>
-      <div><span>Starting fuel</span><strong>{{ number(route.starting_fuel_t) }} t</strong></div>
-      <div><span>Starting tritium</span><strong>{{ number(route.starting_tritium_t) }} t</strong></div>
     </div>
   </section>
 </template>
@@ -82,7 +80,7 @@ function number(value, digits = 0) {
 
 .carrierTripMetrics {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -112,7 +110,7 @@ function number(value, digits = 0) {
 
 @media (max-width: 900px) {
   .carrierTripMetrics {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

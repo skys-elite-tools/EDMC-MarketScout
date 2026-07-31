@@ -983,23 +983,11 @@ def contiguous_carrier_trip_progress_index(
     return next_index
 
 
-def active_carrier_trip(conn: sqlite3.Connection) -> Optional[Dict[str, Any]]:
-    row = conn.execute(
-        """
-        SELECT carrier_trip_id
-        FROM carrier_trip_routes
-        WHERE active = 1
-        ORDER BY imported_datetime DESC, carrier_trip_id DESC
-        LIMIT 1
-        """
-    ).fetchone()
-    if not row:
-        return None
-    carrier_trip_id = int(row["carrier_trip_id"])
-    routes = [route for route in carrier_trip_route_rows(conn) if int(route["carrier_trip_id"]) == carrier_trip_id]
-    if not routes:
-        return None
-    route = routes[0]
+def _carrier_trip_full_route(
+    conn: sqlite3.Connection,
+    route: Dict[str, Any],
+) -> Dict[str, Any]:
+    carrier_trip_id = int(route["carrier_trip_id"])
     route["stops"] = carrier_trip_stop_rows(conn, carrier_trip_id)
     route["progress_stop_index"] = contiguous_carrier_trip_progress_index(
         conn,
@@ -1009,21 +997,50 @@ def active_carrier_trip(conn: sqlite3.Connection) -> Optional[Dict[str, Any]]:
     return route
 
 
+def active_carrier_trips(conn: sqlite3.Connection) -> List[Dict[str, Any]]:
+    routes_by_id = {
+        int(route["carrier_trip_id"]): route
+        for route in carrier_trip_route_rows(conn)
+    }
+    active_ids = conn.execute(
+        """
+        SELECT carrier_trip_id
+        FROM carrier_trip_routes
+        WHERE active = 1
+        ORDER BY imported_datetime ASC, carrier_trip_id ASC
+        """
+    ).fetchall()
+    return [
+        _carrier_trip_full_route(conn, routes_by_id[int(row["carrier_trip_id"])])
+        for row in active_ids
+        if int(row["carrier_trip_id"]) in routes_by_id
+    ]
+
+
+def active_carrier_trip(conn: sqlite3.Connection) -> Optional[Dict[str, Any]]:
+    active_routes = active_carrier_trips(conn)
+    return active_routes[0] if active_routes else None
+
+
 def carrier_trip_routes_response(conn: sqlite3.Connection) -> Dict[str, Any]:
     try:
         routes = carrier_trip_route_rows(conn)
-        active = active_carrier_trip(conn)
+        active_routes = active_carrier_trips(conn)
     except sqlite3.OperationalError:
         routes = []
-        active = None
-    return {"ok": True, "routes": routes, "active_route": active}
+        active_routes = []
+    return {
+        "ok": True,
+        "routes": routes,
+        "active_routes": active_routes,
+        "active_route": active_routes[0] if active_routes else None,
+    }
 
 
 def import_carrier_trip(conn: sqlite3.Connection, payload: Dict[str, Any], imported_at: str) -> Dict[str, Any]:
     route, stops = parse_spansh_carrier_route(payload)
     source_content = str(payload.get("content") or "")
     source_sha256 = hashlib.sha256(source_content.encode("utf-8")).hexdigest()
-    conn.execute("UPDATE carrier_trip_routes SET active=0")
     cur = conn.execute(
         """
         INSERT INTO carrier_trip_routes(
@@ -1098,6 +1115,7 @@ def import_carrier_trip(conn: sqlite3.Connection, payload: Dict[str, Any], impor
         "ok": True,
         "carrier_trip_id": carrier_trip_id,
         "imported_stops": len(stops),
+        "active_routes": active_carrier_trips(conn),
         "active_route": active_carrier_trip(conn),
     }
 
@@ -1112,20 +1130,49 @@ def start_carrier_trip(conn: sqlite3.Connection, payload: Dict[str, Any], starte
     ).fetchone()
     if not exists:
         return {"ok": False, "error": "Carrier trip not found"}
-    conn.execute("UPDATE carrier_trip_routes SET active=0")
     conn.execute(
         """
         UPDATE carrier_trip_routes
         SET active=1,
-            progress_started_datetime=?,
-            progress_stop_index=0,
+            progress_started_datetime=COALESCE(progress_started_datetime, ?),
+            progress_stop_index=COALESCE(progress_stop_index, 0),
             progress_updated_datetime=?
         WHERE carrier_trip_id=?
         """,
         (clean_text(started_at), clean_text(started_at), carrier_trip_id),
     )
     conn.commit()
-    return {"ok": True, "routes": carrier_trip_route_rows(conn), "active_route": active_carrier_trip(conn)}
+    active_routes = active_carrier_trips(conn)
+    return {
+        "ok": True,
+        "routes": carrier_trip_route_rows(conn),
+        "active_routes": active_routes,
+        "active_route": active_routes[0] if active_routes else None,
+    }
+
+
+def stop_carrier_trip(conn: sqlite3.Connection, payload: Dict[str, Any], stopped_at: str) -> Dict[str, Any]:
+    carrier_trip_id = coerce_int(payload.get("carrier_trip_id"))
+    if carrier_trip_id is None:
+        return {"ok": False, "error": "Missing carrier_trip_id"}
+    updated = conn.execute(
+        """
+        UPDATE carrier_trip_routes
+        SET active=0, progress_updated_datetime=?
+        WHERE carrier_trip_id=?
+        """,
+        (clean_text(stopped_at), carrier_trip_id),
+    )
+    if updated.rowcount < 1:
+        return {"ok": False, "error": "Carrier trip not found"}
+    conn.commit()
+    active_routes = active_carrier_trips(conn)
+    return {
+        "ok": True,
+        "routes": carrier_trip_route_rows(conn),
+        "active_routes": active_routes,
+        "active_route": active_routes[0] if active_routes else None,
+    }
 
 
 def set_carrier_trip_stop_skipped(
@@ -1185,7 +1232,13 @@ def set_carrier_trip_stop_skipped(
             (max(0, stop_index - 1), clean_text(updated_at), carrier_trip_id),
         )
     conn.commit()
-    return {"ok": True, "routes": carrier_trip_route_rows(conn), "active_route": active_carrier_trip(conn)}
+    active_routes = active_carrier_trips(conn)
+    return {
+        "ok": True,
+        "routes": carrier_trip_route_rows(conn),
+        "active_routes": active_routes,
+        "active_route": active_routes[0] if active_routes else None,
+    }
 
 
 def advance_active_carrier_trip_progress(
@@ -1198,70 +1251,61 @@ def advance_active_carrier_trip_progress(
     address = coerce_int(system_address)
     if not name and address is None:
         return False
-    active = conn.execute(
+    active_rows = conn.execute(
         """
         SELECT carrier_trip_id, progress_stop_index
         FROM carrier_trip_routes
         WHERE active=1
-        ORDER BY imported_datetime DESC, carrier_trip_id DESC
-        LIMIT 1
+        ORDER BY imported_datetime ASC, carrier_trip_id ASC
         """
-    ).fetchone()
-    if not active:
+    ).fetchall()
+    if not active_rows:
         return False
-    carrier_trip_id = int(active["carrier_trip_id"])
-    current_index = coerce_int(active["progress_stop_index"]) or 0
-    event_stop = conn.execute(
-        """
-        SELECT 1
-        FROM carrier_trip_stops
-        WHERE carrier_trip_id=? AND stop_index>?
-          AND ((? IS NOT NULL AND system_address=?)
-               OR (? != '' AND lower(system_name_snapshot)=lower(?)))
-        LIMIT 1
-        """,
-        (carrier_trip_id, current_index, address, address, name, name),
-    ).fetchone()
-    if not event_stop:
-        return False
-    next_index = contiguous_carrier_trip_progress_index(conn, carrier_trip_id, current_index)
-    if next_index <= current_index:
-        return False
-    conn.execute(
-        """
-        UPDATE carrier_trip_routes
-        SET progress_stop_index=?, progress_updated_datetime=?
-        WHERE carrier_trip_id=?
-        """,
-        (next_index, clean_text(visited_at), carrier_trip_id),
-    )
-    conn.commit()
-    return True
+    changed = False
+    for active in active_rows:
+        carrier_trip_id = int(active["carrier_trip_id"])
+        current_index = coerce_int(active["progress_stop_index"]) or 0
+        event_stop = conn.execute(
+            """
+            SELECT 1
+            FROM carrier_trip_stops
+            WHERE carrier_trip_id=? AND stop_index>?
+              AND ((? IS NOT NULL AND system_address=?)
+                   OR (? != '' AND lower(system_name_snapshot)=lower(?)))
+            LIMIT 1
+            """,
+            (carrier_trip_id, current_index, address, address, name, name),
+        ).fetchone()
+        if not event_stop:
+            continue
+        next_index = contiguous_carrier_trip_progress_index(conn, carrier_trip_id, current_index)
+        if next_index <= current_index:
+            continue
+        conn.execute(
+            """
+            UPDATE carrier_trip_routes
+            SET progress_stop_index=?, progress_updated_datetime=?
+            WHERE carrier_trip_id=?
+            """,
+            (next_index, clean_text(visited_at), carrier_trip_id),
+        )
+        changed = True
+    if changed:
+        conn.commit()
+    return changed
 
 
 def delete_carrier_trip(conn: sqlite3.Connection, payload: Dict[str, Any]) -> Dict[str, Any]:
     carrier_trip_id = coerce_int(payload.get("carrier_trip_id"))
     if carrier_trip_id is None:
         return {"ok": False, "error": "Missing carrier_trip_id"}
-    was_active = conn.execute(
-        "SELECT active FROM carrier_trip_routes WHERE carrier_trip_id=?",
-        (carrier_trip_id,),
-    ).fetchone()
     conn.execute("DELETE FROM carrier_trip_stops WHERE carrier_trip_id=?", (carrier_trip_id,))
     conn.execute("DELETE FROM carrier_trip_routes WHERE carrier_trip_id=?", (carrier_trip_id,))
-    if was_active and int(was_active["active"] or 0):
-        next_route = conn.execute(
-            """
-            SELECT carrier_trip_id
-            FROM carrier_trip_routes
-            ORDER BY imported_datetime DESC, carrier_trip_id DESC
-            LIMIT 1
-            """
-        ).fetchone()
-        if next_route:
-            conn.execute(
-                "UPDATE carrier_trip_routes SET active=1 WHERE carrier_trip_id=?",
-                (int(next_route["carrier_trip_id"]),),
-            )
     conn.commit()
-    return {"ok": True, "routes": carrier_trip_route_rows(conn), "active_route": active_carrier_trip(conn)}
+    active_routes = active_carrier_trips(conn)
+    return {
+        "ok": True,
+        "routes": carrier_trip_route_rows(conn),
+        "active_routes": active_routes,
+        "active_route": active_routes[0] if active_routes else None,
+    }

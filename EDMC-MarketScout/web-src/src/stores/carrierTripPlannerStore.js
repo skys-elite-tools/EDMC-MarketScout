@@ -3,7 +3,9 @@ import { onScopeDispose, ref } from 'vue'
 
 export const useCarrierTripPlannerStore = defineStore('carrierTripPlanner', () => {
   const carrierTripRoutes = ref([])
+  const activeCarrierTrips = ref([])
   const activeCarrierTrip = ref(null)
+  const selectedCarrierTripId = ref(null)
   const carrierTripBusy = ref(false)
   const carrierTripStatus = ref('')
   let statusTimer = null
@@ -28,7 +30,20 @@ export const useCarrierTripPlannerStore = defineStore('carrierTripPlanner', () =
 
   function setData(data) {
     carrierTripRoutes.value = Array.isArray(data?.routes) ? data.routes : []
-    activeCarrierTrip.value = data?.active_route || null
+    activeCarrierTrips.value = Array.isArray(data?.active_routes)
+      ? data.active_routes
+      : (data?.active_route ? [data.active_route] : [])
+    const selected = activeCarrierTrips.value.find(
+      route => route.carrier_trip_id === selectedCarrierTripId.value,
+    ) || activeCarrierTrips.value[0] || null
+    activeCarrierTrip.value = selected
+    selectedCarrierTripId.value = selected?.carrier_trip_id || null
+  }
+
+  function selectCarrierTrip(carrierTripId) {
+    const selected = activeCarrierTrips.value.find(route => route.carrier_trip_id === carrierTripId) || null
+    activeCarrierTrip.value = selected
+    selectedCarrierTripId.value = selected?.carrier_trip_id || null
   }
 
   async function loadCarrierTrips() {
@@ -63,6 +78,7 @@ export const useCarrierTripPlannerStore = defineStore('carrierTripPlanner', () =
 
   async function startCarrierTrip(carrierTripId) {
     carrierTripBusy.value = true
+    selectedCarrierTripId.value = carrierTripId
     try {
       const res = await fetch('/api/carrier-trips/start', {
         method: 'POST',
@@ -71,6 +87,26 @@ export const useCarrierTripPlannerStore = defineStore('carrierTripPlanner', () =
       })
       const data = await res.json()
       if (!data.ok) throw new Error(data.error || 'Could not start Carrier Trip')
+      setData(data)
+      return data
+    } catch (err) {
+      setStatus(err?.message || String(err))
+      return null
+    } finally {
+      carrierTripBusy.value = false
+    }
+  }
+
+  async function stopCarrierTrip(carrierTripId) {
+    carrierTripBusy.value = true
+    try {
+      const res = await fetch('/api/carrier-trips/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ carrier_trip_id: carrierTripId }),
+      })
+      const data = await res.json()
+      if (!data.ok) throw new Error(data.error || 'Could not pause Carrier Trip')
       setData(data)
       return data
     } catch (err) {
@@ -126,12 +162,16 @@ export const useCarrierTripPlannerStore = defineStore('carrierTripPlanner', () =
 
   return {
     carrierTripRoutes,
+    activeCarrierTrips,
     activeCarrierTrip,
+    selectedCarrierTripId,
     carrierTripBusy,
     carrierTripStatus,
     loadCarrierTrips,
     importCarrierTrip,
     startCarrierTrip,
+    stopCarrierTrip,
+    selectCarrierTrip,
     setStopSkipped,
     deleteCarrierTrip,
   }
